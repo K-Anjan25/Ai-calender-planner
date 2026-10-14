@@ -1,0 +1,43 @@
+import type { Metadata, Viewport } from 'next'
+import './globals.css'
+import { Grain } from '@/components/paper/Grain'
+
+/**
+ * Fonts load through a plain `<link>` rather than `next/font/google`: a build environment without
+ * access to fonts.googleapis.com must not fail the build (D-005). The fallback stack in
+ * `globals.css` is complete, so the design degrades to Palatino/system sans rather than to nothing.
+ */
+
+export const metadata: Metadata = {
+  title: 'Paperweek — the AI calendar planner that tells you the truth',
+  description:
+    'Give Paperweek your tasks, deadlines and preferences. It builds a realistic week — or tells you exactly what does not fit, and what to trade.',
+  applicationName: 'Paperweek',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#f2ead9',
+  width: 'device-width',
+  initialScale: 1,
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- deliberate: a build-time
+            font fetch would fail in networks without access to fonts.googleapis.com (D-005). */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+        />
+      </head>
+      <body className="paper-board min-h-screen antialiased">
+        {children}
+        <Grain />
+      </body>
+    </html>
+  )
+}

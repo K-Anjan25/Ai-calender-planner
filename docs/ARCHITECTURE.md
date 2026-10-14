@@ -1,0 +1,397 @@
+# Paperweek — Architecture
+
+| Field | Value |
+| --- | --- |
+| Document | Architecture |
+| Version | 1.0 |
+| Last updated | 2026-10-14 |
+| Stack | Next.js 15 (App Router) · React 19 · TypeScript · Tailwind v4 · LangChain · Google Calendar API |
+| Related | `PRD.md`, `RULES.md`, `DESIGN.md`, `TASK.md`, `MEMORY.md` |
+
+---
+
+## 1. Architectural thesis
+
+> **The model reasons. The engine decides. The human approves.**
+
+Three rules drive every design decision below.
+
+1. **Time is deterministic, never generative.** LLMs are unreliable at arithmetic and catastrophic at timestamp bookkeeping. All scheduling math lives in `lib/scheduler/*` — pure, testable, idempotent (INV-7). The agent may *call* the engine and *interpret* its output, but the type system makes it structurally hard for the agent to emit a timestamp (§5.4).
+2. **Capability degrades, product never breaks.** Missing API key → local reasoner. Provider 500 → deterministic plan. Google down → plan still builds, sync queue holds. There is no state in which the user sees an empty screen.
+3. **The plan is data, not UI.** A plan is a validated, serialisable object (`PlanProposal`). The grid, the report, the trade-off panel, and the calendar writer are four independent renderings of the same data.
+
+## 2. System overview
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  BROWSER — Next.js App Router (React 19 Server + Client Components)          │
+│                                                                              │
+│   (marketing)  ──▶  /planner  ─────────────────────────────────────────────┐  │
+│                       │                                                    │  │
+│      ┌────────────────┼─────────────────┐                                  │  │
+│      ▼                ▼                 ▼                                  │  │
+│  TaskInbox      PreferencePanel     AgentChat                              │  │
+│      │                │                 │                                  │  │
+│      └────────┬───────┴─────────┬───────┘                                  │  │
+│               ▼                 ▼                                          │  │
+│        zustand store  ◀────  WeekGrid · PlanReport · InsightsRail  ────────┘  │
+└───────────────┬──────────────────────────────────────────────────────────────┘
+                │ fetch (same-origin, /api/*)
+┌───────────────▼──────────────────────────────────────────────────────────────┐
+│  NEXT.JS SERVER (route handlers, Node runtime)                               │
+│                                                                              │
+│   POST /api/plan      ──▶ lib/agent/planner-agent.ts                         │
+│                            │  1. resolveProvider()  (openai|anthropic|google|local)
+│                            │  2. tool-calling loop (LangChain, max 6 steps)  │
+│                            │  3. structured output → zod PlanProposal        │
+│                            ▼                                                 │
+│                     lib/scheduler/engine.ts  ◀── lib/scheduler/{slots,       │
+│                            │                       policies, conflicts,     │
+│                            │                       score}                    │
+│                            ▼                                                 │
+│                     PlanProposal + PlanReport                                │
+│                                                                              │
+│   POST /api/chat      ──▶ agent refinement loop → re-run engine → diff       │
+│   POST /api/calendar/sync  ──▶ lib/google/calendar.ts (googleapis)          │
+│   GET  /api/calendar/auth  ──▶ OAuth 2.0 consent redirect                    │
+│   GET  /api/calendar/callback ─▶ code→token exchange → session cookie        │
+│   GET  /api/health    ──▶ provider + calendar capability probe               │
+└──────────────────────────────────────────────────────────────────────────────┘
+                │
+                ▼
+      Google Calendar API v3            LLM provider (optional)
+      freebusy · events.insert/patch   OpenAI · Anthropic · Gemini
+```
+
+## 3. Layer responsibilities
+
+| Layer | Path | Responsibility | Must not |
+| --- | --- | --- | --- |
+| Domain | `src/lib/types.ts`, `src/lib/scheduler/` | Types, invariants, time math, scoring, reports. Pure functions. | Import React, fetch, or an LLM SDK. |
+| Agent | `src/lib/agent/` | Prompting, tool wiring, provider selection, JSON repair, demo reasoner. | Compute timestamps or bypass the engine. |
+| Integration | `src/lib/google/` | OAuth, free/busy, event CRUD, idempotency. | Mutate plans or hold UI state. |
+| API | `src/app/api/` | Validation, orchestration, error shaping, capability detection. | Contain business logic beyond orchestration. |
+| State | `src/lib/store/` | Client session state (tasks, prefs, proposal, pins, trace). | Hold secrets or duplicate server truth. |
+| UI | `src/components/` | Rendering + interaction. | Re-implement scheduling rules. |
+
+Dependency direction is strictly inward: `app → components → store → lib/{agent,google} → lib/scheduler → lib/types`. The domain layer imports nothing from above it (enforced by review, `RULES.md` §4).
+
+## 4. Data model
+
+`src/lib/types.ts` — zod schemas are the source of truth; TS types are inferred from them.
+
+```ts
+Task {
+  id, title, notes?
+  estimateMinutes: number          // 15..720
+  deadline?: ISO                   // final chunk must end ≤ deadline (INV-3)
+  earliestStart?: ISO              // INV-4
+  priority: 'P0'|'P1'|'P2'|'P3'
+  energy: 'deep'|'light'|'admin'|'social'|'physical'
+  category: 'work'|'study'|'health'|'life'|'admin'|'creative'
+  splittable: boolean; minChunkMinutes: number
+  location?: string
+  recurring?: { days: Weekday[] }  // "review PRs daily"
+  dependsOn?: string[]
+  source: 'user'|'agent'|'demo'
+  estimatedByAI?: boolean
+}
+
+Preferences {
+  timezone, weekStartsOn
+  workingHours: Record<Weekday, {start,end} | null>   // null = day off
+  focusPeak: 'morning'|'afternoon'|'evening'|{start,end}
+  energyTrough?: {start,end}
+  lunch: {start,end,minutes} | null
+  bufferMinutes, minBlockMinutes, snapMinutes
+  maxDeepWorkMinutesPerDay, maxPlannedMinutesPerDay
+  blackouts: {label, weekday?, start, end}[]
+  weekendMode: 'off'|'light'|'normal'
+}
+
+BusyEvent { id, title, start, end, source:'google'|'demo'|'manual', allDay? }
+
+PlacedBlock {
+  id, taskId, title, start, end, minutes
+  kind: 'task'|'break'|'lunch'|'buffer'|'meeting'
+  energy, category, priority
+  chunkIndex, chunkCount
+  reasons: Reason[]                // explainability payload (FR-3.9)
+  score: number; pinned: boolean
+  conflict?: 'deadline-risk'|'overlap-resolved'|'over-capacity'
+}
+Reason { code, label, detail?, weight? }   // code drives UI chips & tests
+
+PlanReport {
+  fits: 'fits'|'tight'|'overbooked'
+  capacityMinutes, demandMinutes, scheduledMinutes, utilisation
+  placedCount, unplacedCount, unscheduled: {taskId, minutes, why}[]
+  deadlineRisks: {taskId, deadline, shortfallMinutes, severity}[]
+  warnings: Warning[]              // fragmentation, no-break, marathon, cliff
+  perDay: {weekday, planned, capacity, deep, meetings}[]
+  tradeoffs: TradeoffOption[]      // FR-3.11
+  trace: AgentStep[]               // FR-4.4
+}
+
+PlanProposal { blocks, report, tasks, preferences, busy, generatedAt, engine:'deterministic'|'agent', pins }
+```
+
+## 5. The scheduler (the core IP)
+
+`lib/scheduler/engine.ts` orchestrates five pure stages. Total budget ≤ 400 ms for 60 tasks × 7 days (≈ 700 candidate slots).
+
+### 5.1 Pipeline
+
+```
+           inputs: tasks · preferences · busy events · pins
+                              │
+   ┌──────────────────────────▼───────────────────────────┐
+   │ 1. BUILD HORIZON          slots.ts                   │
+   │    week frames → working windows → snap 15 min       │
+   │    subtract: blackouts · lunch · busy events         │
+   │    → FreeSlot[] with day, start, end, minutes,       │
+   │      energyProfile (peak / normal / trough)          │
+   └──────────────────────────┬───────────────────────────┘
+   ┌──────────────────────────▼───────────────────────────┐
+   │ 2. TRIAGE + CHUNK         policies.ts                │
+   │    urgency = f(priority, slack, effort)              │
+   │    Critical Ratio  CR = timeRemaining / workRemaining│
+   │    order: CR asc → priority → deadline asc → effort↓ │
+   │    split into chunks: ≤90 min, ≥ minChunkMinutes     │
+   └──────────────────────────┬───────────────────────────┘
+   ┌──────────────────────────▼───────────────────────────┐
+   │ 3. PLACE                  engine.ts                  │
+   │    for each chunk: scan FreeSlots, filter by         │
+   │    hard constraints (INV-2/3/4/5), score survivors,  │
+   │    take argmax, commit, deduct slot capacity,        │
+   │    attach reasons + score                            │
+   └──────────────────────────┬───────────────────────────┘
+   ┌──────────────────────────▼───────────────────────────┐
+   │ 4. REPAIR                 conflicts.ts               │
+   │    resolve residual overlaps, enforce daily caps,    │
+   │    run escalation ladder for leftovers,              │
+   │    insert buffer + lunch blocks                      │
+   └──────────────────────────┬───────────────────────────┘
+   ┌──────────────────────────▼───────────────────────────┐
+   │ 5. EVALUATE               score.ts                   │
+   │    utilisation, fragmentation, balance, deadline     │
+   │    feasibility → PlanReport + ranked TradeoffOptions │
+   └──────────────────────────┬───────────────────────────┘
+                              ▼
+                        PlanProposal
+```
+
+### 5.2 Placement scoring
+
+```
+score(slot, chunk) =
+    0.30 · energyMatch          // deep→peak 1.0 · deep→trough 0.0
+  + 0.22 · deadlineFit          // headroom before deadline after placing
+  + 0.16 · contiguity           // adjacency to same task/category, ±/− gap
+  + 0.12 · dayBalance           // penalise days already heavy
+  + 0.10 · fragmentation        // penalise creating unusable gaps
+  + 0.06 · rhythm               // buffers preserved, lunch untouched
+  + 0.04 · contextMatch         // same location / batching win
+  − penalties                   // cap exceeded, weekend use, late-evening
+
+Weight vector lives in ONE place — policies.ts WEIGHTS — so tuning is a
+one-line change and the reasons[] payload always mirrors the weights used.
+```
+
+### 5.3 Guarantees
+
+- **Idempotent (INV-7):** no `Date.now()`, no `Math.random()`, no Map-iteration-order dependence. Ties break on `taskId` then `start` ascending.
+- **Conserving (INV-6):** every minute of every task is either placed or reported in `unscheduled` with a reason. Silent loss is impossible because `evaluate()` reconciles totals against inputs.
+- **Explained (FR-3.9):** reasons are emitted *by the same expression that produced the score*, so the UI can never drift from the algorithm.
+- **Honest about what it could not do (FR-3.10):** a requested pin that collides with a meeting or falls outside working hours is not silently relocated — it produces a `pin-ignored` warning, and the block is placed by the normal ladder.
+- **Rituals yield to reality:** lunch and break tiles are decorative layering; `repairPlan` checks their candidate windows against busy events before inserting, so a ritual row can never cover a real meeting.
+
+### 5.4 Why the agent cannot emit a timestamp
+
+`planner-agent.ts` never constructs a `PlacedBlock`. Its tools return `PlanProposal` values produced by the engine, and its final structured output is a *selection + narration* over engine output:
+
+```ts
+AgentOutput = {
+  tasks: Task[]                 // parsed, not scheduled
+  preferences: Partial<Preferences>
+  strategy?: string             // e.g. "front-load deep work before Thu"
+  // NOTE: no start/end fields exist anywhere in this schema
+}
+```
+
+This is a type-level guarantee, not a prompt-level hope.
+
+**Wall-clock, not UTC.** Deadlines and `earliestStart` are local wall-clock instants
+(`2026-10-15T17:00:00`) — that is the coordinate system the placement loop works in (§5.1). The
+boundary uses a parse-validated string rather than `z.string().datetime()`, which requires a `Z`
+suffix and would reject the engine's own output on the way back in (MEMORY.md D-013). A regression
+test posts a plan's tasks straight back to `/api/plan` to keep that round-trip honest.
+
+## 6. Agent design
+
+### 6.1 Tools (`lib/agent/tools.ts`)
+
+| Tool | Input | Output | Purpose |
+| --- | --- | --- | --- |
+| `parse_tasks` | free text + now | `Task[]` | Messy language → structured tasks. Estimates inferred and flagged. |
+| `build_schedule` | tasks, prefs, busy, pins | `PlanProposal` | **The only way time is assigned.** |
+| `critique_plan` | proposal | `Warning[]`, `TradeoffOption[]` | Finds overload, fragmentation, deadline cliffs. |
+| `revise_plan` | proposal + instruction | `PlanProposal` | Applies preference/pin changes, re-runs engine. |
+| `explain_block` | proposal, blockId | `string` | Natural-language justification of one block. |
+
+### 6.2 Loop
+
+```
+user input ──▶ provider? ──no──▶ LocalReasoner (deterministic, keyword + heuristics)
+                  │yes                    │
+                  ▼                       │
+      LangChain tool-calling agent        │
+      max 6 steps · tools as above        │
+                  │                       │
+        structured output (zod) ──────────┘
+                  │
+        validate ──fail──▶ 1 repair attempt ──fail──▶ deterministic plan
+                  │pass
+                  ▼
+             PlanProposal  →  UI
+```
+
+- **Prompting:** system prompt encodes role, the invariants, the tool contract, and an explicit prohibition on inventing times (`RULES.md` §7).
+- **Structured output:** `withStructuredOutput(schema)` on LangChain when supported; otherwise JSON-mode + `zod.safeParse` + one repair round-trip.
+- **Provider matrix:** `LLM_PROVIDER=openai|anthropic|google`, `LLM_MODEL` override. `resolveProvider()` returns `null` (never throws) when keys are absent, and the caller falls back to `LocalReasoner`.
+- **Cost control:** temperature ≤ 0.3 for parsing, ≤ 0.5 for narration; tool results truncated to the fields the model actually needs.
+
+### 6.3 Demo mode (FR-4.5)
+
+`lib/agent/local-reasoner.ts` is a real implementation of the agent contract, not a stub: keyword/regex parsing with category lexicons, duration heuristics, preference extraction, and scripted tool sequencing. It produces the same `PlanProposal` shape, so the UI, reports, and calendar writer cannot tell the difference. This guarantees the product is demonstrable with zero configuration and makes the demo path the *default* path in tests.
+
+## 7. Google Calendar integration
+
+```
+/planner ──connect──▶ GET /api/calendar/auth
+                          │ build OAuth2 client (clientId, secret, redirect)
+                          │ scopes: calendar.events, calendar.readonly
+                          ▼
+                   accounts.google.com consent
+                          │
+                          ▼
+                   GET /api/calendar/callback?code=…
+                          │ exchange → tokens
+                          │ persist server-side (httpOnly cookie / store)
+                          ▼
+                   redirect /planner?calendar=connected
+
+POST /api/calendar/sync  { proposal, approvedBlockIds[] }
+  1. refresh access token if expired
+  2. freebusy.query → re-verify the horizon (catch drift since planning)
+  3. conflicts? → return 409 with the offending blocks (never write blind)
+  4. for each approved block: upsert by extendedProperties.private.paperweekBlockId
+       existing? events.patch : events.insert
+  5. return { inserted, updated, skipped, failed[] }
+```
+
+**Idempotency:** every written event carries `extendedProperties.private = { paperweekBlockId, paperweekPlanId }`. Re-syncing patches instead of duplicating (FR-5.4).
+**Marker in the title:** `· PW` suffix (configurable) so blocks are identifiable in the native calendar UI.
+**Write discipline:** sync requires an explicit `approvedBlockIds[]`; nothing is written by implication. `dryRun: true` returns the exact intended payloads (RULES.md §8).
+**Failure mode:** per-block failures are collected and returned; a partial sync never rolls back the plan or throws away successful writes.
+**Dry runs need no credentials.** `dryRun: true` touches nothing and therefore requires neither Google configuration nor consent — the user can see the exact events, idempotency markers included, before connecting anything (MEMORY.md D-015). Real writes still need config *and* a connected account.
+
+## 8. Client state
+
+`zustand` store, four slices:
+
+| Slice | Contents | Persistence |
+| --- | --- | --- |
+| `tasks` | task list, free-text buffer, parsing state | localStorage (ids + content only) |
+| `prefs` | preferences object | localStorage |
+| `plan` | proposal, pins, selected block, dirty flag | memory (server-derived truth) |
+| `ui` | active tab, filters, reduced-motion, trace open | memory |
+
+Server truth is `PlanProposal`; the client never recomputes placement. Drag-and-drop produces a *pin request* → `POST /api/plan` with `pins[]` → engine re-runs → new proposal. That keeps one scheduling implementation, on the server, always.
+
+## 9. File map
+
+```
+src/
+  app/
+    layout.tsx                     fonts, paper grain, theme
+    page.tsx                       marketing surface (diorama hero)
+    planner/page.tsx               main workspace
+    api/plan/route.ts              generate / regenerate w/ pins
+    api/chat/route.ts              agent refinement + diff
+    api/calendar/{auth,callback,sync}/route.ts
+    api/health/route.ts            capability probe
+    globals.css                    Tailwind v4 @theme design tokens
+  components/
+    paper/                         design-system primitives (see DESIGN.md §9)
+      PaperCard · PaperButton · PaperInput · PaperChip · PaperTabs
+      DioramaScene · Grain · CutEdge · LayerStack · PaperSheet
+    planner/
+      TaskInbox · PreferencePanel · WeekGrid · ScheduleBlock · AgentChat
+      PlanReportPanel · TradeoffPanel · InsightsRail · CalendarPanel
+  lib/
+    types.ts  sample-data.ts  utils.ts
+    scheduler/{engine,slots,policies,conflicts,score}.ts
+    agent/{planner-agent,tools,prompts,providers,local-reasoner}.ts
+    google/{calendar,oauth,scopes}.ts
+    store/planner-store.ts
+docs/  PRD.md ARCHITECTURE.md RULES.md DESIGN.md TASK.md MEMORY.md
+```
+
+## 10. Configuration
+
+| Env var | Required | Effect when absent |
+| --- | --- | --- |
+| `LLM_PROVIDER` | no | defaults to `local` |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | no | provider resolves to `local` (demo mode) |
+| `LLM_MODEL` | no | per-provider default in `providers.ts` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | no | calendar features disabled, plan unaffected |
+| `DEMO_MODE` | no | auto-enabled when no keys are present |
+
+Every optional integration degrades to a working product (§1.2).
+
+## 11. Testing strategy
+
+| Level | Scope | Notes |
+| --- | --- | --- |
+Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 46 assertions).
+
+| Level | Scope | Where |
+| --- | --- | --- |
+| **Invariant tests** | scheduler | `tests/scheduler.test.ts` — INV-1…INV-8 asserted against the demo week, the overloaded week (32h into 24h), and seeded random 25–60 task sets. |
+| **Property tests** | scheduler | Same file: `mulberry32`-seeded random weeks; no invariant may break, no minute may go missing (INV-6), and two runs must be identical (INV-7). |
+| **Performance** | scheduler | 60 tasks must plan in under the 400 ms budget (measured in-process). |
+| **Round-trip** | API | A plan's own tasks are posted back to `/api/plan`; the response must be a valid plan (the wall-clock deadline regression, D-013). |
+| **Contract tests** | agent | `tests/agent.test.ts` — a nonsense payload is rejected, minimal payloads get defaults, provider resolution never throws and never leaks key material. |
+| **Lexicon tests** | local reasoner | Every phrasing in `scripts/agent-check.ts` asserted for the *values* it must produce (durations, weekday deadlines, repeat days, energy, refusals, pins). |
+| **Repair tests** | agent plumbing | `extractJson` on fenced/chatty/broken model output; `normaliseTasks` uniqueness and `estimatedByAI`; `mergeTasks` not duplicating on re-parse. |
+| **Adapter tests** | calendar | Free/busy clamped to the week; every payload carries `paperweekBlockId`/`paperweekPlanId` and the `· PW` marker. |
+| **A11y** | UI | Keyboard parity (move/resize/jump) and focus rings are implemented in `WeekGrid`; a real browser pass is still owed (TASK.md T-507). |
+
+**What is deliberately not claimed:** there is no DOM-level or end-to-end browser test in this build.
+Everything in the table above runs headless in-process, and the UI's static behaviour was reasoned
+from source and rendered HTML rather than clicked through.
+
+## 12. Performance
+
+- Scheduler is O(chunks × slots); at MVP scale (~60 × 700) it is sub-100 ms in-process. Free slots are pre-indexed by day and sorted once.
+- UI: `WeekGrid` virtualises nothing at MVP scale (168 hour-rows max) but memoises blocks per day; drag uses pointer events with no re-render per frame (transform-only).
+- Agent calls are the only slow path → streamed trace, optimistic skeleton, and a hard 20 s timeout after which the deterministic plan is shown with a notice.
+
+## 13. Security & privacy
+
+- OAuth tokens live server-side only (`httpOnly` cookie). Never in `localStorage`, never in client logs.
+- Task text is sent to an LLM provider **only** when a provider key is configured; demo mode is fully local. This is disclosed in the UI.
+- Route handlers validate every payload with zod before use; no unvalidated input reaches the scheduler or the calendar writer.
+- No analytics or third-party scripts in MVP.
+- Scopes are minimal and requested incrementally (calendar only when the user clicks Connect).
+
+## 14. Known constraints & deliberate trade-offs
+
+| Decision | Trade-off accepted |
+| --- | --- |
+| Single-week horizon | Simpler, faster, matches how people actually plan. Multi-week is v1.1. |
+| Greedy + repair instead of global optimisation (ILP/CP) | Extremely fast, explainable, deterministic. Slightly suboptimal packing; acceptable at MVP scale and worth it for the reason-by-construction model. |
+| Recompute-on-drag (server round trip) | One source of scheduling truth over instant local feel; mitigated by optimistic UI. |
+| No DB in MVP | Zero-setup demo, deployable anywhere; state is client-held + Google Calendar. Persistence is v1.1. |
+| Tailwind v4 CSS-first tokens, no config file | Tokens live in `globals.css` `@theme`; one file to review for design drift. |

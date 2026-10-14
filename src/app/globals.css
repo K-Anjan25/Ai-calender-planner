@@ -1,0 +1,376 @@
+@import 'tailwindcss';
+
+/* ==================================================================
+   PAPERWEEK — Design tokens (DESIGN.md §3–§7)
+   Single source of truth for the cut-paper diorama language.
+   No component may hardcode a hex value (RULES.md L8).
+   ================================================================== */
+
+@theme {
+  /* --- base paper stock ------------------------------------------------ */
+  --color-paper-cream: #f2ead9;
+  --color-paper-ivory: #fbf7ee;
+  --color-paper-sand: #e8ddc7;
+  --color-paper-kraft: #d6c6a9;
+  --color-paper-edge: #cbb99b;
+
+  /* --- ink (warm, never pure black) ------------------------------------ */
+  --color-ink: #3b332a;
+  --color-ink-soft: #6c6052;
+  --color-ink-faint: #9b8d7a;
+  --color-ink-ghost: #c4b7a2;
+
+  /* --- dyed sheet accents ---------------------------------------------- */
+  --color-rose: #c0707e;
+  --color-rose-deep: #9e4f5d;
+  --color-rose-light: #e6bcc1;
+
+  --color-terracotta: #c67f57;
+  --color-terracotta-deep: #9a5a38;
+  --color-terracotta-light: #e8c8b2;
+
+  --color-olive: #a79b5e;
+  --color-olive-deep: #7b7140;
+  --color-olive-light: #d6cea4;
+
+  --color-teal: #5c8e90;
+  --color-teal-deep: #3d6b6e;
+  --color-teal-light: #b0ccca;
+
+  --color-plum: #7a6a9e;
+  --color-plum-deep: #57497a;
+  --color-plum-light: #c7bada;
+
+  --color-frost: #86a7c4;
+  --color-frost-deep: #4e6e90;
+  --color-frost-light: #cbdbe9;
+
+  /* --- light & shadow: warm, soft, never grey -------------------------- */
+  --shadow-mat: 0 1px 0 rgba(255, 255, 255, 0.55), 0 3px 6px -2px rgba(88, 68, 44, 0.18);
+  --shadow-sheet: 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 14px -6px rgba(88, 68, 44, 0.22),
+    0 18px 34px -18px rgba(88, 68, 44, 0.28);
+  --shadow-lift: 0 2px 0 rgba(255, 255, 255, 0.5), 0 14px 28px -10px rgba(88, 68, 44, 0.3),
+    0 34px 60px -30px rgba(88, 68, 44, 0.36);
+  --shadow-cut: inset 0 2px 4px rgba(88, 68, 44, 0.22), inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+  --shadow-press: inset 0 2px 3px rgba(88, 68, 44, 0.28), 0 1px 0 rgba(255, 255, 255, 0.45);
+  --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.5), 0 4px 8px -3px rgba(88, 68, 44, 0.24);
+
+  /* --- hand-cut radii (asymmetric on purpose) -------------------------- */
+  --radius-cut: 14px 17px 13px 18px / 16px 13px 18px 14px;
+  --radius-cut-sm: 9px 11px 8px 12px / 10px 9px 12px 8px;
+  --radius-cut-xs: 6px 7px 5px 8px / 7px 6px 8px 5px;
+  --radius-well: 12px 14px 11px 15px / 13px 11px 15px 12px;
+
+  /* --- typography ------------------------------------------------------ */
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, ui-serif, serif;
+  --font-sans: 'Nunito Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* --- motion ---------------------------------------------------------- */
+  --ease-paper: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ==================================================================
+   Base
+   ================================================================== */
+
+@layer base {
+  html {
+    background-color: var(--color-paper-cream);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+
+  ::selection {
+    background: var(--color-teal-light);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-teal-deep);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-ink-faint);
+  }
+
+  input[type='time']::-webkit-calendar-picker-indicator,
+  input[type='date']::-webkit-calendar-picker-indicator {
+    opacity: 0.45;
+  }
+
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-paper-sand);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-paper-edge);
+    border-radius: 8px;
+    border: 2px solid var(--color-paper-sand);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-ghost);
+  }
+}
+
+/* ==================================================================
+   Paper materials (DESIGN.md §2, §4, §6)
+   ================================================================== */
+
+@layer components {
+  /* Laid-paper fibre: directional grain, multiplied over any surface. */
+  .paper-fibre {
+    position: relative;
+  }
+  .paper-fibre::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.015' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23f)'/%3E%3C/svg%3E");
+    background-size: 240px 240px;
+  }
+
+  /* Matte tooth of card stock. */
+  .paper-tooth::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23t)'/%3E%3C/svg%3E");
+  }
+
+  /* The lighting of the whole board: soft warm vignette. */
+  .paper-board {
+    background-color: var(--color-paper-cream);
+    background-image:
+      radial-gradient(120% 85% at 50% -10%, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 55%),
+      radial-gradient(125% 100% at 50% 115%, rgba(88, 68, 44, 0.13) 0%, rgba(88, 68, 44, 0) 60%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(88, 68, 44, 0.05) 100%);
+  }
+
+  /* A raised sheet: cut edge highlight + warm drop shadow. */
+  .paper-sheet {
+    background-color: var(--color-paper-ivory);
+    border: 1px solid rgba(120, 98, 70, 0.14);
+    border-radius: var(--radius-cut);
+    box-shadow: var(--shadow-sheet);
+    position: relative;
+  }
+
+  /* The mat peeking out beneath a sheet — this is what creates depth. */
+  .paper-mat::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 7px;
+    bottom: -7px;
+    border-radius: var(--radius-cut);
+    background: var(--color-paper-sand);
+    box-shadow: var(--shadow-mat);
+    z-index: -1;
+  }
+
+  /* A recess: cut into the board rather than laid on top of it. */
+  .paper-well {
+    background-color: var(--color-paper-sand);
+    border-radius: var(--radius-well);
+    box-shadow: var(--shadow-cut);
+    border: 1px solid rgba(120, 98, 70, 0.12);
+  }
+
+  /* Cut edge highlight for small tiles. */
+  .paper-tile {
+    background-color: var(--color-paper-ivory);
+    border-radius: var(--radius-cut-sm);
+    border: 1px solid rgba(120, 98, 70, 0.16);
+    box-shadow: var(--shadow-tile);
+    position: relative;
+    overflow: hidden;
+  }
+  .paper-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+    pointer-events: none;
+  }
+
+  /* Fixed studio grain over everything. */
+  .paper-grain {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    opacity: 0.055;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
+  }
+
+  /* Scalloped deckle edge used on hero scenery and section cuts. */
+  .deckle-top {
+    -webkit-mask-image: radial-gradient(circle at 6px -2px, transparent 6px, black 6.5px);
+    -webkit-mask-size: 14px 12px;
+    -webkit-mask-repeat: repeat-x;
+    -webkit-mask-position: top left;
+    mask-image: radial-gradient(circle at 6px -2px, transparent 6px, black 6.5px);
+    mask-size: 14px 12px;
+    mask-repeat: repeat-x;
+    mask-position: top left;
+  }
+
+  /* Perforation dots along a cut line. */
+  .paper-perforation {
+    border-top: 1px dashed rgba(120, 98, 70, 0.3);
+  }
+
+  /* Per-layer depth for SVG diorama scenery — tuned warm, never grey. */
+  .layer-shadow-1 {
+    filter: drop-shadow(0 3px 4px rgba(88, 68, 44, 0.16));
+  }
+  .layer-shadow-2 {
+    filter: drop-shadow(0 7px 9px rgba(88, 68, 44, 0.2));
+  }
+  .layer-shadow-3 {
+    filter: drop-shadow(0 12px 14px rgba(88, 68, 44, 0.24));
+  }
+  .layer-shadow-4 {
+    filter: drop-shadow(0 18px 20px rgba(88, 68, 44, 0.28));
+  }
+
+  /* Drag handle / lifted sheet. */
+  .paper-lifted {
+    transform: translateY(-1px) rotate(-0.6deg);
+    box-shadow: var(--shadow-lift);
+    z-index: 5;
+  }
+
+  .paper-pressed {
+    transform: translateY(1px);
+    box-shadow: var(--shadow-press);
+  }
+}
+
+/* ==================================================================
+   Motion (DESIGN.md §7)
+   ================================================================== */
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes layer-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tile-settle {
+  0% {
+    transform: translateY(-3px) rotate(-0.8deg);
+  }
+  60% {
+    transform: translateY(1px) rotate(0.15deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes paper-slide {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@utility animate-sheet-in {
+  animation: sheet-in 320ms var(--ease-paper) both;
+}
+
+@utility animate-layer-in {
+  animation: layer-in 620ms var(--ease-paper) both;
+}
+
+@utility animate-tile-settle {
+  animation: tile-settle 240ms var(--ease-paper) both;
+}
+
+@utility animate-paper-slide {
+  animation: paper-slide 200ms var(--ease-paper) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .paper-lifted {
+    transform: none;
+  }
+}
+
+/* Tabular numerals anywhere we show a time. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
