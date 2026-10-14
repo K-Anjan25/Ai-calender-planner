@@ -23,9 +23,9 @@
 | Calendar | `lib/google/*` + OAuth routes + sync route with upsert/dryRun/409-on-drift |
 | UI | Cut-paper diorama design system + 3-column planner workspace + marketing page |
 | Modes | **Demo mode works with zero env vars** — this is the default and the test path |
-| Tests | `tests/scheduler.test.ts` (INV-1…8 + seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters) — 46 assertions, all green |
+| Tests | 64 assertions, all green: `tests/scheduler.test.ts` (INV-1…8 + seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters), `tests/ui.test.ts` (**the components, executed in jsdom** against the real routes and engine) |
 | Verified | types, lint (0/0), production build, `npm test`, `npm run smoke`, `npm run agent:check`, live API round-trips, four rendered scenes |
-| Known gaps | Browser-level verification (T-507 — no headless browser in the build sandbox), persistence, recurring engine, `dependsOn` |
+| Known gaps | Real-browser verification (T-507 — jsdom is not a browser: no layout, no paint, no OAuth redirect), persistence, recurring engine, `dependsOn` |
 
 ## 2. What this product is (one paragraph)
 
@@ -57,6 +57,7 @@ Format: **D-nnn · date · decision — rationale — consequence.**
 | **D-015** | 2026-10-14 | **Calendar dry runs work with no Google configuration at all.** | The preview is the trust-building step; requiring OAuth to see *what would be written* inverts the approval model. | `POST /api/calendar/sync {dryRun:true}` returns the exact event payloads (idempotency markers included) without credentials. Real writes still require config **and** consent. |
 | **D-016** | 2026-10-14 | **Ritual tiles (lunch, break) may not be laid over real meetings.** | Meetings are fixed facts; the ritual row is decoration and must yield. | `repairPlan` checks lunch/break candidate windows against busy events before inserting. Regression test: demo week, Thursday 1:1s. |
 | **D-017** | 2026-10-14 | **A refinement reply lists what actually moved, including preference and block-level changes.** | "No change" when three blocks moved destroys trust in the diff. | `diffPlans(previousTasks, nextTasks, proposal, previousPreferences, previousBlocks)`; the client sends a compact snapshot of the plan it was looking at. |
+| **D-018** | 2026-10-14 | **UI behaviour is tested by executing it in jsdom, not by reading it.** | Static review passed every drag bug that shipped (see §5.19–21) because the code looks correct. Executing the components found all three in minutes. | `tests/ui.test.ts` renders real components, stubs only geometry and the two cookie-scoped OAuth routes, and drives real pointer/keyboard events through to the real engine. |
 
 ## 4. Invariants cheat-sheet
 
@@ -92,7 +93,11 @@ Assert these when touching the engine. If a change breaks one, stop and check `R
 15. **Never render a 100%-wide absolutely positioned block for hour labels.** Every label stacks at `top: 0`. Labels belong in the gutter column with `top: index * HOUR_HEIGHT`.
 16. **Negative preferences must be matched before positive ones.** "Do not use the weekend" contains "use the weekend"; the refusal check runs first and wins.
 17. **Anything computed from `new Date()` at render time is a hydration bug.** Calendar dates default to `mounted ? … : null` and render a paper skeleton until the client resolves them — or take `weekStart` from the plan, which is already deterministic.
-18. **Tailwind v4 here emits nothing for `bg-gradient-to-*`.** Use the arbitrary form `bg-[linear-gradient(...)]`. Likewise `accent-[color:var(--x)]` is unreliable — `accent-<token>` works because the token is in `@theme`.
+18. **React's pointer plugin needs a real `PointerEvent`.** A `MouseEvent` typed `'pointerdown'` reaches DOM listeners but never an `onPointerDown` handler — which makes a drag test pass vacuously.
+19. **A `pointerup` listener registered during a render captures that render's state.** `endDrag` closed over `ghost`, which is `null` in the render where the drag starts, so every drop was silently discarded: the tile followed the cursor and snapped back. State a listener will read on a *later* event must be mirrored in a ref (`ghostRef`).
+20. **Grab offsets are relative, not absolute.** `grabOffsetMin` must be the offset *inside the block*; adding `day.windowStart` (as it did) drags the tile to the top of the day, because the move handler subtracts it from an absolute minute.
+21. **A move and a resize are different gestures.** Deriving `startMin` from the pointer in both modes made a resize slide the block's start down to the grip. Resize keeps `originStart` and only moves the base; move follows the cursor.
+22. **Tailwind v4 here emits nothing for `bg-gradient-to-*`.** Use the arbitrary form `bg-[linear-gradient(...)]`. Likewise `accent-[color:var(--x)]` is unreliable — `accent-<token>` works because the token is in `@theme`.
 
 ## 6. Open threads / next actions
 
@@ -105,7 +110,7 @@ Assert these when touching the engine. If a change breaks one, stop and check `R
 | N-5 | Persistence (T-605) | Eng | Also unlocks multi-device and "what changed" diffs |
 | N-6 | Decide Q3 from PRD §11 (deadline = midnight vs stated time) | Product | Currently midnight of the stated date |
 | N-7 | Cost pass: cache parse results per input hash | Eng | Avoids re-parsing identical task text on regenerate |
-| N-8 | Browser-level verification (T-507) | Eng | Playwright: plan → drag a block → pin survives → approve → undo. No browser exists in the build sandbox, so drag/OAuth/responsive remain reasoned-about rather than clicked. |
+| N-8 | Real-browser verification (T-507) | Eng | Playwright: paint, layout, responsive, and the OAuth redirect. jsdom now covers the *logic* of drag/resize/keyboard (18 assertions), so what remains is pixels, not behaviour. |
 | N-9 | `scripts/agent-check.ts` should carry pins across turns | Eng | The harness currently sends `pins: []`, so cross-message pin persistence is untested outside the store. |
 
 ## 7. Session log
@@ -113,6 +118,7 @@ Assert these when touching the engine. If a change breaks one, stop and check `R
 | Date | What happened |
 | --- | --- |
 | 2026-10-14 | Repo initialised (LICENSE only). Product spec'd: PRD, ARCHITECTURE, RULES, DESIGN, TASK, MEMORY. MVP implemented end to end: deterministic week scheduler with explainable placement, LangChain agent (5 tools, 4 providers, deterministic demo reasoner), zod-validated API surface, Google Calendar OAuth + free/busy + idempotent approved sync, and a full cut-paper diorama design system + planner workspace. Decisions D-001…D-012 recorded. |
+| 2026-10-14 | UI round. Added a jsdom harness (`tests/harness/`) that executes the components against the real route handlers, agent and engine, plus 18 assertions in `tests/ui.test.ts` (drag, resize, keyboard parity, free-text intake, chat, calendar states, the full page). The very first run found **three shipped bugs in drag and drop** — the flagship interaction — none of which static review caught: a drop was silently discarded (§5.19), grabbing a tile near its top threw it to the start of the day (§5.20), and resizing slid the block's start to the grip (§5.21). All fixed and covered. Also: `Dry run` was gated behind a connected Google account, which contradicted D-015 — now it works unconfigured. ADR D-018 records the lesson: execute the UI, don't read it. |
 | 2026-10-14 | Verification round. Added 46 assertions (engine invariants + agent/adapters); the tests immediately caught four real defects, all fixed: (1) `z.string().datetime()` rejected the engine's own wall-clock deadlines, breaking every follow-up request — D-013; (2) ritual tiles could be laid over meetings — D-016; (3) refused pins were silently relocated — D-014; (4) "do not use the weekend" was matched by the weekend-*enable* rule — gotcha 16. Also: dry-run sync no longer needs Google config (D-015), refinement replies now report preference and block-level movement (D-017), hydration-safe calendar dates (gotcha 17), block explanations wired end-to-end through `explain_block`, README + `.env.example` rewritten, `package.json` `scaffold` → `paperweek` with `test`/`smoke`/`agent:check`/`scene` scripts. |
 
 ## 8. How to use this file

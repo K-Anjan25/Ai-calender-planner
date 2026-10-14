@@ -85,8 +85,9 @@ A task is only ✅ when **lint + build pass** and its acceptance criteria are me
 | T-504 | A11y sweep: keyboard grid, focus rings, aria labels, reduced motion | Design+Eng | T-503 | 🟡 | Keyboard parity + focus rings implemented; needs a real browser pass (see T-507) |
 | T-505 | Responsive sweep 1440 / 1280 / 1024 / 768 / 390 | Design | T-503 | 🟡 | Layouts implemented + verified in markup/CSS; visual confirmation still browser-bound |
 | T-506 | README with setup, env matrix, demo walkthrough | Eng | T-502 | ✅ | Copy-paste runnable; `.env.example` included |
-| T-507 | Browser-level verification (Playwright: plan → drag → approve) | Eng | T-506 | ⬜ | No headless browser in the build sandbox — UI verified statically only |
+| T-507 | Real-browser verification (Playwright: paint, responsive, OAuth redirect) | Eng | T-506 | ⬜ | No headless browser in the build sandbox. Behaviour is covered by T-509; pixels are not. |
 | T-508 | Agent + adapter contract tests (`tests/agent.test.ts`) | Eng | T-205 | ✅ | 46 assertions over zod boundaries, lexicons, Google adapter |
+| T-509 | jsdom UI harness + interaction tests (`tests/ui.test.ts`) | Eng | T-410 | ✅ | 18 assertions driving real pointer/keyboard events through store → route → engine. Found and fixed three drag bugs (§Bugs found) |
 
 ## Phase 6 — Post-MVP backlog (not in this build)
 
@@ -111,16 +112,31 @@ A task is only ✅ when **lint + build pass** and its acceptance criteria are me
 | Types | `npx tsc --noEmit` | clean |
 | Lint | `npm run lint` | 0 errors, 0 warnings |
 | Build | `NODE_OPTIONS=--max-old-space-size=3072 npm run build` | succeeds (all routes) |
-| Tests | `npm test` | 46 / 46 pass |
+| Tests | `npm test` | 64 / 64 pass (scheduler, agent, UI-in-jsdom) |
 | Engine smoke | `npm run smoke` | demo FITS 78% · overloaded OVERBOOKED · invariants 0/0/0 |
 | Agent walkthrough | `npm run agent:check` | 5 conversational turns, all as designed |
 | API | `POST /api/plan`, `POST /api/chat`, `POST /api/calendar/sync` | 200 with verified payloads |
 | Routes | `/`, `/planner`, `/api/health` | 200 |
 | Art | `npm run scene` | four scenes rasterised and inspected |
 
-**Not verified, and why:** there is no headless browser in the build sandbox, so nothing above is a
-DOM-level observation. Drag-and-drop, cookie OAuth, and responsive behaviour were reasoned about
-from the source and the rendered HTML, not clicked. Tracked as T-507.
+**Not verified, and why:** there is no headless browser in the build sandbox. Components are now
+*executed* in jsdom (T-509), which covers behaviour but not paint — overlap, overflow, focus rings,
+responsive reflow and the OAuth redirect are still unobserved. Tracked as T-507.
+
+---
+
+## Bugs found by executing the UI (T-509)
+
+Three defects in the flagship interaction, every one of them invisible to review and to the build:
+
+| Bug | Symptom for a user | Cause |
+| --- | --- | --- |
+| A drop was discarded | Drag a block, it follows the cursor, release — it snaps back and nothing happens. | `endDrag` read `ghost` from the closure in which `pointerup` was registered, where it is still `null`. Now mirrored in a ref. |
+| Grab near the top threw it up | Grab a tile by its top edge and drop it: it lands at the very start of the day. | `grabOffsetMin` included `day.windowStart` — an absolute minute subtracted from an absolute minute. Now a within-block offset. |
+| Resizing slid the block | Pull the bottom grip down and the whole block moves down with it. | The pointer position drove `startMin` in both gestures. Resize now holds `originStart`. |
+
+Two further inconsistencies were found the same way: `Dry run` was disabled unless Google was
+connected (contradicting D-015), and the calendar panel's unconfigured state was never asserted.
 
 ---
 

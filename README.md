@@ -48,11 +48,16 @@ mode**: a realistic week, a deterministic local reasoner standing in for the mod
 that says exactly that. The planner is fully functional on that path.
 
 ```bash
-npm test             # 46 assertions: engine invariants, agent contract, Google adapter
+npm test             # 64 assertions: engine invariants, agent contract, and the UI in jsdom
+npm run test:ui      # just the interaction tests (drag, resize, keyboard, intake, chat)
 npm run agent:check  # walk the agent through five conversational turns
 npm run smoke        # capacity/demand baselines for the demo + overloaded weeks
 npm run build        # production build
 ```
+
+The UI tests are not snapshots. They render the real components in jsdom, route `fetch` to the real
+API handlers, and drive real pointer and keyboard events through to the real engine — which is how
+three shipped bugs in drag-and-drop were found (see `docs/TASK.md` § *Bugs found by executing the UI*).
 
 > Heavy build boxes: `NODE_OPTIONS=--max-old-space-size=3072 npm run build` if the default heap
 > OOMs during the production build — it does on small containers.
@@ -132,7 +137,7 @@ src/
     google/                scopes · oauth · calendar   ← freebusy, drift, upsert, rollback
     diorama.ts             the cut-paper scene geometry
     store/                 zustand session store (localStorage-persisted)
-tests/                     engine invariants · agent contract · adapters
+tests/                     engine invariants · agent contract · UI interactions (jsdom)
 scripts/                   smoke baselines, agent walkthrough, scene renderer
 docs/                      PRD · ARCHITECTURE · RULES · DESIGN · TASK · MEMORY
 ```
@@ -179,6 +184,8 @@ instead of arguing with it. If a pin is impossible — a meeting is already ther
 
 ## Known limits
 
+- **No real-browser test.** jsdom executes behaviour but paints nothing: overlap, overflow, focus
+  rings and responsive reflow are unobserved (TASK.md T-507).
 - Single week, single timezone per plan. Multi-week horizons and travel time are not modelled.
 - The local reasoner is a rule-based interpreter, not a model. It handles the phrasings in
   `scripts/agent-check.ts` very well and unusual framing less well — that's what `LLM_PROVIDER` is for.

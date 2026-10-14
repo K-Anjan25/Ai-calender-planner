@@ -17,8 +17,26 @@ import { PaperWell } from '@/components/paper/PaperSheet'
  * not a source of truth. Keyboard operation mirrors the pointer one exactly.
  */
 
-const HOUR_HEIGHT = 44
+/** Pixels per hour. The drag maths, the ghost, and the test harness all measure against this. */
+export const HOUR_HEIGHT = 44
 const SNAP = SNAP_MINUTES
+
+/** Where a dragged tile currently wants to land, before the server agrees. */
+type Ghost = { blockId: string; date: string; startMin: number; minutes: number }
+
+/** Everything a drag needs to survive re-renders. Held in a ref, not state: it must not re-render. */
+type DragDescriptor = {
+  blockId: string
+  taskId: string
+  mode: 'move' | 'resize'
+  grabOffsetMin: number
+  startX: number
+  startY: number
+  originDate: string
+  originStart: number
+  originMinutes: number
+  moved: boolean
+}
 
 export function WeekGrid({
   blocks,
@@ -44,19 +62,21 @@ export function WeekGrid({
     [preferences, resolvedStart],
   )
   const { selectedBlockId, selectBlock, pinBlock, status, filters } = usePlanner()
-  const dragRef = useRef<{
-    blockId: string
-    taskId: string
-    mode: 'move' | 'resize'
-    grabOffsetMin: number
-    startX: number
-    startY: number
-    originDate: string
-    originStart: number
-    originMinutes: number
-    moved: boolean
-  } | null>(null)
-  const [ghost, setGhost] = useState<{ blockId: string; date: string; startMin: number; minutes: number } | null>(null)
+  const dragRef = useRef<DragDescriptor | null>(null)
+  const [ghost, setGhostState] = useState<Ghost | null>(null)
+  /**
+   * The ghost, mirrored into a ref.
+   *
+   * `pointerup` is registered while the drag *starts*, so its listener closes over the `ghost` of
+   * that render — which is still `null`. Reading the ref instead of the captured state is what makes
+   * a drop land: without it the tile follows the cursor and then silently snaps back, and the plan
+   * never changes. (Found by `tests/ui.test.ts`, not by reading the code.)
+   */
+  const ghostRef = useRef<Ghost | null>(null)
+  const setGhost = useCallback((next: Ghost | null) => {
+    ghostRef.current = next
+    setGhostState(next)
+  }, [])
   const [draggingId, setDraggingId] = useState<string | null>(null)
   /** The strip of day columns — drag maths must be measured against this, not the whole grid,
    *  or the hour-label gutter silently shifts every drop by half a day. */
@@ -87,22 +107,30 @@ export function WeekGrid({
 
       const rect = container.getBoundingClientRect()
       const minuteRaw = target.windowStart + ((event.clientY - rect.top) / HOUR_HEIGHT) * 60
-      const snapped = Math.round((minuteRaw - (drag.mode === 'move' ? drag.grabOffsetMin : 0)) / SNAP) * SNAP
-      const minutes = drag.mode === 'resize' ? Math.max(SNAP, Math.round((minuteRaw - drag.originStart) / SNAP) * SNAP) : drag.originMinutes
-      const maxStart = target.windowEnd - minutes
-      const startMin = Math.max(target.windowStart, Math.min(maxStart, snapped))
+      const span = target.windowEnd - target.windowStart
+
+      // Two gestures, two rules. A *move* follows the cursor, offset by wherever the tile was
+      // grabbed. A *resize* keeps the start where it was and only moves the base — deriving the
+      // start from the pointer here would slide the whole block down as the user stretches it.
+      const minutes =
+        drag.mode === 'resize'
+          ? Math.min(span, Math.max(SNAP, Math.round((minuteRaw - drag.originStart) / SNAP) * SNAP))
+          : drag.originMinutes
+      const requested =
+        drag.mode === 'resize' ? drag.originStart : Math.round((minuteRaw - drag.grabOffsetMin) / SNAP) * SNAP
+      const startMin = Math.max(target.windowStart, Math.min(target.windowEnd - minutes, requested))
 
       if (Math.abs(event.clientX - drag.startX) > 3 || Math.abs(event.clientY - drag.startY) > 3) drag.moved = true
       setGhost({ blockId: drag.blockId, date: target.date, startMin, minutes })
     },
-    [days],
+    [days, setGhost],
   )
 
   const endDrag = useCallback(() => {
     window.removeEventListener('pointermove', onPointerMove)
     window.removeEventListener('pointerup', endDrag)
     const drag = dragRef.current
-    const current = ghost
+    const current = ghostRef.current
     dragRef.current = null
     setDraggingId(null)
     setGhost(null)
@@ -112,7 +140,7 @@ export function WeekGrid({
     if (!day) return
     if (current.date === drag.originDate && current.startMin === drag.originStart && current.minutes === drag.originMinutes) return
     void pinBlock(drag.blockId, current.date, current.startMin, current.minutes)
-  }, [days, ghost, onPointerMove, pinBlock])
+  }, [days, onPointerMove, pinBlock, setGhost])
 
   const beginDrag = useCallback(
     (event: React.PointerEvent<HTMLElement>, block: PlacedBlock, mode: 'move' | 'resize') => {
@@ -122,12 +150,15 @@ export function WeekGrid({
       const day = days.find((d) => d.date === block.date)
       if (!day) return
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-      const minuteAtPointer = day.windowStart + ((event.clientY - rect.top) / rect.height) * block.minutes
+      // An offset *within the block*, in minutes. Adding `day.windowStart` here makes the drop land
+      // at the start of the day instead of under the cursor, because the move handler subtracts this
+      // from an absolute minute.
+      const minuteAtPointer = rect.height > 0 ? ((event.clientY - rect.top) / rect.height) * block.minutes : 0
       dragRef.current = {
         blockId: block.id,
         taskId: block.taskId,
         mode,
-        grabOffsetMin: mode === 'move' ? minuteAtPointer : 0,
+        grabOffsetMin: mode === 'move' ? Math.max(0, Math.min(block.minutes, minuteAtPointer)) : 0,
         startX: event.clientX,
         startY: event.clientY,
         originDate: block.date,
@@ -140,7 +171,7 @@ export function WeekGrid({
       window.addEventListener('pointermove', onPointerMove)
       window.addEventListener('pointerup', endDrag)
     },
-    [days, endDrag, onPointerMove],
+    [days, endDrag, onPointerMove, setGhost],
   )
 
   /**
@@ -265,7 +296,8 @@ export function WeekGrid({
             ))}
           </div>
 
-          <div ref={columnsRef} className="flex min-w-0 flex-1">
+          {/* data-day-strip is the measurement target for drag maths and for the jsdom UI tests. */}
+          <div ref={columnsRef} data-day-strip="" className="flex min-w-0 flex-1">
             {days.map((day) => (
               <DayColumn
                 key={day.date}
@@ -413,6 +445,8 @@ function DayColumn({
 
   return (
     <div
+      data-day-date={day.date}
+      data-window-start={day.windowStart}
       className={clsx(
         'relative min-w-0 flex-1 rounded-[var(--radius-cut-xs)] border border-[color:rgba(120,98,70,0.10)]',
         off ? 'bg-paper-sand/40' : 'bg-paper-ivory/85',

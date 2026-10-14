@@ -366,11 +366,18 @@ Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 
 | **Lexicon tests** | local reasoner | Every phrasing in `scripts/agent-check.ts` asserted for the *values* it must produce (durations, weekday deadlines, repeat days, energy, refusals, pins). |
 | **Repair tests** | agent plumbing | `extractJson` on fenced/chatty/broken model output; `normaliseTasks` uniqueness and `estimatedByAI`; `mergeTasks` not duplicating on re-parse. |
 | **Adapter tests** | calendar | Free/busy clamped to the week; every payload carries `paperweekBlockId`/`paperweekPlanId` and the `· PW` marker. |
-| **A11y** | UI | Keyboard parity (move/resize/jump) and focus rings are implemented in `WeekGrid`; a real browser pass is still owed (TASK.md T-507). |
+| **UI behaviour** | components | `tests/ui.test.ts` — jsdom, real components, real routes, real engine. Drag → pin → server replan (honoured and refused), resize, keyboard parity, free-text intake, chat, calendar gates, full-page render. |
+| **A11y** | UI | Keyboard parity (move/resize/jump) and focus rings are *exercised* by the UI tests; focus-visible styling and screen-reader output still want a real browser (TASK.md T-507). |
 
-**What is deliberately not claimed:** there is no DOM-level or end-to-end browser test in this build.
-Everything in the table above runs headless in-process, and the UI's static behaviour was reasoned
-from source and rendered HTML rather than clicked through.
+**The harness.** `tests/harness/dom.ts` installs jsdom, routes `fetch` to the real handlers, and
+shims the geometry jsdom cannot compute (`getBoundingClientRect`, `clientWidth`) from the same
+constants the grid uses — `HOUR_HEIGHT` is asserted equal in both places, so a scale change fails
+loudly instead of silently. Each day column publishes its own display window as `data-window-start`,
+which is how a test computes where 13:30 is without reimplementing the layout.
+
+**What is still not claimed.** jsdom has no layout engine, so nothing here proves *pixels*: no
+overlap, no overflow, no focus ring, no responsive reflow, and the OAuth redirect cannot be followed.
+Those remain T-507.
 
 ## 12. Performance
 

@@ -8,11 +8,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test tests/*.test.ts",
-    "test:scheduler": "node --import tsx --test tests/scheduler.test.ts",
+    "test": "tsx --tsconfig tsconfig.tests.json --test tests/*.test.ts",
+    "test:scheduler": "tsx --tsconfig tsconfig.tests.json --test tests/scheduler.test.ts",
     "agent:check": "tsx scripts/agent-check.ts",
     "smoke": "tsx scripts/smoke.ts",
-    "scene": "tsx scripts/scene-svg.ts && node scripts/render-scene.mjs"
+    "scene": "tsx scripts/scene-svg.ts && node scripts/render-scene.mjs",
+    "test:ui": "tsx --tsconfig tsconfig.tests.json --test tests/ui.test.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json"
   },
   "dependencies": {
     "@langchain/anthropic": "^1.5.12",
@@ -35,11 +37,15 @@
     "@eslint/eslintrc": "^3",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.27",
+    "jsdom": "^30.1.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

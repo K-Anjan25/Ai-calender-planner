@@ -137,10 +137,12 @@ export function CalendarPanel() {
           </ul>
 
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            {/* A dry run writes nothing, so it must not require a connected account: seeing exactly
+                what would be written is how the user decides whether to connect at all (D-015). */}
             <PaperButton
               size="sm"
               variant="flat"
-              disabled={!connected}
+              disabled={taskBlocks.length === 0}
               onClick={() => {
                 setShowPreflight(true)
                 void dryRun()
