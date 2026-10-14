@@ -91,13 +91,13 @@ describe('events', () => {
     const block = plan.blocks.find((item) => item.kind === 'task')
     assert.ok(block)
     const ics = buildIcs({ proposal: plan })
-    const event = events(ics).find((lines) => lines.includes(`UID:${block.id}@paperweek`))
+    const event = events(ics).find((lines) => lines.includes(`UID:${block.id}@calendra`))
     assert.ok(event, 'the block has no event')
-    assert.ok(event.some((line) => line.startsWith('X-PAPERWEEK-PLAN:')))
-    assert.ok(event.some((line) => line.startsWith(`X-PAPERWEEK-BLOCK-ID:${block.id}`)))
-    assert.ok(event.some((line) => line.startsWith(`X-PAPERWEEK-PRIORITY:${block.priority}`)))
+    assert.ok(event.some((line) => line.startsWith('X-CALENDRA-PLAN:')))
+    assert.ok(event.some((line) => line.startsWith(`X-CALENDRA-BLOCK-ID:${block.id}`)))
+    assert.ok(event.some((line) => line.startsWith(`X-CALENDRA-PRIORITY:${block.priority}`)))
     const summary = event.find((line) => line.startsWith('SUMMARY:'))
-    assert.ok(summary?.includes('· PW'), 'the Paperweek marker is missing from the title')
+    assert.ok(summary?.includes('· CAL'), 'the Calendra marker is missing from the title')
     const description = event.find((line) => line.startsWith('DESCRIPTION:'))
     assert.ok((description ?? '').length > 30, 'the event explains nothing')
   })
@@ -117,10 +117,10 @@ describe('events', () => {
     const plan = proposal()
     const chosen = plan.blocks.filter((block) => block.kind === 'task').slice(0, 3)
     const ics = buildIcs({ proposal: plan, approvedBlockIds: chosen.map((block) => block.id) })
-    const exported = events(ics).map((lines) => lines.find((line) => line.startsWith('X-PAPERWEEK-BLOCK-ID:')))
+    const exported = events(ics).map((lines) => lines.find((line) => line.startsWith('X-CALENDRA-BLOCK-ID:')))
     assert.deepEqual(
       exported.sort(),
-      chosen.map((block) => `X-PAPERWEEK-BLOCK-ID:${block.id}`).sort(),
+      chosen.map((block) => `X-CALENDRA-BLOCK-ID:${block.id}`).sort(),
     )
   })
 
@@ -130,7 +130,7 @@ describe('events', () => {
     const ics = buildIcs({ proposal: plan })
     const uids = events(ics).map((lines) => lines.find((line) => line.startsWith('UID:')))
     for (const block of plan.blocks.filter((item) => item.kind === 'lunch')) {
-      assert.ok(!uids.includes(`UID:${block.id}@paperweek`), 'a lunch row was exported as an event')
+      assert.ok(!uids.includes(`UID:${block.id}@calendra`), 'a lunch row was exported as an event')
     }
   })
 
@@ -139,7 +139,7 @@ describe('events', () => {
     const ics = buildIcs({ proposal: plan })
     const lines = contentLines(ics)
     assert.ok(lines.includes('BEGIN:VJOURNAL'))
-    assert.ok(lines.some((line) => line.startsWith('SUMMARY:Paperweek: ')))
+    assert.ok(lines.some((line) => line.startsWith('SUMMARY:Calendra: ')))
     assert.ok(ics.includes(plan.report.headline.slice(0, 20).replace(/[;,]/g, '')), 'the verdict is missing')
   })
 })
@@ -166,13 +166,13 @@ describe('text handling', () => {
       blocks: plan.blocks.map((block, index) => (index === 0 ? { ...block, title: 'Review, then send; done' } : block)),
     }
     const ics = buildIcs({ proposal: withComma })
-    assert.ok(ics.includes('SUMMARY:Review\\, then send\\; done · PW'))
+    assert.ok(ics.includes('SUMMARY:Review\\, then send\\; done · CAL'))
   })
 
   it('names the file after the week, safely', () => {
     const plan = proposal()
     const name = icsFilename(plan)
-    assert.match(name, /^paperweek-[A-Za-z0-9-]+\.ics$/)
+    assert.match(name, /^calendra-[A-Za-z0-9-]+\.ics$/)
     assert.ok(!/[/\\:]/.test(name), 'the filename contains a path separator')
   })
 })

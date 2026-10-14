@@ -82,7 +82,7 @@ type Actions = {
   rollback(): Promise<void>
 }
 
-const STORAGE_KEY = 'paperweek.session.v1'
+const STORAGE_KEY = 'calendra.session.v1'
 
 function persist(state: Pick<State, 'tasks' | 'preferences' | 'demoSet' | 'mode'>) {
   if (typeof window === 'undefined') return
@@ -448,7 +448,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = `paperweek-${proposal.weekStart}.ics`
+      anchor.download = `calendra-${proposal.weekStart}.ics`
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()

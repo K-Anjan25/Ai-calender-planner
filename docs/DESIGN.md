@@ -1,4 +1,4 @@
-# Paperweek — Design Language: **Cut-Paper Diorama**
+# Calendra — Design Language: **Cut-Paper Diorama**
 
 | Field | Value |
 | --- | --- |
@@ -16,7 +16,7 @@ A paper diorama is a **box of stacked layers**. Each sheet is cut, dyed, and glu
 in front of the one behind it. Depth comes from the *shadow between layers*, never from gradients.
 The charm comes from imperfection: hand-cut edges, visible fibre, slightly-off registration.
 
-Paperweek renders a week as a diorama. Days are sheets. Tasks are cut-out tiles glued onto them.
+Calendra renders a week as a diorama. Days are sheets. Tasks are cut-out tiles glued onto them.
 The user's real meetings are the printed layer everything else must be placed around.
 
 **Style mandate:** texture, depth, and cut-paper materiality — **no people, no characters, no faces.**
@@ -168,6 +168,20 @@ restricted networks) and always with a full local fallback so the design survive
 
 **Voice:** warm, plain, specific, never chirpy. "3 tasks don't fit this week" — not "Uh oh! Your week is
 super packed!". No exclamation marks in system copy.
+
+### 8b. Texture, and the one place fidelity yields to speed
+
+The paper is built from two SVG-turbulence noise layers (`paper-fibre` across the grain, `paper-tooth`
+across the matte) plus a fixed studio grain, all at 3.5–5% opacity. They are **drawn with a normal
+blend, not `mix-blend-mode: multiply`** — which is the truer physical model, and the reason it was
+written that way first. A blended layer cannot be composited on its own: the browser must blend it
+against everything beneath it, so every repaint underneath forces a re-blend of the layer. With the
+texture on every chip, every button and a fixed full-viewport overlay, dragging a block meant a
+screen-sized composite per frame (the INP report that started this, D-023).
+
+Greyscale noise at 3.5–5% over cream differs by an imperceptible amount between the two blend modes,
+so the material survives intact and the frames stay cheap. If you are tempted to put the blend back,
+read D-023 first — and re-run `npm run test:perf`.
 
 ## 9. Components
 

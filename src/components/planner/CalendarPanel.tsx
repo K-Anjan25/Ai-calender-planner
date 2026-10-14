@@ -61,7 +61,7 @@ export function CalendarPanel() {
         ) : !connected ? (
           <div className="space-y-2">
             <p className="text-[12px] leading-relaxed text-ink-soft">
-              Connect to import your real meetings as fixed context and to push approved blocks back. Paperweek reads free/busy
+              Connect to import your real meetings as fixed context and to push approved blocks back. Calendra reads free/busy
               only — it never reads event details it does not need.
             </p>
             {/* A real anchor: OAuth consent must be a full navigation, not a client route. */}

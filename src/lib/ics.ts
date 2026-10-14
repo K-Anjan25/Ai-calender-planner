@@ -24,7 +24,7 @@ export type IcsInput = {
   includeMeetings?: boolean
 }
 
-const PRODID = '-//Paperweek//AI calendar planner//EN'
+const PRODID = '-//Calendra//AI calendar planner//EN'
 const MAX_LINE_OCTETS = 75
 
 /** RFC 5545 §3.3.11: backslash, semicolon, comma and newline are the only escapes in TEXT. */
@@ -83,7 +83,7 @@ export function buildIcs(input: IcsInput): string {
     `PRODID:${PRODID}`,
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${escapeIcsText(`Paperweek · ${proposal.weekLabel}`)}`,
+    `X-WR-CALNAME:${escapeIcsText(`Calendra · ${proposal.weekLabel}`)}`,
     `X-WR-TIMEZONE:${proposal.preferences.timezone}`,
   ]
 
@@ -94,16 +94,16 @@ export function buildIcs(input: IcsInput): string {
       'BEGIN:VEVENT',
       // Stable and collision-proof: the same block re-exported keeps its identity, which is what
       // makes "import again after editing" update the event instead of duplicating it.
-      `UID:${block.id}@paperweek`,
+      `UID:${block.id}@calendra`,
       `DTSTAMP:${planStamp(proposal.generatedAt)}`,
       `DTSTART:${stamp(block.date, block.startMin)}`,
       `DTEND:${stamp(block.date, block.endMin)}`,
-      `SUMMARY:${escapeIcsText(`${block.title} · PW`)}`,
+      `SUMMARY:${escapeIcsText(`${block.title} · CAL`)}`,
       `DESCRIPTION:${escapeIcsText(describe(block, proposal))}`,
-      `CATEGORIES:${escapeIcsText(meeting ? 'Paperweek meeting' : `Paperweek, ${block.category}`)}`,
-      `X-PAPERWEEK-BLOCK-ID:${block.id}`,
-      `X-PAPERWEEK-PLAN:${escapeIcsText(`${proposal.weekStart}_${proposal.generatedAt}`)}`,
-      `X-PAPERWEEK-PRIORITY:${block.priority}`,
+      `CATEGORIES:${escapeIcsText(meeting ? 'Calendra meeting' : `Calendra, ${block.category}`)}`,
+      `X-CALENDRA-BLOCK-ID:${block.id}`,
+      `X-CALENDRA-PLAN:${escapeIcsText(`${proposal.weekStart}_${proposal.generatedAt}`)}`,
+      `X-CALENDRA-PRIORITY:${block.priority}`,
       'TRANSP:OPAQUE',
       'END:VEVENT',
     )
@@ -111,10 +111,10 @@ export function buildIcs(input: IcsInput): string {
 
   lines.push(
     'BEGIN:VJOURNAL',
-    `UID:paperweek-note-${proposal.weekStart}@paperweek`,
+    `UID:calendra-note-${proposal.weekStart}@calendra`,
     `DTSTAMP:${planStamp(proposal.generatedAt)}`,
     `DTSTART;VALUE=DATE:${proposal.weekStart.replace(/-/g, '')}`,
-    `SUMMARY:${escapeIcsText(`Paperweek: ${proposal.report.headline}`)}`,
+    `SUMMARY:${escapeIcsText(`Calendra: ${proposal.report.headline}`)}`,
     `DESCRIPTION:${escapeIcsText(
       [
         proposal.report.headline,
@@ -126,7 +126,7 @@ export function buildIcs(input: IcsInput): string {
           ? `Warnings: ${proposal.report.warnings.map((warning) => warning.message).join(' ')}`
           : '',
         '',
-        `Exported from Paperweek for the week of ${proposal.weekStart}–${lastDay}.`,
+        `Exported from Calendra for the week of ${proposal.weekStart}–${lastDay}.`,
       ]
         .filter(Boolean)
         .join('\n'),
@@ -147,7 +147,7 @@ function describe(block: PlacedBlock, proposal: PlanProposal): string {
     block.chunkCount > 1 ? `Session ${block.chunkIndex + 1} of ${block.chunkCount}` : '',
     task?.deadline ? `Deadline ${task.deadline}` : '',
     '',
-    'Planned with Paperweek. Move it here and Paperweek will plan around your change next time.',
+    'Planned with Calendra. Move it here and Calendra will plan around your change next time.',
   ]
     .filter(Boolean)
     .join('\n')
@@ -156,5 +156,5 @@ function describe(block: PlacedBlock, proposal: PlanProposal): string {
 /** A filename a browser and a filesystem both accept. */
 export function icsFilename(proposal: PlanProposal): string {
   const label = proposal.weekLabel.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '')
-  return `paperweek-${label || proposal.weekStart}.ics`
+  return `calendra-${label || proposal.weekStart}.ics`
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { Sun, Coffee } from 'lucide-react'
 import { SNAP_MINUTES, WEEKDAY_SHORT, type BusyEvent, type PlacedBlock, type Preferences, type Weekday } from '@/lib/types'
@@ -23,6 +23,10 @@ const SNAP = SNAP_MINUTES
 
 /** Where a dragged tile currently wants to land, before the server agrees. */
 type Ghost = { blockId: string; date: string; startMin: number; minutes: number }
+
+/** Shared empties: `memo` compares by identity, so a fresh `[]` per render would defeat it. */
+const NO_BLOCKS: PlacedBlock[] = []
+const NO_MEETINGS: BusyEvent[] = []
 
 /** Everything a drag needs to survive re-renders. Held in a ref, not state: it must not re-render. */
 type DragDescriptor = {
@@ -81,6 +85,20 @@ export function WeekGrid({
   /** The strip of day columns — drag maths must be measured against this, not the whole grid,
    *  or the hour-label gutter silently shifts every drop by half a day. */
   const columnsRef = useRef<HTMLDivElement>(null)
+  /**
+   * The strip's geometry, measured **once when the drag starts**.
+   *
+   * Reading `clientWidth`/`getBoundingClientRect()` inside the move handler looks harmless and is
+   * the classic performance trap: React has already written the previous frame's transform, so the
+   * read forces the browser to recompute style and layout before it can answer — a synchronous
+   * reflow per `pointermove`. A 120 Hz mouse delivers ~120 of those a second, on top of the render
+   * that follows, which is precisely how an interaction ends up over the INP budget
+   * (`tests/perf.test.ts` measures this; the numbers are in MEMORY.md §5b).
+   *
+   * A gesture cannot scroll the page, and `clientX/clientY` are viewport-relative exactly like
+   * `getBoundingClientRect()`, so the measurement stays valid for the whole drag.
+   */
+  const geometryRef = useRef<{ left: number; top: number; dayWidth: number } | null>(null)
 
   const visible = useMemo(() => {
     const energy = filters.energy
@@ -93,20 +111,37 @@ export function WeekGrid({
     })
   }, [blocks, filters])
 
+  /**
+   * Partition once instead of filtering per column on every render.
+   *
+   * `visible.filter(...)` inside the map handed each column a brand-new array, so every column
+   * re-rendered on every pointer move even though only the dragged one can have changed. The arrays
+   * below keep their identity until the blocks or the filters actually do.
+   */
+  const byDay = useMemo(() => {
+    const blocksFor = new Map<string, PlacedBlock[]>()
+    const meetingsFor = new Map<string, BusyEvent[]>()
+    for (const day of days) {
+      blocksFor.set(day.date, [])
+      meetingsFor.set(day.date, [])
+    }
+    for (const block of visible) blocksFor.get(block.date)?.push(block)
+    for (const event of busy) meetingsFor.get(event.date)?.push(event)
+    return { blocksFor, meetingsFor }
+  }, [busy, days, visible])
+
   const minuteToY = useCallback((minute: number, day: DayMeta) => ((minute - day.windowStart) / 60) * HOUR_HEIGHT, [])
 
   const onPointerMove = useCallback(
     (event: PointerEvent) => {
       const drag = dragRef.current
-      const container = columnsRef.current
-      if (!drag || !container) return
-      const dayWidth = container.clientWidth / 7
-      const dayIndex = Math.max(0, Math.min(6, Math.floor((event.clientX - container.getBoundingClientRect().left) / dayWidth)))
+      const geometry = geometryRef.current
+      if (!drag || !geometry) return
+      const dayIndex = Math.max(0, Math.min(6, Math.floor((event.clientX - geometry.left) / geometry.dayWidth)))
       const target = days[dayIndex]
       if (!target) return
 
-      const rect = container.getBoundingClientRect()
-      const minuteRaw = target.windowStart + ((event.clientY - rect.top) / HOUR_HEIGHT) * 60
+      const minuteRaw = target.windowStart + ((event.clientY - geometry.top) / HOUR_HEIGHT) * 60
       const span = target.windowEnd - target.windowStart
 
       // Two gestures, two rules. A *move* follows the cursor, offset by wherever the tile was
@@ -132,6 +167,7 @@ export function WeekGrid({
     const drag = dragRef.current
     const current = ghostRef.current
     dragRef.current = null
+    geometryRef.current = null
     setDraggingId(null)
     setGhost(null)
     if (!drag || !current || !drag.moved) return
@@ -149,6 +185,12 @@ export function WeekGrid({
       event.stopPropagation()
       const day = days.find((d) => d.date === block.date)
       if (!day) return
+      const strip = columnsRef.current
+      if (!strip) return
+      // One measurement for the whole gesture — see `geometryRef`. The tile's own rect is read here
+      // too, because the grab offset is relative to it and this runs once per drag, not per move.
+      const stripRect = strip.getBoundingClientRect()
+      geometryRef.current = { left: stripRect.left, top: stripRect.top, dayWidth: strip.clientWidth / 7 }
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
       // An offset *within the block*, in minutes. Adding `day.windowStart` here makes the drop land
       // at the start of the day instead of under the cursor, because the move handler subtracts this
@@ -302,9 +344,11 @@ export function WeekGrid({
               <DayColumn
                 key={day.date}
                 day={day}
-                blocks={visible.filter((block) => block.date === day.date)}
-                meetings={busy.filter((event) => event.date === day.date)}
-                ghost={ghost}
+                blocks={byDay.blocksFor.get(day.date) ?? NO_BLOCKS}
+                meetings={byDay.meetingsFor.get(day.date) ?? NO_MEETINGS}
+                /* Scoped to the target: the other six columns receive a stable `null`, so the
+                   memoised column skips them entirely while a drag is in flight. */
+                ghost={ghost && ghost.date === day.date ? ghost : null}
                 draggingId={draggingId}
                 selectedBlockId={selectedBlockId}
                 minuteToY={minuteToY}
@@ -416,7 +460,11 @@ function hourMarks(day?: DayMeta) {
   return marks
 }
 
-function DayColumn({
+/**
+ * One day. Memoised because a drag updates the ghost ~120×/second and only the column holding the
+ * dragged tile can look different; without this every column re-rendered for every move.
+ */
+const DayColumn = memo(function DayColumn({
   day,
   blocks,
   meetings,
@@ -510,7 +558,7 @@ function DayColumn({
       })}
     </div>
   )
-}
+})
 
 /** Lunch and blackout bands, so protected time is visible rather than merely respected. */
 function ProtectedBands({ day }: { day: DayMeta }) {

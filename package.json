@@ -1,5 +1,5 @@
 {
-  "name": "paperweek",
+  "name": "calendra",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test": "node scripts/run-tests.mjs",
     "test:scheduler": "node scripts/run-tests.mjs tests/scheduler.test.ts",
+    "test:perf": "node scripts/run-tests.mjs tests/perf.test.ts",
     "agent:check": "tsx scripts/agent-check.ts",
     "smoke": "tsx scripts/smoke.ts",
     "scene": "tsx scripts/scene-svg.ts && node scripts/render-scene.mjs",

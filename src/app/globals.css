@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /* ==================================================================
-   PAPERWEEK — Design tokens (DESIGN.md §3–§7)
+   CALENDRA — Design tokens (DESIGN.md §3–§7)
    Single source of truth for the cut-paper diorama language.
    No component may hardcode a hex value (RULES.md L8).
    ================================================================== */
@@ -160,7 +160,15 @@
     border-radius: inherit;
     pointer-events: none;
     opacity: 0.05;
-    mix-blend-mode: multiply;
+    /*
+     * Deliberately *not* `mix-blend-mode: multiply`, though that is the truer paper model. A blended
+     * layer cannot be composited on its own: the browser must blend it against everything beneath it,
+     * so every repaint underneath forces a re-blend of this layer — and this class sits on every
+     * chip and button on screen (plus the full-viewport grain). During a drag that is a
+     * full-viewport composite per frame, which is exactly what an Interaction-to-Next-Paint warning
+     * is made of (MEMORY.md §5b). The noise is greyscale at 5%, so a normal blend darkens the paper
+     * by a visually indistinguishable amount and costs one ordinary layer instead.
+     */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.015' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23f)'/%3E%3C/svg%3E");
     background-size: 240px 240px;
   }
@@ -173,7 +181,7 @@
     border-radius: inherit;
     pointer-events: none;
     opacity: 0.035;
-    mix-blend-mode: multiply;
+    /* Unblended for the same reason as `.paper-fibre` — see the note there. */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23t)'/%3E%3C/svg%3E");
   }
 
@@ -242,7 +250,9 @@
     z-index: 40;
     pointer-events: none;
     opacity: 0.055;
-    mix-blend-mode: multiply;
+    /* Its own paint region: the overlay covers the viewport, so without this any repaint under it
+       invites a re-composite of the whole screen. Unblended — see `.paper-fibre`. */
+    contain: paint;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
   }
 

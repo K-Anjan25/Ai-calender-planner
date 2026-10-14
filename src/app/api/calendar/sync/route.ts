@@ -9,7 +9,7 @@ import { clearTokens, readTokens } from '@/lib/google/oauth'
  *
  * Rules this route exists to enforce:
  *  - explicit approval: `approvedBlockIds` is required, so nothing is ever written by implication (L2);
- *  - idempotent: events are upserted by their Paperweek marker, so re-syncing updates instead of
+ *  - idempotent: events are upserted by their Calendra marker, so re-syncing updates instead of
  *    duplicating (D-006);
  *  - honest about drift: if the calendar moved since planning, return 409 with the conflicting blocks
  *    rather than writing on top of someone's meeting.

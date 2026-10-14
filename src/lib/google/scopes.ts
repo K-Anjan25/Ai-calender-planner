@@ -11,10 +11,10 @@ export const CALENDAR_SCOPES = [
 ] as const
 
 /** Private extended properties written on every event we create. */
-export const MARKER_BLOCK = 'paperweekBlockId'
-export const MARKER_PLAN = 'paperweekPlanId'
-export const MARKER_KIND = 'paperweekBlock'
-export const BLOCK_LABEL_SUFFIX = ' · PW'
+export const MARKER_BLOCK = 'calendraBlockId'
+export const MARKER_PLAN = 'calendraPlanId'
+export const MARKER_KIND = 'calendraBlock'
+export const BLOCK_LABEL_SUFFIX = ' · CAL'
 
 export type CalendarConfig = {
   configured: boolean
@@ -41,5 +41,5 @@ export function isCalendarConfigured(): boolean {
   return calendarConfig().configured
 }
 
-export const TOKEN_COOKIE = 'pw_gcal'
-export const OAUTH_STATE_COOKIE = 'pw_gcal_state'
+export const TOKEN_COOKIE = 'calendra_gcal'
+export const OAUTH_STATE_COOKIE = 'calendra_gcal_state'

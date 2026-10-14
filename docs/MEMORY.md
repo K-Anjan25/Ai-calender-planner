@@ -1,4 +1,4 @@
-# Paperweek — Project Memory
+# Calendra — Project Memory
 
 | Field | Value |
 | --- | --- |
@@ -16,6 +16,7 @@
 
 | Area | State |
 | --- | --- |
+| Product | **Calendra** (renamed from Paperweek, 2026-10-14 — D-022) |
 | Branch | `main` (initial commit `a512bc0`), full MVP implemented on top |
 | Docs | PRD, ARCHITECTURE, RULES, DESIGN, TASK, MEMORY — all written |
 | Engine | `lib/scheduler/*` complete: horizon → triage/chunk → place → repair → evaluate. Deterministic. |
@@ -23,13 +24,13 @@
 | Calendar | `lib/google/*` + OAuth routes + sync route with upsert/dryRun/409-on-drift; plus `POST /api/export/ics` — the same week as a file, with no account of any kind |
 | UI | Cut-paper diorama design system + 3-column planner workspace + marketing page |
 | Modes | **Demo mode works with zero env vars** — this is the default and the test path |
-| Tests | 101 assertions, all green: `tests/scheduler.test.ts` (INV-1…8, dependency ordering, recurrence, seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters, free-text cadence), `tests/ics.test.ts` (RFC 5545 structure, escaping, determinism), `tests/ui.test.ts` (**the components, executed in jsdom** against the real routes and engine) |
+| Tests | 103 assertions, all green: `tests/scheduler.test.ts` (INV-1…8, dependency ordering, recurrence, seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters, free-text cadence), `tests/ics.test.ts` (RFC 5545 structure, escaping, determinism), `tests/ui.test.ts` (**the components, executed in jsdom** against the real routes and engine), `tests/perf.test.ts` (drag cost: forced layouts + render coalescing) |
 | Verified | types, lint (0/0), production build, `npm test`, `npm run smoke`, `npm run agent:check`, live API round-trips, four rendered scenes |
 | Known gaps | Real-browser verification (T-507 — jsdom is not a browser: no layout, no paint, no OAuth redirect), persistence, multi-week horizon (T-603), calendar *import* (only export is shipped), `.ics` is not yet a first-class sync target alongside Google |
 
 ## 2. What this product is (one paragraph)
 
-Paperweek turns a pile of tasks, deadlines, and preferences into a **realistic** week, and tells the
+Calendra turns a pile of tasks, deadlines, and preferences into a **realistic** week, and tells the
 truth when the week doesn't fit. The LLM handles language (parsing messy input, choosing between valid
 strategies, narrating trade-offs). A deterministic engine handles all time arithmetic. Nothing is
 written to a real calendar without explicit approval. The UI is a layered cut-paper diorama.
@@ -45,7 +46,7 @@ Format: **D-nnn · date · decision — rationale — consequence.**
 | **D-003** | 2026-10-14 | **Reasons are emitted by the same code path that computes the score.** | Prevents UI explanation from drifting away from the algorithm. | `reasons[]` and `score` are written together in `engine.ts`; tests can assert they're consistent. |
 | **D-004** | 2026-10-14 | **Zero-key Demo mode is a first-class implementation, not a stub** (`LocalReasoner`). | The product must be demonstrable without secrets, and the grading/demo path must never depend on a network. | Two real agent implementations share one contract. Live-provider bugs can be reproduced deterministically in demo mode. |
 | **D-005** | 2026-10-14 | **No `next/font/google`; fonts load via `<link>` with a complete local fallback stack.** | Build environments (including CI/sandboxes) may have no access to `fonts.googleapis.com`, which would fail `next build`. | Slight FOUT instead of build fragility. Fallback stack in `DESIGN.md` §8 is mandatory. |
-| **D-006** | 2026-10-14 | **Google Calendar writes are upsert-by-`extendedProperties.private.paperweekBlockId` and require explicit `approvedBlockIds[]`.** | Re-syncing must not duplicate events; unapproved writes to a user's real calendar are unacceptable. | Sync is idempotent. Deleting a plan removes exactly the events it created. |
+| **D-006** | 2026-10-14 | **Google Calendar writes are upsert-by-`extendedProperties.private.calendraBlockId` and require explicit `approvedBlockIds[]`.** | Re-syncing must not duplicate events; unapproved writes to a user's real calendar are unacceptable. | Sync is idempotent. Deleting a plan removes exactly the events it created. |
 | **D-007** | 2026-10-14 | **Tailwind v4 CSS-first tokens (`@theme` in `globals.css`), no `tailwind.config.js`.** | One file to review for design drift; tokens are plain CSS variables usable in SVG and canvas too. | Design changes start in `globals.css`, never in JSX (RULES L8). |
 | **D-008** | 2026-10-14 | **Cut-paper diorama aesthetic, explicitly excluding human figures/characters.** | Requested style: layered papercraft texture and depth, scenery and objects only. | Every illustration is bespoke SVG scenery (clouds, hills, sun, pines, water, arches, desk objects). Icons are line-only. Review gate: no faces. |
 | **D-009** | 2026-10-14 | **Drag-and-drop sends a *pin request* to the server; the engine recomputes.** | Keeps exactly one scheduling implementation. | A drag costs a round trip (optimistic UI masks it). `pins[]` are immovable inputs to regeneration (INV-8). |
@@ -60,8 +61,10 @@ Format: **D-nnn · date · decision — rationale — consequence.**
 | **D-018** | 2026-10-14 | **UI behaviour is tested by executing it in jsdom, not by reading it.** | Static review passed every drag bug that shipped (see §5.19–21) because the code looks correct. Executing the components found all three in minutes. | `tests/ui.test.ts` renders real components, stubs only geometry and the two cookie-scoped OAuth routes, and drives real pointer/keyboard events through to the real engine. |
 
 | **D-019** | 2026-10-14 | **A cadence with no named days is spread across the week deterministically.** | "Inbox zero, four times this week" is a real instruction, and leaving it as one 30-minute block silently answers a different question than the user asked. | `spreadDays(n)` in `local-reasoner.ts` maps 2→Tue/Thu, 3→Mon/Wed/Fri, 4→Mon/Tue/Thu/Fri, 5→weekdays, and the chosen days are visible in the task list, so a wrong guess is one edit away. `recurrence.count` then trims to the exact number. |
-| **D-020** | 2026-10-14 | **The export path never depends on configuration.** | The product's claim is that it plans honestly; the only way a stranger can check that is to take the week with them. An export behind OAuth cannot be tested by someone evaluating the app, and breaks whenever credentials rot. | `POST /api/export/ics` is stateless and credential-free (like the dry run, D-015). The `.ics` is written for importers, not for curl: RFC 5545 folding, escaping, floating local times, stable `UID:<blockId>@paperweek`, plus a `VJOURNAL` carrying the verdict. |
+| **D-020** | 2026-10-14 | **The export path never depends on configuration.** | The product's claim is that it plans honestly; the only way a stranger can check that is to take the week with them. An export behind OAuth cannot be tested by someone evaluating the app, and breaks whenever credentials rot. | `POST /api/export/ics` is stateless and credential-free (like the dry run, D-015). The `.ics` is written for importers, not for curl: RFC 5545 folding, escaping, floating local times, stable `UID:<blockId>@calendra`, plus a `VJOURNAL` carrying the verdict. |
 
+| **D-022** | 2026-10-14 | **The product is named Calendra, not Paperweek.** | The style was named after the product, which made the name describe the *material* rather than the *job*. A planner has to say what it does. | Renamed across UI copy, metadata, docs, package name, `.ics` PRODID/UID domain, Google markers (`calendraBlockId`/`calendraPlanId`), label suffix (`· CAL`), cookies and the storage key. A stored session from an older build is ignored rather than migrated (no users to migrate). |
+| **D-023** | 2026-10-14 | **No `mix-blend-mode` on repeated chrome, and geometry is measured once per gesture.** | An Interaction-to-Next-Paint warning pointed at a chip, but the chip was a symptom: blended layers cannot be composited independently, so every repaint beneath one re-blends it — and the texture sat on every chip, button *and* a fixed full-viewport grain. The drag also read `clientWidth`/`getBoundingClientRect()` per `pointermove`, forcing a synchronous reflow per event. | The textures keep their noise and opacity but drop the blend (greyscale at 3.5–5% is visually indistinguishable). The drag measures the strip once at `pointerdown` (`geometryRef`) and memoises the day columns. Measured: **72 → 0 forced layouts per 24 moves; 345ms → 181ms** (`tests/perf.test.ts`). |
 | **D-021** | 2026-10-14 | **A pin the engine cannot honour is retired, not retried.** | Re-sending an impossible pin every turn repeats a warning the user has already read and makes the client's pin list a lie about what is in force. | `PlanReport.droppedPins` names the task ids; `proposal.pins` contains **only** honoured pins; the store sets `pins = proposal.pins` after every plan, chat turn and drag; the toolkit prunes its context the same way. The user loses the drag, never the explanation. |
 
 ## 4. Invariants cheat-sheet
@@ -112,7 +115,7 @@ Three things shipped after the MVP, all of them derived from the same principle 
 - **T-604 ICS export (`src/lib/ics.ts`)** — dependency-free RFC 5545 writer. Folding is on octet
   boundaries (`'é'.repeat(80)` folds into ≤75-byte lines and still unfolds byte-for-byte), TEXT
   escaping covers `\ ; ,` and newlines, `DTSTAMP` comes from `proposal.generatedAt` (never the
-  clock, so the output is deterministic and diffable), and UIDs are `blockId@paperweek` so a
+  clock, so the output is deterministic and diffable), and UIDs are `blockId@calendra` so a
   re-import updates instead of duplicating. Default scope is `kind === 'task'`; ritual rows and
   meetings are opt-in.
 - **T-601 recurrence** — `recurrenceSchema` in `types.ts`, `occurrenceDays()` in
@@ -123,6 +126,28 @@ Three things shipped after the MVP, all of them derived from the same principle 
 - **T-602 dependencies** — depth-first `orderTasks` (cycle-safe `dependencyDepth`), an
   `AWAITING_DEPENDENCY` feasibility gate, and a post-hoc `dependencyConflicts` audit that warns
   `dependency-unmet` instead of quietly starting the deck before the spec exists.
+
+## 5c. Performance work (2026-10-14)
+
+The app was reported slow to respond (a browser INP warning on a chip). Two causes, both invisible to
+a functional test and to a screenshot, both now asserted in `tests/perf.test.ts`:
+
+1. **`mix-blend-mode: multiply` on every chip, button and the fixed full-viewport grain.** A blended
+   layer cannot be composited on its own — the browser must blend it against its backdrop, so any
+   repaint underneath forces a re-blend. During a drag that is a full-viewport composite per frame.
+   The textures are unchanged visually (greyscale noise at 3.5–5%); only the blend is gone.
+2. **Forced reflow per `pointermove`.** The move handler read `container.clientWidth` and
+   `getBoundingClientRect()` on every event — three synchronous style+layout recalculations each time,
+   ~120×/second on a 120 Hz mouse. Geometry is now captured once at `pointerdown`.
+
+Plus the render work: `visible.filter(...)` gave every column a fresh array each render, so all seven
+re-rendered on every move. The columns are partitioned once (`byDay`), the ghost is passed only to the
+column it lands on, and `DayColumn` is memoised.
+
+| Measurement (24 pointer moves) | Before | After |
+| --- | --- | --- |
+| Forced layout reads | 72 | 0 |
+| Wall clock (jsdom, indicative) | 345 ms | 181 ms |
 
 ## 6. Open threads / next actions
 
@@ -146,9 +171,10 @@ Three things shipped after the MVP, all of them derived from the same principle 
 | --- | --- |
 | 2026-10-14 | Repo initialised (LICENSE only). Product spec'd: PRD, ARCHITECTURE, RULES, DESIGN, TASK, MEMORY. MVP implemented end to end: deterministic week scheduler with explainable placement, LangChain agent (5 tools, 4 providers, deterministic demo reasoner), zod-validated API surface, Google Calendar OAuth + free/busy + idempotent approved sync, and a full cut-paper diorama design system + planner workspace. Decisions D-001…D-012 recorded. |
 | 2026-10-14 | UI round. Added a jsdom harness (`tests/harness/`) that executes the components against the real route handlers, agent and engine, plus 18 assertions in `tests/ui.test.ts` (drag, resize, keyboard parity, free-text intake, chat, calendar states, the full page). The very first run found **three shipped bugs in drag and drop** — the flagship interaction — none of which static review caught: a drop was silently discarded (§5.19), grabbing a tile near its top threw it to the start of the day (§5.20), and resizing slid the block's start to the grip (§5.21). All fixed and covered. Also: `Dry run` was gated behind a connected Google account, which contradicted D-015 — now it works unconfigured. ADR D-018 records the lesson: execute the UI, don't read it. |
+| 2026-10-14 | Renamed the product to **Calendra** and fixed the reported INP problem. The rename touched 25 files (copy, metadata, docs, package name, `.ics` PRODID/UIDs, Google markers, label suffix `· CAL`, cookies, storage key). The performance work is recorded as D-023 and measured in `tests/perf.test.ts`: the blend modes came off the repeated chrome, the drag stopped reading layout per `pointermove` (72 → 0 forced layouts) and the day columns were memoised (345 ms → 181 ms over 24 moves). 103 assertions green, lint 0, build clean. |
 | 2026-10-14 | Post-MVP round three. `npm run agent:check` (N-9) rewritten to carry pins across turns — which found a real defect within minutes: the client threw a drag away whenever the user then asked the agent anything (`buildWeek`/`sendMessage` reset `pins: []`), and the toolkit replaced its pin set on every `revise_plan`. Fixed by making the plan the authority (D-021): `PlanReport.droppedPins`, `proposal.pins` = honoured pins only, store adopts it after every path, toolkit prunes its context. Harness now ends `PASS: 9 turns, 8 tasks, 1 pin carried`. Two assertions added at the engine boundary and two at the conversation boundary; `npm test` 101/101. |
 | 2026-10-14 | Post-MVP round two. T-601 recurrence and T-602 dependencies implemented end-to-end (schema → policies → engine → score → parser → prompts → UI), with `occurrenceDays()`/`recurrenceLabel()`/`dependencyDepth()`/`dependencyConflicts()` and an `AWAITING_DEPENDENCY` gate; 29 scheduler assertions and 36 agent assertions, including a fixture that *proves* the constraint bites (the dependent is placed **before** its prerequisite without it). T-604 shipped: credential-free `.ics` export (`src/lib/ics.ts` + `POST /api/export/ics` + a cell in `CalendarPanel`), 12 structural assertions, verified over HTTP (12.6 kB, 20 VEVENTs, CRLF, folding, balance, unique UIDs) and with an independent parser check. Parser now reads "every other Thursday", "until Thursday", "N times this week" — and spreads a bare count across deterministic days (D-019). `npm test` 97/97. |
-| 2026-10-14 | Verification round. Added 46 assertions (engine invariants + agent/adapters); the tests immediately caught four real defects, all fixed: (1) `z.string().datetime()` rejected the engine's own wall-clock deadlines, breaking every follow-up request — D-013; (2) ritual tiles could be laid over meetings — D-016; (3) refused pins were silently relocated — D-014; (4) "do not use the weekend" was matched by the weekend-*enable* rule — gotcha 16. Also: dry-run sync no longer needs Google config (D-015), refinement replies now report preference and block-level movement (D-017), hydration-safe calendar dates (gotcha 17), block explanations wired end-to-end through `explain_block`, README + `.env.example` rewritten, `package.json` `scaffold` → `paperweek` with `test`/`smoke`/`agent:check`/`scene` scripts. |
+| 2026-10-14 | Verification round. Added 46 assertions (engine invariants + agent/adapters); the tests immediately caught four real defects, all fixed: (1) `z.string().datetime()` rejected the engine's own wall-clock deadlines, breaking every follow-up request — D-013; (2) ritual tiles could be laid over meetings — D-016; (3) refused pins were silently relocated — D-014; (4) "do not use the weekend" was matched by the weekend-*enable* rule — gotcha 16. Also: dry-run sync no longer needs Google config (D-015), refinement replies now report preference and block-level movement (D-017), hydration-safe calendar dates (gotcha 17), block explanations wired end-to-end through `explain_block`, README + `.env.example` rewritten, `package.json` `scaffold` → `calendra` with `test`/`smoke`/`agent:check`/`scene` scripts. |
 
 ## 8. How to use this file
 

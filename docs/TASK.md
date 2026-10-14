@@ -1,4 +1,4 @@
-# Paperweek — Task Ledger
+# Calendra — Task Ledger
 
 | Field | Value |
 | --- | --- |
@@ -52,7 +52,7 @@ A task is only ✅ when **lint + build pass** and its acceptance criteria are me
 | ID | Task | Owner | Depends | Status | Acceptance |
 | --- | --- | --- | --- | --- | --- |
 | T-301 | `lib/google/oauth.ts` + `scopes.ts`: OAuth2 client, minimal scopes, token refresh | Eng | T-002 | ✅ | Tokens server-side only |
-| T-302 | `lib/google/calendar.ts`: freebusy, upsert by `paperweekBlockId`, `dryRun`, per-block failures | Eng | T-301 | ✅ | No blind insert; partial failure safe |
+| T-302 | `lib/google/calendar.ts`: freebusy, upsert by `calendraBlockId`, `dryRun`, per-block failures | Eng | T-301 | ✅ | No blind insert; partial failure safe |
 | T-303 | `POST /api/plan`: validate → agent or local → proposal | Eng | T-205 | ✅ | zod at boundary; envelope shape |
 | T-304 | `POST /api/chat`: refinement + diff summary | Eng | T-303 | ✅ | Returns changed blocks |
 | T-305 | `GET /api/calendar/{auth,callback}` + `POST /api/calendar/sync` | Eng | T-302 | ✅ | Drift → 409; approval required |
@@ -87,7 +87,8 @@ A task is only ✅ when **lint + build pass** and its acceptance criteria are me
 | T-506 | README with setup, env matrix, demo walkthrough | Eng | T-502 | ✅ | Copy-paste runnable; `.env.example` included |
 | T-507 | Real-browser verification (Playwright: paint, responsive, OAuth redirect) | Eng | T-506 | ⬜ | No headless browser in the build sandbox. Behaviour is covered by T-509; pixels are not. |
 | T-508 | Agent + adapter contract tests (`tests/agent.test.ts`) | Eng | T-205 | ✅ | 46 assertions over zod boundaries, lexicons, Google adapter |
-| T-509 | jsdom UI harness + interaction tests (`tests/ui.test.ts`) | Eng | T-410 | ✅ | 18 assertions driving real pointer/keyboard events through store → route → engine. Found and fixed three drag bugs (§Bugs found) |
+| T-509 | jsdom UI harness + interaction tests (`tests/ui.test.ts`) | Eng | T-410 | ✅ | 21 assertions driving real pointer/keyboard events through store → route → engine. Found and fixed three drag bugs (§Bugs found) |
+| T-510 | Interaction performance: no blended layers on repeated chrome; geometry measured once per gesture; memoised day columns | Eng | T-509 | ✅ | `tests/perf.test.ts` measures it: 72 → 0 forced layouts per 24 moves, 345 ms → 181 ms. See MEMORY §5c / D-023 |
 
 ## Phase 6 — Post-MVP backlog (not in this build)
 
@@ -112,7 +113,8 @@ A task is only ✅ when **lint + build pass** and its acceptance criteria are me
 | Types | `npx tsc --noEmit` | clean |
 | Lint | `npm run lint` | 0 errors, 0 warnings |
 | Build | `NODE_OPTIONS=--max-old-space-size=3072 npm run build` | succeeds (all routes) |
-| Tests | `npm test` | 101 / 101 pass (30 engine, 38 agent, 12 export, 21 UI-in-jsdom) |
+| Tests | `npm test` | 103 / 103 pass (30 engine, 38 agent, 12 export, 21 UI-in-jsdom, 2 drag-performance) |
+| Drag cost | `npm run test:perf` | 24 pointer moves: 0 forced layouts (was 72), 181 ms (was 345 ms) |
 | Engine smoke | `npm run smoke` | demo FITS 78% · overloaded OVERBOOKED · invariants 0/0/0 |
 | Agent walkthrough | `npm run agent:check` | 9 conversational turns carrying tasks, preferences and pins — ends `PASS: 9 turns, 8 tasks, 1 pin carried` |
 | API | `POST /api/plan`, `POST /api/chat`, `POST /api/calendar/sync` | 200 with verified payloads |
@@ -148,6 +150,28 @@ every path in the store adopts `proposal.pins`.
 
 ---
 
+## Post-MVP: interaction performance (T-510)
+
+Reported from a real browser as an Interaction-to-Next-Paint warning, with a chip element named as the
+culprit. The chip was a symptom of two independent costs — and neither is visible in a screenshot or
+catchable by a functional test, which is why they are now measured rather than eyeballed:
+
+1. **A blended layer cannot be composited independently.** `mix-blend-mode: multiply` sat on every
+   chip and button (via `paper-fibre`), every sheet (via `paper-tooth`) and on a *fixed, full-viewport*
+   grain overlay. Any repaint beneath one of those forces the browser to re-blend it, so a drag meant a
+   full-screen composite per frame. The textures keep their noise and opacity; the blend is gone.
+2. **A forced reflow per pointer event.** The move handler read `clientWidth` and
+   `getBoundingClientRect()` on every `pointermove`, and the browser answers a layout read by first
+   recomputing style and layout — three synchronous reflows per event, ~120/second from a 120 Hz mouse.
+   Geometry is now captured once in `beginDrag` and reused for the gesture.
+
+On top of that, the render: `visible.filter(...)` handed each column a new array every render, so all
+seven columns re-rendered on every move regardless of which one the ghost was in. The blocks are
+partitioned once, the ghost is passed only to the column it targets, and `DayColumn` is memoised.
+
+Both properties are asserted in `tests/perf.test.ts` — the first as "layout reads must not scale with
+the number of events", the second as "a burst of moves must not produce a render each".
+
 ## Post-MVP: ICS export (T-604)
 
 The one backlog item pulled forward, because the product's argument is *honesty* and the only way to
@@ -158,8 +182,8 @@ prove a planner is honest is to let a stranger take the week with them:
   run (D-015), which makes it the export path that can never be broken by configuration.
 - The file is written to be *importable*, not merely present: CRLF endings, 75-octet folding on
   octet (not character) boundaries, TEXT escaping, floating local `DTSTART`/`DTEND` with
-  `X-WR-TIMEZONE`, stable `UID:<blockId>@paperweek` so re-importing updates rather than duplicates,
-  `X-PAPERWEEK-*` properties for round-tripping, and a `VJOURNAL` carrying the verdict so the file
+  `X-WR-TIMEZONE`, stable `UID:<blockId>@calendra` so re-importing updates rather than duplicates,
+  `X-CALENDRA-*` properties for round-tripping, and a `VJOURNAL` carrying the verdict so the file
   explains itself a month later.
 - Default scope is `kind === 'task'` only — a plan, not a diary; ritual rows (lunch, focus breaks)
   and imported meetings are opt-in via `includeMeetings`.

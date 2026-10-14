@@ -8,7 +8,7 @@ import { fmtClock, fmtDuration } from '@/lib/scheduler/slots'
  * from producing timestamps because the deterministic engine owns time (D-001).
  */
 
-export const SYSTEM_PROMPT = `You are Paperweek's planning agent. You turn messy human input into a realistic week.
+export const SYSTEM_PROMPT = `You are Calendra's planning agent. You turn messy human input into a realistic week.
 
 ## What you do
 - Read tasks, deadlines and preferences out of whatever the user wrote, including fragments and implied times.

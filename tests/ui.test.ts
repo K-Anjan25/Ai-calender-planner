@@ -530,7 +530,7 @@ describe('calendar panel', () => {
     const originalRevoke = URL.revokeObjectURL
     URL.createObjectURL = (blob: Blob) => {
       created.push(blob.type)
-      return 'blob:paperweek'
+      return 'blob:calendra'
     }
     URL.revokeObjectURL = () => {}
     const click = HTMLAnchorElement.prototype.click
@@ -555,7 +555,7 @@ describe('calendar panel', () => {
 
     assert.equal(created.length, 1, 'the export did not produce a download')
     assert.match(created[0] ?? '', /^text\/calendar/, 'the exported blob was not a calendar file')
-    assert.match(downloaded ?? '', /^paperweek-.*\.ics$/)
+    assert.match(downloaded ?? '', /^calendra-.*\.ics$/)
   })
 })
 

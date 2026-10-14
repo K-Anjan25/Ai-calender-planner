@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /**
- * Paperweek domain types.
+ * Calendra domain types.
  *
  * `zod` schemas are the single source of truth (RULES.md §6); TypeScript types are inferred.
  * Time is represented as *local wall-clock minutes from midnight* for scheduling, and serialised

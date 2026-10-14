@@ -9,10 +9,10 @@ import { Grain } from '@/components/paper/Grain'
  */
 
 export const metadata: Metadata = {
-  title: 'Paperweek — the AI calendar planner that tells you the truth',
+  title: 'Calendra — the AI calendar planner that tells you the truth',
   description:
-    'Give Paperweek your tasks, deadlines and preferences. It builds a realistic week — or tells you exactly what does not fit, and what to trade.',
-  applicationName: 'Paperweek',
+    'Give Calendra your tasks, deadlines and preferences. It builds a realistic week — or tells you exactly what does not fit, and what to trade.',
+  applicationName: 'Calendra',
 }
 
 export const viewport: Viewport = {

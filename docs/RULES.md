@@ -1,4 +1,4 @@
-# Paperweek — Engineering Rules
+# Calendra — Engineering Rules
 
 | Field | Value |
 | --- | --- |
@@ -92,7 +92,7 @@ app/*  →  components/*  →  store/*  →  lib/{agent,google}  →  lib/schedu
 
 - Scopes are exactly `https://www.googleapis.com/auth/calendar.events` and `https://www.googleapis.com/auth/calendar.readonly`. Asking for more requires a PRD amendment.
 - Tokens: server-side only, `httpOnly` + `sameSite=lax`, never serialised to the client.
-- Every written event carries `extendedProperties.private.paperweekBlockId` — **upsert, never blind insert**.
+- Every written event carries `extendedProperties.private.calendraBlockId` — **upsert, never blind insert**.
 - Re-verify availability with `freebusy.query` immediately before writing; on drift return `409` with the conflicting blocks instead of writing.
 - `dryRun: true` must return the exact payloads that would be sent, byte-for-byte — and must work with **no** Google configuration and no connected account, because the preview is what the user approves against.
 - A partial failure returns `failed[]` per block and **never** discards successful writes or the local plan.

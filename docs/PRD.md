@@ -1,9 +1,9 @@
-# Paperweek — Product Requirements Document
+# Calendra — Product Requirements Document
 
-> **Paperweek** is an AI calendar planner. You hand it tasks, deadlines, and preferences;
+> **Calendra** is an AI calendar planner. You hand it tasks, deadlines, and preferences;
 > it returns a realistic, defensible week — built layer by layer, like a paper diorama.
 >
-> *Working title: "AI Calendar Planner". Shipping name used across the app: **Paperweek**.*
+> *Working title: "AI Calendar Planner". Shipping name used across the app: **Calendra**.*
 
 | Field | Value |
 | --- | --- |

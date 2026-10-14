@@ -65,7 +65,7 @@ export function TaskInbox() {
   return (
     <div className="flex flex-col gap-3">
       <PaperSheet className="p-3.5">
-        <PaperLabel htmlFor="brief">Tell Paperweek what your week holds</PaperLabel>
+        <PaperLabel htmlFor="brief">Tell Calendra what your week holds</PaperLabel>
         <PaperTextarea
           id="brief"
           rows={4}

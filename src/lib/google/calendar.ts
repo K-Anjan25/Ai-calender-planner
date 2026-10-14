@@ -161,7 +161,7 @@ export function payloadForBlock(block: PlacedBlock, planId: string, timeZone: st
       `Priority ${block.priority} · ${block.energy} · ${block.category}`,
       block.chunkCount > 1 ? `Session ${block.chunkIndex + 1} of ${block.chunkCount}` : '',
       '',
-      'Planned with Paperweek. Edit it here and Paperweek will plan around your change next time.',
+      'Planned with Calendra. Edit it here and Calendra will plan around your change next time.',
     ]
       .filter(Boolean)
       .join('\n'),

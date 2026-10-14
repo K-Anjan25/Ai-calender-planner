@@ -70,11 +70,11 @@ export default function PlannerPage() {
 
       <header className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <div className="flex items-center gap-2.5">
-          <Link href="/" className="flex items-center gap-2" aria-label="Paperweek home">
+          <Link href="/" className="flex items-center gap-2" aria-label="Calendra home">
             <span className="paper-tile flex h-8 w-8 items-center justify-center">
               <Leaf size={15} className="text-teal-deep" aria-hidden="true" />
             </span>
-            <span className="font-[family-name:var(--font-display)] text-[19px] font-semibold tracking-tight">Paperweek</span>
+            <span className="font-[family-name:var(--font-display)] text-[19px] font-semibold tracking-tight">Calendra</span>
           </Link>
           {proposal ? (
             <PaperChip tone="kraft" icon={<CalendarRange size={10} aria-hidden="true" />}>

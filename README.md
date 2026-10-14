@@ -1,6 +1,6 @@
 <div align="center">
 
-# Paperweek
+# Calendra
 
 **The AI calendar planner that tells you the truth.**
 
@@ -15,7 +15,7 @@ Next.js 15 · LangChain · Google Calendar API · Tailwind v4 · zod · determin
 
 ## What it is
 
-Most planners accept a todo list, sketch a hopeful week, and quietly drop the rest. Paperweek does
+Most planners accept a todo list, sketch a hopeful week, and quietly drop the rest. Calendra does
 the opposite: a **deterministic scheduling engine** owns all time arithmetic, a **LangChain agent**
 owns language, and the plan arrives with a verdict you can trust.
 
@@ -49,8 +49,9 @@ mode**: a realistic week, a deterministic local reasoner standing in for the mod
 that says exactly that. The planner is fully functional on that path.
 
 ```bash
-npm test             # 101 assertions: engine invariants, agent contract, .ics structure, UI in jsdom
+npm test             # 103 assertions: engine invariants, agent contract, .ics structure, UI, drag cost
 npm run test:ui      # just the interaction tests (drag, resize, keyboard, intake, chat)
+npm run test:perf    # just the drag cost: forced layouts and render coalescing
 npm run agent:check  # walk the agent through nine turns, carrying pins between them
 npm run smoke        # capacity/demand baselines for the demo + overloaded weeks
 npm run build        # production build
@@ -62,6 +63,23 @@ three shipped bugs in drag-and-drop were found (see `docs/TASK.md` § *Bugs foun
 
 > Heavy build boxes: `NODE_OPTIONS=--max-old-space-size=3072 npm run build` if the default heap
 > OOMs during the production build — it does on small containers.
+
+### Keeping it fast
+
+A drag fires `pointermove` far more often than the screen refreshes, so the grid is built for that:
+the strip's geometry is measured **once** at `pointerdown` (a layout read while React has a pending
+write forces a synchronous reflow — ~120 of those a second is what an INP warning looks like), the
+ghost is passed only to the column it lands on, and the columns are memoised. Nothing in the material
+layer uses `mix-blend-mode`: a blended layer can't be composited on its own, so a repaint underneath
+one re-blends it — across every chip, button and the full-viewport grain that is a screen-sized
+composite per frame.
+
+Both properties are asserted in `tests/perf.test.ts`, because neither is visible in a screenshot:
+
+| 24 pointer moves | Before | After |
+| --- | --- | --- |
+| Forced layout reads | 72 | **0** |
+| Wall clock (jsdom, indicative) | 345 ms | **181 ms** |
 
 ### Going live
 
@@ -158,7 +176,7 @@ afterwards — if a dependent still starts too early, the report says `dependenc
 both tasks. A cycle or a dangling reference is survived, not thrown.
 
 And `POST /api/export/ics` turns whatever is on screen into an `.ics` you keep: CRLF and 75-octet
-folding, escaped text, floating local times, stable `UID:<blockId>@paperweek` so re-importing
+folding, escaped text, floating local times, stable `UID:<blockId>@calendra` so re-importing
 updates instead of duplicating, and a `VJOURNAL` entry carrying the verdict so the file still
 explains itself a month later.
 

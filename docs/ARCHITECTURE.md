@@ -1,4 +1,4 @@
-# Paperweek — Architecture
+# Calendra — Architecture
 
 | Field | Value |
 | --- | --- |
@@ -285,13 +285,13 @@ POST /api/calendar/sync  { proposal, approvedBlockIds[] }
   1. refresh access token if expired
   2. freebusy.query → re-verify the horizon (catch drift since planning)
   3. conflicts? → return 409 with the offending blocks (never write blind)
-  4. for each approved block: upsert by extendedProperties.private.paperweekBlockId
+  4. for each approved block: upsert by extendedProperties.private.calendraBlockId
        existing? events.patch : events.insert
   5. return { inserted, updated, skipped, failed[] }
 ```
 
-**Idempotency:** every written event carries `extendedProperties.private = { paperweekBlockId, paperweekPlanId }`. Re-syncing patches instead of duplicating (FR-5.4).
-**Marker in the title:** `· PW` suffix (configurable) so blocks are identifiable in the native calendar UI.
+**Idempotency:** every written event carries `extendedProperties.private = { calendraBlockId, calendraPlanId }`. Re-syncing patches instead of duplicating (FR-5.4).
+**Marker in the title:** `· CAL` suffix (configurable) so blocks are identifiable in the native calendar UI.
 **Write discipline:** sync requires an explicit `approvedBlockIds[]`; nothing is written by implication. `dryRun: true` returns the exact intended payloads (RULES.md §8).
 **Failure mode:** per-block failures are collected and returned; a partial sync never rolls back the plan or throws away successful writes.
 **Dry runs need no credentials.** `dryRun: true` touches nothing and therefore requires neither Google configuration nor consent — the user can see the exact events, idempotency markers included, before connecting anything (MEMORY.md D-015). Real writes still need config *and* a connected account.
@@ -361,8 +361,8 @@ Every optional integration degrades to a working product (§1.2).
 
 | Level | Scope | Notes |
 | --- | --- | --- |
-Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 101 assertions:
-38 agent, 30 engine, 12 export, 21 UI-in-jsdom).
+Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 103 assertions:
+38 agent, 30 engine, 12 export, 21 UI-in-jsdom, 2 drag-performance).
 
 | Level | Scope | Where |
 | --- | --- | --- |
@@ -373,10 +373,11 @@ Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 
 | **Contract tests** | agent | `tests/agent.test.ts` — a nonsense payload is rejected, minimal payloads get defaults, provider resolution never throws and never leaks key material. |
 | **Lexicon tests** | local reasoner | Every phrasing in `scripts/agent-check.ts` asserted for the *values* it must produce (durations, weekday deadlines, repeat days, energy, refusals, pins). |
 | **Repair tests** | agent plumbing | `extractJson` on fenced/chatty/broken model output; `normaliseTasks` uniqueness and `estimatedByAI`; `mergeTasks` not duplicating on re-parse. |
-| **Adapter tests** | calendar | Free/busy clamped to the week; every payload carries `paperweekBlockId`/`paperweekPlanId` and the `· PW` marker. |
+| **Adapter tests** | calendar | Free/busy clamped to the week; every payload carries `calendraBlockId`/`calendraPlanId` and the `· CAL` marker. |
 | **Export tests** | `lib/ics` | `tests/ics.test.ts` — CRLF, 75-octet folding on octet boundaries, TEXT escaping, floating local times, unique/stable UIDs, determinism, `approvedBlockIds` scoping, and the ritual-row exclusion. A malformed `.ics` imports as *nothing at all*, so structure is asserted rather than sampled. |
 | **Carry-over** | agent session | `scripts/agent-check.ts` walks nine conversational turns carrying tasks, preferences and **pins**, then asserts a pin made earlier still holds and that none were silently relocated (D-021). |
 | **UI behaviour** | components | `tests/ui.test.ts` — jsdom, real components, real routes, real engine. Drag → pin → server replan (honoured and refused), resize, keyboard parity, free-text intake, chat, calendar gates, full-page render. |
+| **Interaction cost** | WeekGrid | `tests/perf.test.ts` — geometry reads must not scale with the number of `pointermove` events, and a burst of moves must not commit a render each. Both are INP-relevant and both are invisible to functional tests. |
 | **A11y** | UI | Keyboard parity (move/resize/jump) and focus rings are *exercised* by the UI tests; focus-visible styling and screen-reader output still want a real browser (TASK.md T-507). |
 
 **The harness.** `tests/harness/dom.ts` installs jsdom, routes `fetch` to the real handlers, and
@@ -392,7 +393,7 @@ Those remain T-507.
 ## 12. Performance
 
 - Scheduler is O(chunks × slots); at MVP scale (~60 × 700) it is sub-100 ms in-process. Free slots are pre-indexed by day and sorted once.
-- UI: `WeekGrid` virtualises nothing at MVP scale (168 hour-rows max) but memoises blocks per day; drag uses pointer events with no re-render per frame (transform-only).
+- UI: `WeekGrid` virtualises nothing at MVP scale (168 hour-rows max). Its drag path is the hot path and is built for it: the strip's geometry is measured **once** at `pointerdown` (never per move — a layout read while React has a pending write forces a synchronous reflow), the ghost is passed only to the column it lands on, and `DayColumn` is memoised so the other six do not re-render. Nothing in the material layer uses `mix-blend-mode`: a blended layer cannot be composited independently, so a repaint beneath one re-blends it — across every chip, button and the full-viewport grain, that is a screen-sized composite per frame (D-023).
 - Agent calls are the only slow path → streamed trace, optimistic skeleton, and a hard 20 s timeout after which the deterministic plan is shown with a notice.
 
 ## 13. Security & privacy

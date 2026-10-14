@@ -28,7 +28,7 @@ export default function Home() {
           <span className="paper-tile flex h-9 w-9 items-center justify-center">
             <Layers size={17} className="text-teal-deep" aria-hidden="true" />
           </span>
-          <span className="font-[family-name:var(--font-display)] text-[21px] font-semibold tracking-tight">Paperweek</span>
+          <span className="font-[family-name:var(--font-display)] text-[21px] font-semibold tracking-tight">Calendra</span>
         </span>
         <nav className="flex items-center gap-2">
           <PaperLink href="/planner" tone="teal">
@@ -49,7 +49,7 @@ export default function Home() {
               A week you can actually keep.
             </h1>
             <p className="mt-4 max-w-[52ch] text-[16.5px] leading-relaxed text-ink-soft">
-              Give Paperweek your tasks, deadlines and the rules you actually live by. It builds the week sheet by sheet — and
+              Give Calendra your tasks, deadlines and the rules you actually live by. It builds the week sheet by sheet — and
               when the work does not fit, it says so with numbers and offers you something to trade.
             </p>
 
@@ -102,7 +102,7 @@ export default function Home() {
             Four layers, glued in this order
           </h2>
           <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-ink-soft">
-            Most planners fail because they let a language model do arithmetic. Paperweek splits the job: the agent reads your
+            Most planners fail because they let a language model do arithmetic. Calendra splits the job: the agent reads your
             language and chooses a strategy, a deterministic engine decides every timestamp, and your existing calendar is a
             fixed layer everything else is placed around.
           </p>
@@ -212,7 +212,7 @@ export default function Home() {
       <footer className="border-t border-dashed border-[color:rgba(120,98,70,0.25)] py-8">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-4 text-[11.5px] text-ink-faint sm:px-8">
           <p>
-            Paperweek · Next.js · LangChain · Google Calendar API — built as a demonstration of honest AI planning.
+            Calendra · Next.js · LangChain · Google Calendar API — built as a demonstration of honest AI planning.
           </p>
           <p>Cut-paper diorama aesthetic. No characters, no faces.</p>
         </div>

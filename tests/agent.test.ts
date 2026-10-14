@@ -468,7 +468,7 @@ describe('google calendar adapter', () => {
     assert.equal(events[0]?.date, '2026-10-13')
   })
 
-  it('writes an idempotency marker and a Paperweek tag on every event', () => {
+  it('writes an idempotency marker and a Calendra tag on every event', () => {
     const payload = payloadForBlock(
       {
         id: 'blk_1',
@@ -494,9 +494,9 @@ describe('google calendar adapter', () => {
       'plan_1',
       'Europe/London',
     )
-    assert.equal(payload.extendedProperties.private.paperweekBlockId, 'blk_1')
-    assert.equal(payload.extendedProperties.private.paperweekPlanId, 'plan_1')
-    assert.match(payload.summary, /· PW$/)
+    assert.equal(payload.extendedProperties.private.calendraBlockId, 'blk_1')
+    assert.equal(payload.extendedProperties.private.calendraPlanId, 'plan_1')
+    assert.match(payload.summary, /· CAL$/)
     assert.match(payload.start.dateTime, /^2026-10-12T09:00:00$/)
     assert.equal(payload.start.timeZone, 'Europe/London')
   })

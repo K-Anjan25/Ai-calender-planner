@@ -15,7 +15,7 @@ import { estimateDurationMinutes, type InterpretedMessage, type Interpreter, typ
 /**
  * LocalReasoner — a real, deterministic implementation of the agent contract (D-004).
  *
- * It exists so Paperweek works with zero API keys, and so tests exercise the same code path the
+ * It exists so Calendra works with zero API keys, and so tests exercise the same code path the
  * product ships. It is deliberately rule-based: keyword lexicons for categories and energy,
  * pattern matching for durations and deadlines, and phrase matching for preference changes.
  * It never guesses a time for a block — the engine does that.
