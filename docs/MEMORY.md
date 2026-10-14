@@ -20,12 +20,12 @@
 | Docs | PRD, ARCHITECTURE, RULES, DESIGN, TASK, MEMORY — all written |
 | Engine | `lib/scheduler/*` complete: horizon → triage/chunk → place → repair → evaluate. Deterministic. |
 | Agent | `lib/agent/*` complete: 5 tools, 4 providers, `LocalReasoner` demo path, structured output + 1 repair |
-| Calendar | `lib/google/*` + OAuth routes + sync route with upsert/dryRun/409-on-drift |
+| Calendar | `lib/google/*` + OAuth routes + sync route with upsert/dryRun/409-on-drift; plus `POST /api/export/ics` — the same week as a file, with no account of any kind |
 | UI | Cut-paper diorama design system + 3-column planner workspace + marketing page |
 | Modes | **Demo mode works with zero env vars** — this is the default and the test path |
-| Tests | 64 assertions, all green: `tests/scheduler.test.ts` (INV-1…8 + seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters), `tests/ui.test.ts` (**the components, executed in jsdom** against the real routes and engine) |
+| Tests | 101 assertions, all green: `tests/scheduler.test.ts` (INV-1…8, dependency ordering, recurrence, seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters, free-text cadence), `tests/ics.test.ts` (RFC 5545 structure, escaping, determinism), `tests/ui.test.ts` (**the components, executed in jsdom** against the real routes and engine) |
 | Verified | types, lint (0/0), production build, `npm test`, `npm run smoke`, `npm run agent:check`, live API round-trips, four rendered scenes |
-| Known gaps | Real-browser verification (T-507 — jsdom is not a browser: no layout, no paint, no OAuth redirect), persistence, recurring engine, `dependsOn` |
+| Known gaps | Real-browser verification (T-507 — jsdom is not a browser: no layout, no paint, no OAuth redirect), persistence, multi-week horizon (T-603), calendar *import* (only export is shipped), `.ics` is not yet a first-class sync target alongside Google |
 
 ## 2. What this product is (one paragraph)
 
@@ -58,6 +58,11 @@ Format: **D-nnn · date · decision — rationale — consequence.**
 | **D-016** | 2026-10-14 | **Ritual tiles (lunch, break) may not be laid over real meetings.** | Meetings are fixed facts; the ritual row is decoration and must yield. | `repairPlan` checks lunch/break candidate windows against busy events before inserting. Regression test: demo week, Thursday 1:1s. |
 | **D-017** | 2026-10-14 | **A refinement reply lists what actually moved, including preference and block-level changes.** | "No change" when three blocks moved destroys trust in the diff. | `diffPlans(previousTasks, nextTasks, proposal, previousPreferences, previousBlocks)`; the client sends a compact snapshot of the plan it was looking at. |
 | **D-018** | 2026-10-14 | **UI behaviour is tested by executing it in jsdom, not by reading it.** | Static review passed every drag bug that shipped (see §5.19–21) because the code looks correct. Executing the components found all three in minutes. | `tests/ui.test.ts` renders real components, stubs only geometry and the two cookie-scoped OAuth routes, and drives real pointer/keyboard events through to the real engine. |
+
+| **D-019** | 2026-10-14 | **A cadence with no named days is spread across the week deterministically.** | "Inbox zero, four times this week" is a real instruction, and leaving it as one 30-minute block silently answers a different question than the user asked. | `spreadDays(n)` in `local-reasoner.ts` maps 2→Tue/Thu, 3→Mon/Wed/Fri, 4→Mon/Tue/Thu/Fri, 5→weekdays, and the chosen days are visible in the task list, so a wrong guess is one edit away. `recurrence.count` then trims to the exact number. |
+| **D-020** | 2026-10-14 | **The export path never depends on configuration.** | The product's claim is that it plans honestly; the only way a stranger can check that is to take the week with them. An export behind OAuth cannot be tested by someone evaluating the app, and breaks whenever credentials rot. | `POST /api/export/ics` is stateless and credential-free (like the dry run, D-015). The `.ics` is written for importers, not for curl: RFC 5545 folding, escaping, floating local times, stable `UID:<blockId>@paperweek`, plus a `VJOURNAL` carrying the verdict. |
+
+| **D-021** | 2026-10-14 | **A pin the engine cannot honour is retired, not retried.** | Re-sending an impossible pin every turn repeats a warning the user has already read and makes the client's pin list a lie about what is in force. | `PlanReport.droppedPins` names the task ids; `proposal.pins` contains **only** honoured pins; the store sets `pins = proposal.pins` after every plan, chat turn and drag; the toolkit prunes its context the same way. The user loses the drag, never the explanation. |
 
 ## 4. Invariants cheat-sheet
 
@@ -97,7 +102,27 @@ Assert these when touching the engine. If a change breaks one, stop and check `R
 19. **A `pointerup` listener registered during a render captures that render's state.** `endDrag` closed over `ghost`, which is `null` in the render where the drag starts, so every drop was silently discarded: the tile followed the cursor and snapped back. State a listener will read on a *later* event must be mirrored in a ref (`ghostRef`).
 20. **Grab offsets are relative, not absolute.** `grabOffsetMin` must be the offset *inside the block*; adding `day.windowStart` (as it did) drags the tile to the top of the day, because the move handler subtracts it from an absolute minute.
 21. **A move and a resize are different gestures.** Deriving `startMin` from the pointer in both modes made a resize slide the block's start down to the grip. Resize keeps `originStart` and only moves the base; move follows the cursor.
-22. **Tailwind v4 here emits nothing for `bg-gradient-to-*`.** Use the arbitrary form `bg-[linear-gradient(...)]`. Likewise `accent-[color:var(--x)]` is unreliable — `accent-<token>` works because the token is in `@theme`.
+22. **The client's pin list must always equal `proposal.pins`.** Three places used to reset pins to `[]` (`buildWeek`, `sendMessage`, and the post-drag settle) — so asking the agent *any* question silently undid a drag. A pin is a user decision (INV-8); the plan is the authority on which ones survived, and `report.droppedPins` is how it says which did not (D-021). Best found by `npm run agent:check` carrying pins across turns, not by reading the store.
+23. **Tailwind v4 here emits nothing for `bg-gradient-to-*`.** Use the arbitrary form `bg-[linear-gradient(...)]`. Likewise `accent-[color:var(--x)]` is unreliable — `accent-<token>` works because the token is in `@theme`.
+
+## 5b. Post-MVP additions (2026-10-14)
+
+Three things shipped after the MVP, all of them derived from the same principle — *say what you did*:
+
+- **T-604 ICS export (`src/lib/ics.ts`)** — dependency-free RFC 5545 writer. Folding is on octet
+  boundaries (`'é'.repeat(80)` folds into ≤75-byte lines and still unfolds byte-for-byte), TEXT
+  escaping covers `\ ; ,` and newlines, `DTSTAMP` comes from `proposal.generatedAt` (never the
+  clock, so the output is deterministic and diffable), and UIDs are `blockId@paperweek` so a
+  re-import updates instead of duplicating. Default scope is `kind === 'task'`; ritual rows and
+  meetings are opt-in.
+- **T-601 recurrence** — `recurrenceSchema` in `types.ts`, `occurrenceDays()` in
+  `policies.ts` as the single source of truth for *which days of this week*, consumed by
+  `chunksForTask()`, `totalDemandMinutes()` and the UI label. Closes the old N-3 thread: a task may
+  now carry `{byWeekday, interval, count, until, anchorWeek}` and be genuinely weekly/fortnightly
+  rather than pre-expanded.
+- **T-602 dependencies** — depth-first `orderTasks` (cycle-safe `dependencyDepth`), an
+  `AWAITING_DEPENDENCY` feasibility gate, and a post-hoc `dependencyConflicts` audit that warns
+  `dependency-unmet` instead of quietly starting the deck before the spec exists.
 
 ## 6. Open threads / next actions
 
@@ -105,13 +130,15 @@ Assert these when touching the engine. If a change breaks one, stop and check `R
 | --- | --- | --- | --- |
 | N-1 | ~~Scheduler invariant + property tests (T-107)~~ **done** | Eng | 46 assertions green; keep them green |
 | N-2 | a11y sweep (T-504) + responsive sweep (T-505) | Design+Eng | Keyboard move/resize of blocks is implemented but unreviewed |
-| N-3 | Recurring task expansion (T-601) | Eng | "review PRs daily" is currently expanded to explicit per-day tasks in demo data |
-| N-4 | Enforce `dependsOn` ordering (T-602) | Eng | Field exists in the schema; engine ignores it |
+| N-3 | ~~Recurring task expansion (T-601)~~ **done** | Eng | `recurrence` + `occurrenceDays()`; free text understood; covered by tests |
+| N-4 | ~~Enforce `dependsOn` ordering (T-602)~~ **done** | Eng | Depth-first ordering + `AWAITING_DEPENDENCY` gate + `dependency-unmet` audit |
 | N-5 | Persistence (T-605) | Eng | Also unlocks multi-device and "what changed" diffs |
 | N-6 | Decide Q3 from PRD §11 (deadline = midnight vs stated time) | Product | Currently midnight of the stated date |
 | N-7 | Cost pass: cache parse results per input hash | Eng | Avoids re-parsing identical task text on regenerate |
 | N-8 | Real-browser verification (T-507) | Eng | Playwright: paint, layout, responsive, and the OAuth redirect. jsdom now covers the *logic* of drag/resize/keyboard (18 assertions), so what remains is pixels, not behaviour. |
-| N-9 | `scripts/agent-check.ts` should carry pins across turns | Eng | The harness currently sends `pins: []`, so cross-message pin persistence is untested outside the store. |
+| N-9 | ~~`scripts/agent-check.ts` should carry pins across turns~~ **done** | Eng | The walkthrough now carries tasks, preferences **and** pins between turns, asserts a pin from an earlier turn still holds, and reports PASS/FAIL. It immediately found the pin-drop bug (gotcha 22, D-021). |
+| N-10 | Calendar *import* (busy + existing events as first-class, `.ics` as a sync target) | Eng | Export is shipped and credential-free; import still means Google free/busy only. |
+| N-11 | Round-trip the `.ics` through a real client (Apple/Outlook/Thunderbird) | Eng | Structure is asserted here; a real importer accepting it is not yet observed. |
 
 ## 7. Session log
 
@@ -119,6 +146,8 @@ Assert these when touching the engine. If a change breaks one, stop and check `R
 | --- | --- |
 | 2026-10-14 | Repo initialised (LICENSE only). Product spec'd: PRD, ARCHITECTURE, RULES, DESIGN, TASK, MEMORY. MVP implemented end to end: deterministic week scheduler with explainable placement, LangChain agent (5 tools, 4 providers, deterministic demo reasoner), zod-validated API surface, Google Calendar OAuth + free/busy + idempotent approved sync, and a full cut-paper diorama design system + planner workspace. Decisions D-001…D-012 recorded. |
 | 2026-10-14 | UI round. Added a jsdom harness (`tests/harness/`) that executes the components against the real route handlers, agent and engine, plus 18 assertions in `tests/ui.test.ts` (drag, resize, keyboard parity, free-text intake, chat, calendar states, the full page). The very first run found **three shipped bugs in drag and drop** — the flagship interaction — none of which static review caught: a drop was silently discarded (§5.19), grabbing a tile near its top threw it to the start of the day (§5.20), and resizing slid the block's start to the grip (§5.21). All fixed and covered. Also: `Dry run` was gated behind a connected Google account, which contradicted D-015 — now it works unconfigured. ADR D-018 records the lesson: execute the UI, don't read it. |
+| 2026-10-14 | Post-MVP round three. `npm run agent:check` (N-9) rewritten to carry pins across turns — which found a real defect within minutes: the client threw a drag away whenever the user then asked the agent anything (`buildWeek`/`sendMessage` reset `pins: []`), and the toolkit replaced its pin set on every `revise_plan`. Fixed by making the plan the authority (D-021): `PlanReport.droppedPins`, `proposal.pins` = honoured pins only, store adopts it after every path, toolkit prunes its context. Harness now ends `PASS: 9 turns, 8 tasks, 1 pin carried`. Two assertions added at the engine boundary and two at the conversation boundary; `npm test` 101/101. |
+| 2026-10-14 | Post-MVP round two. T-601 recurrence and T-602 dependencies implemented end-to-end (schema → policies → engine → score → parser → prompts → UI), with `occurrenceDays()`/`recurrenceLabel()`/`dependencyDepth()`/`dependencyConflicts()` and an `AWAITING_DEPENDENCY` gate; 29 scheduler assertions and 36 agent assertions, including a fixture that *proves* the constraint bites (the dependent is placed **before** its prerequisite without it). T-604 shipped: credential-free `.ics` export (`src/lib/ics.ts` + `POST /api/export/ics` + a cell in `CalendarPanel`), 12 structural assertions, verified over HTTP (12.6 kB, 20 VEVENTs, CRLF, folding, balance, unique UIDs) and with an independent parser check. Parser now reads "every other Thursday", "until Thursday", "N times this week" — and spreads a bare count across deterministic days (D-019). `npm test` 97/97. |
 | 2026-10-14 | Verification round. Added 46 assertions (engine invariants + agent/adapters); the tests immediately caught four real defects, all fixed: (1) `z.string().datetime()` rejected the engine's own wall-clock deadlines, breaking every follow-up request — D-013; (2) ritual tiles could be laid over meetings — D-016; (3) refused pins were silently relocated — D-014; (4) "do not use the weekend" was matched by the weekend-*enable* rule — gotcha 16. Also: dry-run sync no longer needs Google config (D-015), refinement replies now report preference and block-level movement (D-017), hydration-safe calendar dates (gotcha 17), block explanations wired end-to-end through `explain_block`, README + `.env.example` rewritten, `package.json` `scaffold` → `paperweek` with `test`/`smoke`/`agent:check`/`scene` scripts. |
 
 ## 8. How to use this file

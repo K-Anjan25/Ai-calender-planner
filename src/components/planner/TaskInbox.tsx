@@ -6,6 +6,8 @@ import { Plus, Trash2, Wand2, Clock, Flag, Ban, ChevronDown, ChevronRight } from
 import { SNAP_MINUTES, type Energy, type Task } from '@/lib/types'
 import { ENERGY_LABEL } from '@/lib/types'
 import { fmtDuration } from '@/lib/scheduler/slots'
+import { recurrenceLabel } from '@/lib/scheduler/policies'
+import { currentWeekStart } from '@/lib/sample-data'
 import { estimateDurationMinutes } from '@/lib/agent/tools'
 import { usePlanner } from '@/lib/store/planner-store'
 import { PaperButton, PaperChip, PaperInput, PaperLabel, PaperSelect, PaperTextarea } from '@/components/paper/PaperControls'
@@ -22,7 +24,8 @@ import { PaperSheet } from '@/components/paper/PaperSheet'
 const ENERGY_OPTIONS: Energy[] = ['deep', 'light', 'admin', 'social', 'physical']
 
 export function TaskInbox() {
-  const { tasks, addTask, removeTask, updateTask, buildWeek, status, demoSet, loadDemoSet, clearTasks } = usePlanner()
+  const { tasks, addTask, removeTask, updateTask, buildWeek, status, demoSet, loadDemoSet, clearTasks, proposal } = usePlanner()
+  const weekStart = proposal?.weekStart ?? currentWeekStart()
   const [brief, setBrief] = useState('')
   const [draft, setDraft] = useState({
     title: '',
@@ -233,7 +236,10 @@ export function TaskInbox() {
                       <div className="mt-1 flex flex-wrap items-center gap-1">
                         <PaperChip tone="kraft" icon={<Clock size={9} aria-hidden="true" />}>
                           {fmtDuration(task.estimateMinutes)}
-                          {task.repeatDays ? ` × ${task.repeatDays.length}` : ''}
+                          {(() => {
+                            const cadence = recurrenceLabel(task, weekStart)
+                            return cadence ? ` ↻ ${cadence}` : ''
+                          })()}
                         </PaperChip>
                         <PaperChip tone={task.priority === 'P0' ? 'rose' : task.priority === 'P1' ? 'terracotta' : 'olive'} icon={<Flag size={9} aria-hidden="true" />}>
                           {task.priority}

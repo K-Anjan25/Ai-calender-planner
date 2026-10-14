@@ -25,7 +25,7 @@ owns language, and the plan arrives with a verdict you can trust.
 The visual language is layered **cut-paper diorama** — matte paper, cut edges, soft shadow gaps
 between layers, muted dyed stock. Scenery and objects only: no people, no characters, no faces.
 
-### The four things it does
+### What it does
 
 | | |
 | --- | --- |
@@ -33,6 +33,7 @@ between layers, muted dyed stock. Scenery and objects only: no people, no charac
 | **Plans honestly** | Energy-aware chunking, deadline headroom, protected lunch, meeting buffers, daily caps — then a verdict: *fits*, *tight*, or *overbooked*. |
 | **Explains every block** | Each block carries the reason codes the engine used, in plain words: "It landed here for three reasons: your focus peak · balances the day's load · avoids leaving an unusable gap." |
 | **Waits for approval** | Nothing reaches your real calendar until you pick blocks and approve. Sync is a dry run first, upserts are idempotent, and one click rolls the whole plan back. |
+| **Leaves with you** | *Download .ics* hands the week to Apple Calendar, Outlook, Fastmail or a printer — no account, no OAuth, no configuration. The file is written to import, not just to exist. |
 
 ---
 
@@ -48,9 +49,9 @@ mode**: a realistic week, a deterministic local reasoner standing in for the mod
 that says exactly that. The planner is fully functional on that path.
 
 ```bash
-npm test             # 64 assertions: engine invariants, agent contract, and the UI in jsdom
+npm test             # 101 assertions: engine invariants, agent contract, .ics structure, UI in jsdom
 npm run test:ui      # just the interaction tests (drag, resize, keyboard, intake, chat)
-npm run agent:check  # walk the agent through five conversational turns
+npm run agent:check  # walk the agent through nine turns, carrying pins between them
 npm run smoke        # capacity/demand baselines for the demo + overloaded weeks
 npm run build        # production build
 ```
@@ -132,6 +133,7 @@ src/
   components/planner/      WeekGrid, TaskInbox, PreferencePanel, AgentChat, PlanReport, Calendar
   lib/
     types.ts               the domain, expressed once in zod (single source of truth)
+    ics.ts                 RFC 5545 export — importable, not just present
     scheduler/             slots · policies · engine · conflicts · score   ← all time maths
     agent/                 prompts · tools · providers · local-reasoner · planner-agent
     google/                scopes · oauth · calendar   ← freebusy, drift, upsert, rollback
@@ -141,6 +143,24 @@ tests/                     engine invariants · agent contract · UI interaction
 scripts/                   smoke baselines, agent walkthrough, scene renderer
 docs/                      PRD · ARCHITECTURE · RULES · DESIGN · TASK · MEMORY
 ```
+
+### Repeats, order and export
+
+A task can carry a **cadence** — `Mon/Wed/Fri`, `every other Thursday`, `daily until Thursday`,
+`four times this week` — and one function answers the only question the rest of the codebase needs
+to ask: *which days of this week?* (`occurrenceDays`). The estimate is per occurrence; a task in a
+skipped week demands zero minutes and is neither planned nor reported as lost.
+
+A task can also **depend on another** (`dependsOn`). The engine places prerequisites first (depth
+first, then critical ratio), refuses to schedule a dependent before its prerequisite has finished
+(`AWAITING_DEPENDENCY`, with an `after-dependency` reason on the block), and audits the result
+afterwards — if a dependent still starts too early, the report says `dependency-unmet` and names
+both tasks. A cycle or a dangling reference is survived, not thrown.
+
+And `POST /api/export/ics` turns whatever is on screen into an `.ics` you keep: CRLF and 75-octet
+folding, escaped text, floating local times, stable `UID:<blockId>@paperweek` so re-importing
+updates instead of duplicating, and a `VJOURNAL` entry carrying the verdict so the file still
+explains itself a month later.
 
 ### Engine, in one breath
 
@@ -154,8 +174,10 @@ summarised: *placed*, *unplaced*, *slack*, and up to five ranked trade-offs with
 would recover.
 
 Any block can be dragged, and a drag becomes a **pin**: the engine re-plans around your decision
-instead of arguing with it. If a pin is impossible — a meeting is already there — the report says so
-(`pin-ignored`), because silently moving your block would be the one thing this app must never do.
+instead of arguing with it. A pin survives everything else you do — including asking the agent a
+question three turns later (`npm run agent:check` asserts exactly that). If a pin is impossible — a
+meeting is already there — the report says so (`pin-ignored`) and the pin is retired rather than
+re-attempted forever, because silently moving your block would be the one thing this app must never do.
 
 ---
 
@@ -185,8 +207,12 @@ instead of arguing with it. If a pin is impossible — a meeting is already ther
 ## Known limits
 
 - **No real-browser test.** jsdom executes behaviour but paints nothing: overlap, overflow, focus
-  rings and responsive reflow are unobserved (TASK.md T-507).
-- Single week, single timezone per plan. Multi-week horizons and travel time are not modelled.
+  rings and responsive reflow are unobserved (TASK.md T-507). The `.ics` is checked structurally
+  here; no real client has been observed importing it (TASK.md N-11).
+- Single week, single timezone per plan. Multi-week horizons and travel time are not modelled —
+  a fortnightly task is simply *not this week* on its off weeks, and says so.
+- Importing an existing `.ics` (only export is shipped), and `.ics` as a sync target alongside
+  Google, are still open (TASK.md N-10).
 - The local reasoner is a rule-based interpreter, not a model. It handles the phrasings in
   `scripts/agent-check.ts` very well and unusual framing less well — that's what `LLM_PROVIDER` is for.
 - Calendar tokens live in a cookie, so sync is per-browser. A server deployment wants a real store.

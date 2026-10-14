@@ -8,12 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --tsconfig tsconfig.tests.json --test tests/*.test.ts",
-    "test:scheduler": "tsx --tsconfig tsconfig.tests.json --test tests/scheduler.test.ts",
+    "test": "node scripts/run-tests.mjs",
+    "test:scheduler": "node scripts/run-tests.mjs tests/scheduler.test.ts",
     "agent:check": "tsx scripts/agent-check.ts",
     "smoke": "tsx scripts/smoke.ts",
     "scene": "tsx scripts/scene-svg.ts && node scripts/render-scene.mjs",
-    "test:ui": "tsx --tsconfig tsconfig.tests.json --test tests/ui.test.ts",
+    "test:ui": "node scripts/run-tests.mjs tests/ui.test.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json"
   },
   "dependencies": {

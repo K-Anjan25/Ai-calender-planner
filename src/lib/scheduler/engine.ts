@@ -30,6 +30,7 @@ import {
   dayBalanceSignal,
   deadlineFitSignal,
   fragmentationSignal,
+  occurrenceDays,
   orderTasks,
   reasonLabel,
   rhythmSignal,
@@ -133,14 +134,16 @@ function materialisePins(
  * Chunk building (handles repeating tasks)
  * ------------------------------------------------------------------ */
 
-export function chunksForTask(task: Task, prefs: Preferences): Chunk[] {
-  const repeatDays = task.repeatDays ?? []
-  if (repeatDays.length < 2) return chunkTask(task, prefs)
+export function chunksForTask(task: Task, prefs: Preferences, weekStart?: string): Chunk[] {
+  // An occurrence week with no occurrence days in it produces no work at all (T-601).
+  if (task.recurrence && occurrenceDays(task, weekStart).length === 0) return []
+  const days = occurrenceDays(task, weekStart)
+  if (days.length < 2) return chunkTask(task, prefs)
   // Repeating work: `estimateMinutes` is per occurrence, and each occurrence is bound to its day.
-  return repeatDays.map((weekday, index) => ({
+  return days.map((weekday, index) => ({
     task,
     index,
-    count: repeatDays.length,
+    count: days.length,
     minutes: task.estimateMinutes,
     weekday,
   }))
@@ -197,6 +200,22 @@ function busyOnDate(ctx: PlacementContext, date: string): BusyEvent[] {
   return ctx.busy.filter((e) => e.date === date)
 }
 
+/**
+ * Absolute minute (week axis) at which a task's prerequisites are all done, or null when none of
+ * them have been placed yet — in which case there is nothing to enforce.
+ */
+export function dependencyReadyAbs(ctx: PlacementContext, task: Task): number | null {
+  if (!task.dependsOn?.length) return null
+  const ids = new Set(task.dependsOn)
+  let ready: number | null = null
+  for (const block of ctx.blocks) {
+    if (block.kind !== 'task' || !ids.has(block.taskId)) continue
+    const endAbs = block.dayIndex * 1440 + block.endMin
+    if (ready === null || endAbs > ready) ready = endAbs
+  }
+  return ready
+}
+
 export function isFeasible(ctx: PlacementContext, input: FeasibilityInput): Feasibility {
   const { start, end, minutes, task, slot } = input
   const snapOk = start % SNAP_MINUTES === 0 && minutes % SNAP_MINUTES === 0
@@ -213,6 +232,14 @@ export function isFeasible(ctx: PlacementContext, input: FeasibilityInput): Feas
     const deadlineAbs = absMinuteOf(task.deadline, ctx.ordering)
     const dayAbs = slot.dayIndex * 1440
     if (deadlineAbs !== null && dayAbs + end > deadlineAbs) return { ok: false, code: 'PAST_DEADLINE' }
+  }
+
+  // Dependency ordering (T-602): a task may not begin before every prerequisite it depends on has
+  // finished. Only prerequisites that were actually placed constrain anything — an unscheduled
+  // dependency is reported after the fact instead of silently freezing the work behind it.
+  if (task.dependsOn?.length) {
+    const readyAbs = dependencyReadyAbs(ctx, task)
+    if (readyAbs !== null && slot.dayIndex * 1440 + start < readyAbs) return { ok: false, code: 'AWAITING_DEPENDENCY' }
   }
 
   // INV-4 earliest start
@@ -289,7 +316,7 @@ export function tryPlaceChunk(
   } = {},
 ): Placement | null {
   const { task } = chunk
-  const allChunks = chunksForTask(task, ctx.prefs)
+  const allChunks = chunksForTask(task, ctx.prefs, ctx.frame.weekStartDate)
   const remainingAfter = allChunks.filter((c) => c.index > chunk.index).reduce((sum, c) => sum + c.minutes, 0)
 
   let best: Placement | null = null
@@ -388,6 +415,10 @@ export function tryPlaceChunk(
         })
       }
       if (!sameDayBlocks.length) reasons.push({ code: 'early-in-week', label: 'First work placed on this day' })
+      // If this task waits on something else, say so — the reason is part of the promise (L3).
+      if (task.dependsOn?.length && dependencyReadyAbs(ctx, task) !== null) {
+        reasons.push({ code: 'after-dependency', label: reasonLabel('after-dependency') })
+      }
 
       const placement: Placement = {
         slot,
@@ -722,7 +753,7 @@ export function generatePlan(input: GenerateInput): PlanProposal {
   // Pass 1 — clean placement inside real working hours for every chunk of every task.
   const pending: Chunk[] = []
   for (const task of ordered) {
-    for (const chunk of chunksForTask(task, preferences)) {
+    for (const chunk of chunksForTask(task, preferences, frame.weekStartDate)) {
       const placed = tryPlaceChunk(ctx, chunk)
       if (!placed) pending.push(chunk)
     }
@@ -781,6 +812,7 @@ export function generatePlan(input: GenerateInput): PlanProposal {
     blocks: repaired.blocks,
     slots,
     droppedPins: ctx.droppedPins,
+    pins,
     failures: repaired.failures,
     engine: input.engine ?? 'deterministic',
     generatedAt: input.generatedAt ?? nowISO,

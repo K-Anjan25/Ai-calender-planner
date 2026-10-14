@@ -151,6 +151,8 @@ When commitment > capacity, the app must not silently drop work. It presents a *
 | FR-5.4 | Re-running sync updates existing events instead of duplicating them. | P1 |
 | FR-5.5 | Delete/rollback a pushed plan. | P1 |
 | FR-5.6 | Token refresh handling; clear re-auth prompt on expiry. | P1 |
+| FR-5.7 | Export the week as an `.ics` file with no account, no OAuth and no configuration. | P2 |
+| FR-5.8 | The exported file is importable by a standard client: RFC 5545 folding/escaping, floating local times, stable UIDs so re-importing updates rather than duplicates. | P2 |
 
 ### 6.6 Insights
 
@@ -217,8 +219,14 @@ The engine is deterministic and is the single source of truth for time. Full alg
 **MVP (this repository)**
 Structured + free-text intake · preference model · deterministic week scheduler with explanations · agent with tools, structured output, and demo fallback · layered week grid with drag-to-adjust · Plan Report with trade-offs · Google Calendar OAuth + free/busy + approved push · insights rail · responsive paper-diorama UI.
 
+**Post-MVP, shipped (see `TASK.md`)**
+Recurring task engine with per-occurrence estimates (FR-1.4, T-601) · dependency enforcement with an
+ordering gate, an `after-dependency` reason and a `dependency-unmet` audit (FR-1.5, T-602) ·
+credential-free `.ics` export (FR-5.7–5.8, T-604).
+
 **v1.1**
-Recurring task engine, dependency enforcement, multi-week horizon, plan templates, ICS import, "what changed" diff view.
+Calendar *import* (and `.ics` as a sync target), multi-week horizon, plan templates, "what changed"
+diff view, persistence + accounts.
 
 **v2**
 Team availability, focus-time defence against external invites, mobile PWA with offline plan cache, actuals-vs-plan learning loop that tunes the weights per user.

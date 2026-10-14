@@ -7,6 +7,7 @@ import {
   type PlacedBlock,
   type PlanProposal,
   type PlanReport,
+  type Pin,
   type Preferences,
   type Task,
   type TradeoffOption,
@@ -37,6 +38,8 @@ export type EvaluateInput = {
   blocks: PlacedBlock[]
   slots: FreeSlot[]
   droppedPins: string[]
+  /** Every pin the caller asked for — the proposal publishes the subset that survived. */
+  pins: Pin[]
   failures: Map<string, string>
   engine: 'deterministic' | 'agent'
   generatedAt: string
@@ -47,6 +50,48 @@ const MARATHON_MINUTES = 6 * 60 + 30
 const NO_BREAK_MINUTES = 4 * 60
 const THRASH_SWITCHES = 8
 
+/**
+ * Dependency audit (T-602).
+ *
+ * Placement enforces the ordering up front, but a prerequisite that only found room in the second
+ * pass — or never found room at all — can still leave a dependent task scheduled too early. That is
+ * reported rather than papered over: a plan that contradicts your own constraints is not a plan
+ * (RULES.md L3/L4).
+ */
+export function dependencyConflicts(
+  tasks: Task[],
+  blocks: PlacedBlock[],
+): { taskId: string; title: string; blockedBy: string[]; missing: string[] }[] {
+  const byId = new Map(tasks.map((task) => [task.id, task]))
+  const ends = new Map<string, number>()
+  const starts = new Map<string, number>()
+  for (const block of blocks) {
+    if (block.kind !== 'task') continue
+    const absStart = block.dayIndex * 1440 + block.startMin
+    const absEnd = block.dayIndex * 1440 + block.endMin
+    starts.set(block.taskId, Math.min(starts.get(block.taskId) ?? Number.POSITIVE_INFINITY, absStart))
+    ends.set(block.taskId, Math.max(ends.get(block.taskId) ?? 0, absEnd))
+  }
+
+  const conflicts: { taskId: string; title: string; blockedBy: string[]; missing: string[] }[] = []
+  for (const task of tasks) {
+    const dependencies = (task.dependsOn ?? []).filter((id) => byId.has(id) && id !== task.id)
+    if (dependencies.length === 0) continue
+    const start = starts.get(task.id)
+    if (start === undefined) continue // the task itself never landed; that is a different report
+
+    const blockedBy: string[] = []
+    const missing: string[] = []
+    for (const id of dependencies) {
+      const end = ends.get(id)
+      if (end === undefined) missing.push(byId.get(id)?.title ?? id)
+      else if (start < end) blockedBy.push(byId.get(id)?.title ?? id)
+    }
+    if (blockedBy.length > 0 || missing.length > 0) conflicts.push({ taskId: task.id, title: task.title, blockedBy, missing })
+  }
+  return conflicts
+}
+
 function orderedContext(frame: WeekFrame): OrderingContext {
   return {
     nowAbs: 0,
@@ -56,7 +101,7 @@ function orderedContext(frame: WeekFrame): OrderingContext {
 }
 
 export function evaluatePlan(input: EvaluateInput): PlanProposal {
-  const { frame, prefs, tasks, busy, blocks, slots, failures, droppedPins } = input
+  const { frame, prefs, tasks, busy, blocks, slots, failures, droppedPins, pins } = input
   const ordering = orderedContext(frame)
 
   const taskBlocks = blocks.filter((b) => b.kind === 'task')
@@ -68,7 +113,7 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
   const meetingMinutes = busy.reduce((sum, e) => sum + Math.max(0, e.endMin - e.startMin), 0)
   const capacityMinutes =
     slots.reduce((sum, s) => sum + s.minutes, 0) + taskBlocks.filter((b) => b.pinned).reduce((sum, b) => sum + b.minutes, 0)
-  const demandMinutes = tasks.reduce((sum, t) => sum + totalDemandMinutes(t), 0)
+  const demandMinutes = tasks.reduce((sum, t) => sum + totalDemandMinutes(t, frame.weekStartDate), 0)
   const scheduledMinutes = taskBlocks.reduce((sum, b) => sum + b.minutes, 0)
   const utilisation = capacityMinutes > 0 ? Number((scheduledMinutes / capacityMinutes).toFixed(3)) : 0
 
@@ -76,7 +121,7 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
   const unscheduled: PlanReport['unscheduled'] = []
   for (const task of tasks) {
     const scheduled = scheduledByTask.get(task.id) ?? 0
-    const deficit = totalDemandMinutes(task) - scheduled
+    const deficit = totalDemandMinutes(task, frame.weekStartDate) - scheduled
     if (deficit <= 0) continue
     unscheduled.push({
       taskId: task.id,
@@ -94,7 +139,7 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
     if (!task.deadline) continue
     const scheduled = scheduledByTask.get(task.id) ?? 0
     const lateBlocks = taskBlocks.filter((b) => b.taskId === task.id && b.conflict === 'deadline-risk')
-    const shortfall = totalDemandMinutes(task) - scheduled
+    const shortfall = totalDemandMinutes(task, frame.weekStartDate) - scheduled
     if (shortfall <= 0 && !lateBlocks.length) continue
     const deadlineAbs = absMinuteOf(task.deadline, ordering)
     const lastBlock = [...taskBlocks].filter((b) => b.taskId === task.id).sort((a, b) => b.endMin - a.endMin)[0]
@@ -106,7 +151,7 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
       title: task.title,
       deadline: task.deadline,
       scheduledMinutes: scheduled,
-      requiredMinutes: totalDemandMinutes(task),
+      requiredMinutes: totalDemandMinutes(task, frame.weekStartDate),
       severity,
     })
   }
@@ -231,6 +276,19 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
     }
   }
 
+  const dependencyIssues = dependencyConflicts(tasks, blocks)
+  if (dependencyIssues.length > 0) {
+    const parts = dependencyIssues.slice(0, 2).map((issue) => {
+      if (issue.missing.length > 0) return `“${issue.title}” could not wait for ${issue.missing.join(', ')} — no room was found for it`
+      return `“${issue.title}” starts before ${issue.blockedBy.join(', ')} finishes`
+    })
+    warnings.push({
+      code: 'dependency-unmet',
+      severity: 'warn',
+      message: `${parts.join('; ')}. Move it, or free up the prerequisite.`,
+    })
+  }
+
   if (droppedPins.length > 0) {
     const titles = droppedPins
       .map((taskId) => tasks.find((task) => task.id === taskId)?.title)
@@ -281,6 +339,7 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
 
   const report: PlanReport = {
     fits,
+    droppedPins,
     capacityMinutes,
     demandMinutes,
     scheduledMinutes,
@@ -308,7 +367,9 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
     busy,
     tasks,
     preferences: prefs,
-    pins: [],
+    // A pin the engine could not honour is *not* in force: keeping it would promise the user
+    // something the plan does not do (D-021). It is reported in `droppedPins` and warned about.
+    pins: pins.filter((pin) => !droppedPins.includes(pin.taskId)),
     engine: input.engine,
     generatedAt: input.generatedAt,
   }
@@ -346,7 +407,7 @@ function buildTradeoffs(input: {
     if (!task) continue
 
     const sessions = Math.ceil(task.estimateMinutes / 90)
-    if (!task.splittable && occurrenceCount(task) === 1 && sessions > 1 && task.estimateMinutes >= 90) {
+    if (!task.splittable && occurrenceCount(task, frame.weekStartDate) === 1 && sessions > 1 && task.estimateMinutes >= 90) {
       options.push({
         id: `to_split_${task.id}`,
         kind: 'split',
@@ -359,13 +420,13 @@ function buildTradeoffs(input: {
       })
     }
 
-    if (item.minutes > 0 && occurrenceCount(task) > 1) {
+    if (item.minutes > 0 && occurrenceCount(task, frame.weekStartDate) > 1) {
       options.push({
         id: `to_occurrence_${task.id}`,
         kind: 'shorten',
         taskId: task.id,
         label: `Drop one “${task.title}” this week`,
-        consequence: `Skips one of its ${occurrenceCount(task)} occurrences. Frees ${fmtDuration(
+        consequence: `Skips one of its ${occurrenceCount(task, frame.weekStartDate)} occurrences. Frees ${fmtDuration(
           task.estimateMinutes,
         )} and keeps the weekly rhythm mostly intact.`,
         minutesRecovered: task.estimateMinutes,

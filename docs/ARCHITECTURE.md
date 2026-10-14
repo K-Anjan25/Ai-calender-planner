@@ -321,6 +321,7 @@ src/
     api/chat/route.ts              agent refinement + diff
     api/calendar/{auth,callback,sync}/route.ts
     api/health/route.ts            capability probe
+    api/export/ics/route.ts        credential-free .ics export (T-604)
     globals.css                    Tailwind v4 @theme design tokens
   components/
     paper/                         design-system primitives (see DESIGN.md §9)
@@ -329,11 +330,17 @@ src/
     planner/
       TaskInbox · PreferencePanel · WeekGrid · ScheduleBlock · AgentChat
       PlanReportPanel · TradeoffPanel · InsightsRail · CalendarPanel
+tests/
+  harness/{setup-dom,dom}.ts       jsdom + fetch→route-handler bridge + geometry
+  scheduler.test.ts  agent.test.ts  ics.test.ts  ui.test.ts
+scripts/
+  run-tests.mjs                    cross-platform test runner (TASK.md T-509)
   lib/
     types.ts  sample-data.ts  utils.ts
     scheduler/{engine,slots,policies,conflicts,score}.ts
     agent/{planner-agent,tools,prompts,providers,local-reasoner}.ts
     google/{calendar,oauth,scopes}.ts
+    ics.ts                         RFC 5545 writer (folding, escaping, UIDs)
     store/planner-store.ts
 docs/  PRD.md ARCHITECTURE.md RULES.md DESIGN.md TASK.md MEMORY.md
 ```
@@ -354,7 +361,8 @@ Every optional integration degrades to a working product (§1.2).
 
 | Level | Scope | Notes |
 | --- | --- | --- |
-Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 46 assertions).
+Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 101 assertions:
+38 agent, 30 engine, 12 export, 21 UI-in-jsdom).
 
 | Level | Scope | Where |
 | --- | --- | --- |
@@ -366,6 +374,8 @@ Implemented in `tests/` and run with `npm test` (node's test runner over `tsx`, 
 | **Lexicon tests** | local reasoner | Every phrasing in `scripts/agent-check.ts` asserted for the *values* it must produce (durations, weekday deadlines, repeat days, energy, refusals, pins). |
 | **Repair tests** | agent plumbing | `extractJson` on fenced/chatty/broken model output; `normaliseTasks` uniqueness and `estimatedByAI`; `mergeTasks` not duplicating on re-parse. |
 | **Adapter tests** | calendar | Free/busy clamped to the week; every payload carries `paperweekBlockId`/`paperweekPlanId` and the `· PW` marker. |
+| **Export tests** | `lib/ics` | `tests/ics.test.ts` — CRLF, 75-octet folding on octet boundaries, TEXT escaping, floating local times, unique/stable UIDs, determinism, `approvedBlockIds` scoping, and the ritual-row exclusion. A malformed `.ics` imports as *nothing at all*, so structure is asserted rather than sampled. |
+| **Carry-over** | agent session | `scripts/agent-check.ts` walks nine conversational turns carrying tasks, preferences and **pins**, then asserts a pin made earlier still holds and that none were silently relocated (D-021). |
 | **UI behaviour** | components | `tests/ui.test.ts` — jsdom, real components, real routes, real engine. Drag → pin → server replan (honoured and refused), resize, keyboard parity, free-text intake, chat, calendar gates, full-page render. |
 | **A11y** | UI | Keyboard parity (move/resize/jump) and focus rings are *exercised* by the UI tests; focus-visible styling and screen-reader output still want a real browser (TASK.md T-507). |
 

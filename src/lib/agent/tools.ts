@@ -206,6 +206,7 @@ export function normaliseTasks(
       minChunkMinutes: item.minChunkMinutes ?? (item.energy === 'deep' ? 60 : 30),
       location: item.location,
       repeatDays: item.repeatDays,
+      recurrence: item.recurrence,
       dependsOn: item.dependsOn,
       source: 'agent',
       estimatedByAI: inferred || undefined,
@@ -256,6 +257,14 @@ export type Toolkit = {
   revise_plan(input: { tasks?: Task[]; preferences?: Preferences; pins?: Pin[]; rationale?: string }): Promise<Outcome>
   explain_block(input: { blockId: string }): Promise<Outcome>
   estimate_duration(input: { title: string; category?: Task['category']; energy?: Task['energy'] }): Promise<Outcome>
+}
+
+/** Newest pin wins per task+date — the same rule the store applies in `pinBlock`. */
+function mergePins(current: Pin[], incoming: Pin[]): Pin[] {
+  const key = (pin: Pin) => `${pin.taskId}@${pin.date}`
+  const merged = new Map(current.map((pin) => [key(pin), pin]))
+  for (const pin of incoming) merged.set(key(pin), pin)
+  return [...merged.values()]
 }
 
 function pushTrace(trace: AgentStep[], tool: ToolName, label: string, detail: string | undefined, startedAt: number) {
@@ -366,9 +375,14 @@ export function createToolkit(input: { context: ScheduleContext; interpreter: In
         ...context,
         tasks: args.tasks ?? context.tasks,
         preferences: args.preferences ? { ...context.preferences, ...args.preferences } : context.preferences,
-        pins: args.pins ?? context.pins,
+        // Pins accumulate: a new instruction joins the decisions already made rather than
+        // replacing them (N-9). Newest wins per task+date, exactly as the store does.
+        pins: args.pins ? mergePins(context.pins, args.pins) : context.pins,
       }
       const next = schedule(args.rationale, 'revise_plan', 'Rebuilt the week', started)
+      // A pin the engine could not honour is retired here too, so it is not re-attempted (and
+      // re-warned about) on every following turn. The warning above already told the user.
+      context = { ...context, pins: context.pins.filter((pin) => !next.report.droppedPins.includes(pin.taskId)) }
       outcome = { kind: 'patch', tasks: context.tasks, preferences: context.preferences, pins: context.pins }
       void next
       return outcome

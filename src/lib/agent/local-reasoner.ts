@@ -5,6 +5,7 @@ import {
   type BusyEvent,
   type Pin,
   type Preferences,
+  type Recurrence,
   type Task,
   type Weekday,
 } from '@/lib/types'
@@ -57,6 +58,24 @@ const PRIORITY_WORDS: [RegExp, Task['priority']][] = [
 const DEADLINE_DAY: Record<string, number> = {
   monday: 0, mon: 0, tuesday: 1, tue: 1, tues: 1, wednesday: 2, wed: 2,
   thursday: 3, thu: 3, thurs: 3, friday: 4, fri: 4, saturday: 5, sat: 5, sunday: 6, sun: 6,
+}
+
+/**
+ * Spread N occurrences across the week when the user gave a count but no days ("inbox zero, four
+ * times this week"). Deterministic, matched to the phrasings already in REPEAT_WORDS, and visible
+ * in the task list — the user can see and change which days were chosen.
+ */
+function spreadDays(count: number): Weekday[] {
+  const table: Record<number, Weekday[]> = {
+    1: ['mon'],
+    2: ['tue', 'thu'],
+    3: ['mon', 'wed', 'fri'],
+    4: ['mon', 'tue', 'thu', 'fri'],
+    5: ['mon', 'tue', 'wed', 'thu', 'fri'],
+    6: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
+    7: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+  }
+  return table[Math.max(1, Math.min(7, count))] ?? ['mon', 'wed', 'fri']
 }
 
 const REPEAT_WORDS: [RegExp, Weekday[]][] = [
@@ -175,7 +194,45 @@ function detectPriority(clause: string): Task['priority'] {
   return 'P2'
 }
 
+/**
+ * RRULE-ish extras a person actually types: "every other Thursday", "every weekday until Friday",
+ * "gym Mon/Wed/Fri, 4 times this week" (T-601). The engine stays week-scoped (T-603), so `interval`
+ * only decides whether *this* week is an occurrence week.
+ */
+function detectRecurrenceExtras(clause: string, weekStartDate: string): Partial<Recurrence> {
+  const extras: Partial<Recurrence> = {}
+
+  if (/\bevery\s+(?:other|second|2nd)\s+week\b|\bbi[- ]?weekly\b/i.test(clause)) extras.interval = 2
+  if (/\bevery\s+other\s+(mon|tue|wed|thu|fri|sat|sun)/i.test(clause)) extras.interval = 2
+
+  const count = clause.match(/\b(\d+|two|three|four|five|six)\s*(?:times|x|sessions?)\b/i)
+  if (count) {
+    const word = (count[1] ?? '').toLowerCase()
+    const words: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6 }
+    const value = words[word] ?? Number.parseInt(word, 10)
+    if (Number.isFinite(value) && value >= 1 && value <= 20) extras.count = value
+  }
+
+  const until = clause.match(/\buntil\s+((?:mon|tue|wed|thu|fri|sat|sun)[a-z]*)/i)
+  if (until?.[1]) {
+    const weekday = parseWeekday(until[1])
+    if (weekday) extras.until = addDaysISO(weekStartDate, WEEKDAYS.indexOf(weekday))
+  } else if (/until the end of the week\b|\bfor the rest of the week\b/i.test(clause)) {
+    extras.until = addDaysISO(weekStartDate, 6)
+  }
+
+  extras.anchorWeek = weekStartDate
+  return extras
+}
+
 function detectRepeat(clause: string): Weekday[] | undefined {
+  // A single named day alongside a recurrence ("every other Thursday") is still a repeat.
+  const single = clause.match(/\bevery\s+(?:other\s+|second\s+)?(mon|tue|tues|wed|thu|thurs|fri|sat|sun)(?:day)?\b/i)
+  if (single?.[1]) {
+    const key = single[1].toLowerCase().slice(0, 3)
+    const day = WEEKDAYS.find((candidate) => candidate === key)
+    if (day) return [day]
+  }
   for (const [pattern, days] of REPEAT_WORDS) {
     if (pattern.test(clause)) return days
   }
@@ -188,6 +245,14 @@ function detectRepeat(clause: string): Weekday[] | undefined {
       if (found) days.add(found)
     }
     return days.size >= 2 ? [...days].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b)) : undefined
+  }
+  // "four times this week", "3x a week", "twice a week" — a cadence with no named days.
+  const counted = clause.match(/\b(\d+|one|two|three|four|five|six|once|twice)\s*(?:times|x|sessions?)\b/i)
+  if (counted?.[1] && /\b(?:a|per|this|the)\s*week\b|\bweekly\b/i.test(clause)) {
+    const words: Record<string, number> = { once: 1, twice: 2, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 }
+    const key = counted[1].toLowerCase()
+    const value = words[key] ?? Number.parseInt(key, 10)
+    if (Number.isFinite(value) && value >= 2) return spreadDays(value)
   }
   return undefined
 }
@@ -214,6 +279,8 @@ function splitClauses(text: string): string[] {
     if (!fragment) continue
     const isModifier =
       /^(?:for\s+)?\d/.test(fragment) ||
+      /^(?:\d+|one|two|three|four|five|six)\s*(?:times|x|sessions?)\b/i.test(fragment) ||
+      /^(?:once|twice)\b/i.test(fragment) ||
       /^(?:by|before|due|deadline|no later than|prior to)\b/i.test(fragment) ||
       /^(?:it|this|that)(?:'s|\s+is)?\s*(?:p[0-3]|priority)/i.test(fragment)
     if (isModifier && heads.length > 0) {
@@ -233,7 +300,10 @@ function cleanTitle(clause: string): string {
     .replace(/\((?:\d+(?:\.\d+)?\s*(?:h|hr|hrs|hours?|m|min|mins|minutes?)[^)]*)\)/gi, '')
     .replace(/\b(?:about|around|roughly|approximately)?\s*\d+(?:\.\d+)?\s*(?:h|hr|hrs|hours?|m|min|mins|minutes?)\b/gi, '')
     .replace(/\b(?:every|each)\s+(?:day|weekday|week)\b/gi, '')
+    .replace(/\bevery\s+(?:other|second|2nd)\s+(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day)?\b/gi, '')
     .replace(/\b\d+x\s*(?:a|per)\s*week\b/gi, '')
+    .replace(/\b(?:\d+|one|two|three|four|five|six)\s*(?:times|x|sessions?)\s*(?:a|per|this|the)?\s*week\b/gi, '')
+    .replace(/\b(?:daily|weekly|biweekly|fortnightly)\b/gi, '')
     .replace(
       /\b(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day)?(?:\s*[/,&+]\s*(?:mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)(?:day)?)+\b/gi,
       '',
@@ -260,6 +330,7 @@ export function parseTasksLocally(text: string, ctx: { nowISO: string; weekStart
 
   for (const clause of clauses) {
     const repeatDays = detectRepeat(clause)
+    const extras = detectRecurrenceExtras(clause, ctx.weekStartDate)
     const title = cleanTitle(clause)
     if (title.length < 3) continue
     const key = title.toLowerCase()
@@ -296,6 +367,17 @@ export function parseTasksLocally(text: string, ctx: { nowISO: string; weekStart
       splittable,
       minChunkMinutes: Math.min(minChunk, minutes),
       repeatDays,
+      // Only carry a recurrence object when it says something `repeatDays` cannot.
+      recurrence:
+        repeatDays && (extras.interval || extras.count || extras.until)
+          ? {
+              byWeekday: repeatDays,
+              interval: extras.interval ?? 1,
+              count: extras.count,
+              until: extras.until,
+              anchorWeek: ctx.weekStartDate,
+            }
+          : undefined,
       source: 'agent',
       estimatedByAI: stated ? undefined : true,
     })

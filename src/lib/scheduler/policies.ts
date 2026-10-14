@@ -68,17 +68,72 @@ export const PRIORITY_URGENCY: Record<Priority, number> = {
   P3: 0.2,
 }
 
+/** Whole-day helpers, kept local so the engine never does timezone maths (MEMORY.md §5.8). */
+function isoToUtcDate(iso: string): Date {
+  const [year, month, day] = iso.slice(0, 10).split('-').map(Number)
+  return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1))
+}
+
+/**
+ * Which days of `weekStart`'s week this task occurs on, in week order.
+ *
+ * The single answer the rest of the engine asks for, so `repeatDays` (the simple form) and
+ * `recurrence` (the RRULE-ish form) can never drift apart.
+ */
+export function occurrenceDays(task: Task, weekStart?: string, weekOrder: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']): Weekday[] {
+  const recurrence = task.recurrence
+  if (!recurrence) return task.repeatDays ?? []
+
+  if (recurrence.interval > 1 && recurrence.anchorWeek && weekStart) {
+    const weeks = Math.round(
+      (isoToUtcDate(weekStart).getTime() - isoToUtcDate(recurrence.anchorWeek).getTime()) / (7 * 24 * 60 * 60 * 1000),
+    )
+    if (weeks >= 0 && weeks % recurrence.interval !== 0) return []
+  }
+
+  const orderIndex = new Map(weekOrder.map((day, index) => [day, index]))
+  let days = [...recurrence.byWeekday].sort((a, b) => (orderIndex.get(a) ?? 0) - (orderIndex.get(b) ?? 0))
+
+  if (recurrence.until && weekStart) {
+    const until = isoToUtcDate(recurrence.until)
+    days = days.filter((day) => {
+      const date = new Date(isoToUtcDate(weekStart).getTime() + (orderIndex.get(day) ?? 0) * 24 * 60 * 60 * 1000)
+      return date.getTime() <= until.getTime()
+    })
+  }
+
+  if (recurrence.count) days = days.slice(0, recurrence.count)
+  return days
+}
+
+/** Short human phrasing for a task's cadence, for the UI ("Mon, Wed, Fri" / "every 2 weeks"). */
+export function recurrenceLabel(task: Task, weekStart?: string): string | null {
+  const days = occurrenceDays(task, weekStart)
+  if (days.length === 0) return 'not this week'
+  const names = days.map((day) => day.charAt(0).toUpperCase() + day.slice(1))
+  if (task.recurrence?.interval && task.recurrence.interval > 1) {
+    return `every ${task.recurrence.interval} weeks, ${names.join(', ')}`
+  }
+  if (days.length === 1) return names[0] ?? null
+  if (names.length === 5 && days.join() === 'mon,tue,wed,thu,fri') return 'weekdays'
+  if (names.length === 7) return 'every day'
+  return names.join(', ')
+}
+
 /** How many times this task occurs in the week (repeating tasks occur once per listed day). */
-export function occurrenceCount(task: Task): number {
-  return Math.max(1, task.repeatDays?.length ?? 1)
+export function occurrenceCount(task: Task, weekStart?: string): number {
+  const days = occurrenceDays(task, weekStart)
+  return Math.max(1, days.length)
 }
 
 /**
  * Repeating tasks express `estimateMinutes` **per occurrence** ("gym, 60 min, Mon/Wed/Fri"),
  * so the week's true demand is per-occurrence minutes × occurrences (INV-6).
  */
-export function totalDemandMinutes(task: Task): number {
-  return task.estimateMinutes * occurrenceCount(task)
+export function totalDemandMinutes(task: Task, weekStart?: string): number {
+  // A recurring task that does not occur this week demands nothing this week (T-601).
+  if (task.recurrence && occurrenceDays(task, weekStart).length === 0) return 0
+  return task.estimateMinutes * occurrenceCount(task, weekStart)
 }
 
 export type Chunk = {
@@ -179,9 +234,58 @@ export function criticalRatio(task: Task, ctx: OrderingContext): number {
   return timeRemaining / workRemaining
 }
 
-/** Deterministic task ordering: urgency, then priority, then deadline, then biggest-first, then id. */
+/**
+ * How deep a task sits in the dependency graph: 0 for a task nothing blocks, 1 for one waiting on a
+ * single prerequisite, and so on. Cycles are broken by depth-first traversal (a task that depends on
+ * itself, directly or through a loop, simply keeps the depth it reached) — the engine must never
+ * hang or throw because a user typed a circular plan.
+ */
+export function dependencyDepth(tasks: Task[]): Map<string, number> {
+  const byId = new Map(tasks.map((task) => [task.id, task]))
+  const depths = new Map<string, number>()
+
+  const depthOf = (id: string, seen: Set<string>): number => {
+    const cached = depths.get(id)
+    if (cached !== undefined) return cached
+    if (seen.has(id)) return 0 // cycle: stop, do not recurse
+    const task = byId.get(id)
+    if (!task?.dependsOn?.length) {
+      depths.set(id, 0)
+      return 0
+    }
+    seen.add(id)
+    let depth = 0
+    for (const dependency of task.dependsOn) {
+      if (!byId.has(dependency)) continue // a dangling reference is simply not a constraint
+      depth = Math.max(depth, depthOf(dependency, seen) + 1)
+    }
+    seen.delete(id)
+    depths.set(id, depth)
+    return depth
+  }
+
+  for (const task of tasks) depthOf(task.id, new Set())
+  return depths
+}
+
+/** The prerequisites of a task that are actually present in this plan. */
+export function dependenciesOf(task: Task, tasks: Task[]): Task[] {
+  if (!task.dependsOn?.length) return []
+  const ids = new Set(task.dependsOn)
+  return tasks.filter((other) => other.id !== task.id && ids.has(other.id))
+}
+
+/**
+ * Deterministic task ordering: prerequisites first, then urgency, then priority, then deadline,
+ * then biggest-first, then id.
+ */
 export function orderTasks(tasks: Task[], ctx: OrderingContext): Task[] {
+  const depths = dependencyDepth(tasks)
   return [...tasks].sort((a, b) => {
+    const depthA = depths.get(a.id) ?? 0
+    const depthB = depths.get(b.id) ?? 0
+    // A dependent task is never considered before what it depends on (T-602).
+    if (depthA !== depthB) return depthA - depthB
     const crA = criticalRatio(a, ctx)
     const crB = criticalRatio(b, ctx)
     if (crA !== crB) return crA - crB
@@ -411,6 +515,7 @@ export const REASON_LABELS: Record<ReasonCode, string> = {
   'early-in-week': 'Nothing earlier could fit',
   'morning-protected': 'Protects your morning',
   pinned: 'Pinned by you',
+  'after-dependency': 'Runs after what it depends on',
   'split-to-fit': 'Trimmed to fit the largest free gap',
   spillover: 'Extended past the original slot',
   'over-capacity': 'Placed over your daily cap',

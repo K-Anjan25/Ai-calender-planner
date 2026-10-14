@@ -69,6 +69,16 @@ export const wallClockSchema = z
   .min(16)
   .refine((value) => !Number.isNaN(new Date(value).getTime()), { message: 'Invalid ISO datetime' })
 
+export const recurrenceSchema = z.object({
+  byWeekday: z.array(weekdaySchema).min(1).max(7),
+  interval: z.number().int().min(1).max(8).default(1),
+  count: z.number().int().min(1).max(60).optional(),
+  until: z.string().max(40).optional(),
+  /** ISO date of the first occurrence week; interval parity is measured from here. */
+  anchorWeek: z.string().max(40).optional(),
+})
+export type Recurrence = z.infer<typeof recurrenceSchema>
+
 export const taskSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1).max(160),
@@ -86,6 +96,17 @@ export const taskSchema = z.object({
   location: z.string().max(80).optional(),
   /** e.g. ['mon','wed','fri'] for "review PRs three times this week". */
   repeatDays: z.array(weekdaySchema).max(7).optional(),
+  /**
+   * A within-the-week recurrence, in the spirit of RRULE (T-601):
+   *   `byWeekday` — which days; `interval` — every N weeks, counted from `anchorWeek`;
+   *   `count` — stop after N occurrences; `until` — stop after this date (inclusive).
+   *
+   * The engine plans one week at a time (see T-603), so `interval` decides whether *this* week is an
+   * occurrence week, and the rest of the fields choose which days inside it. That is deliberately
+   * narrower than RFC 5545, and honest about it: a task is never silently shifted into next week.
+   */
+  recurrence: recurrenceSchema.optional(),
+  /** Prerequisites: this task is not scheduled before they finish (T-602). */
   dependsOn: z.array(z.string()).max(20).optional(),
   source: z.enum(['user', 'agent', 'demo']).default('user'),
   /** True when the duration was inferred rather than stated (FR-1.3). */
@@ -175,6 +196,7 @@ export const REASON_CODES = [
   'early-in-week',
   'morning-protected',
   'pinned',
+  'after-dependency',
   'split-to-fit',
   'spillover',
   'over-capacity',
@@ -239,6 +261,7 @@ export const warningSchema = z.object({
     'weekend-used',
     'context-thrash',
     'pin-ignored',
+    'dependency-unmet',
   ]),
   severity: z.enum(['info', 'warn', 'critical']),
   message: z.string(),
@@ -298,6 +321,11 @@ export const planReportSchema = z.object({
     }),
   ),
   warnings: z.array(warningSchema),
+  /**
+   * Task ids whose pins could not be honoured (D-014). Structured, not just prose in `warnings`, so
+   * the client can retire a pin it can no longer keep instead of re-sending it forever.
+   */
+  droppedPins: z.array(z.string()).default([]),
   perDay: z.array(dayLoadSchema),
   tradeoffs: z.array(tradeoffOptionSchema),
   headline: z.string(),

@@ -7,5 +7,6 @@
     "moduleResolution": "bundler",
     "noEmit": true
   },
-  "include": ["tests/**/*.ts", "tests/**/*.tsx", "scripts/**/*.ts", "next-env.d.ts"]
+  "//include": "src/** is listed because a test runner resolves the nearest tsconfig per file; a file outside `include` silently falls back to the app config (jsx: preserve -> classic transform -> React is not defined).",
+  "include": ["tests/**/*.ts", "tests/**/*.tsx", "scripts/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "next-env.d.ts"]
 }

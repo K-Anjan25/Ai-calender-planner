@@ -8,7 +8,9 @@ import { runPlannerAgent } from '@/lib/agent/planner-agent'
 import { extractJson } from '@/lib/agent/planner-agent'
 import { diffPlans } from '@/lib/plan-diff'
 import { busyEventsFromFreeBusy, payloadForBlock } from '@/lib/google/calendar'
+import { occurrenceDays, totalDemandMinutes } from '@/lib/scheduler/policies'
 import { currentWeekStart, defaultPreferences, demoBusy, DEMO_FREE_TEXT, demoTasks } from '@/lib/sample-data'
+import { addDaysISO } from '@/lib/scheduler/slots'
 
 /**
  * Agent and contract tests.
@@ -170,6 +172,75 @@ describe('free-text intake', () => {
   })
 })
 
+describe('recurrence in free text (T-601)', () => {
+  const parse = (text: string) => parseTasksLocally(text, { nowISO: NOW, weekStartDate: WEEK_START })
+
+  it('reads "every other Thursday" as a fortnightly occurrence', () => {
+    const { tasks } = parse('Retro every other Thursday at 4pm, 60 minutes')
+    const task = tasks[0]
+    assert.ok(task)
+    assert.equal(task.recurrence?.interval, 2)
+    assert.deepEqual(task.recurrence?.byWeekday, ['thu'])
+    assert.equal(task.recurrence?.anchorWeek, WEEK_START)
+  })
+
+  it('reads "until Thursday" as a bounded run', () => {
+    const { tasks } = parse('Deep work every weekday until Thursday, 2 hours')
+    const task = tasks[0]
+    assert.ok(task?.recurrence?.until)
+    const days = occurrenceDays(task, WEEK_START)
+    assert.deepEqual(days, ['mon', 'tue', 'wed', 'thu'])
+    assert.equal(totalDemandMinutes(task, WEEK_START), 4 * 120)
+  })
+
+  it('reads "four times this week" as a count', () => {
+    const { tasks } = parse('Inbox zero daily, four times this week, 30 minutes')
+    const task = tasks[0]
+    assert.equal(task?.recurrence?.count, 4)
+    assert.equal(occurrenceDays(task, WEEK_START).length, 4)
+  })
+
+  it('leaves a plain weekday list as repeatDays, with no recurrence object', () => {
+    const { tasks } = parse('Gym Mon/Wed/Fri, 45 minutes')
+    const task = tasks[0]
+    assert.deepEqual(task?.repeatDays, ['mon', 'wed', 'fri'])
+    assert.equal(task?.recurrence, undefined, 'a simple repeat gained a redundant recurrence')
+  })
+
+  it('still treats "every weekday" as five occurrences per week', () => {
+    const { tasks } = parse('Review PRs every weekday, 30 minutes')
+    const task = tasks[0]
+    assert.equal(totalDemandMinutes(task, WEEK_START), 5 * 30)
+    assert.equal(task?.recurrence, undefined)
+  })
+})
+
+describe('dependencies survive normalisation (T-602)', () => {
+  it('keeps dependsOn from the model payload', () => {
+    const { tasks } = normaliseTasks(
+      [
+        { title: 'Write the spec', estimateMinutes: 120, energy: 'deep', category: 'work', splittable: false, priority: 'P1' },
+        {
+          title: 'Build the deck',
+          estimateMinutes: 120,
+          energy: 'deep',
+          category: 'work',
+          splittable: false,
+          priority: 'P1',
+          dependsOn: ['t_write_the_spec'],
+        },
+      ],
+      { nowISO: NOW, existingTasks: [] },
+    )
+    assert.deepEqual(tasks[1]?.dependsOn, ['t_write_the_spec'])
+  })
+
+  it('does not invent dependencies', () => {
+    const { tasks } = normaliseTasks([{ title: 'Standalone thing' }], { nowISO: NOW, existingTasks: [] })
+    assert.equal(tasks[0]?.dependsOn, undefined)
+  })
+})
+
 describe('conversational refinement', () => {
   const tasks = demoTasks(WEEK_START)
 
@@ -221,6 +292,67 @@ describe('conversational refinement', () => {
     assert.equal(added?.priority, 'P0')
     assert.equal(added?.estimateMinutes, 90)
     assert.ok(!/p0/i.test(added?.title ?? ''), 'the priority leaked into the title')
+  })
+
+  it('keeps a pin made in an earlier turn when a later turn changes something else (N-9)', async () => {
+    const run = (message: string, previous: Awaited<ReturnType<typeof runPlannerAgent>>) =>
+      runPlannerAgent({
+        tasks: previous.tasks,
+        preferences: previous.proposal.preferences,
+        busy: demoBusy(WEEK_START),
+        pins: previous.pins,
+        weekStartDate: WEEK_START,
+        nowISO: NOW,
+        message,
+        mode: 'local',
+      })
+
+    // Turn 1: open the weekend. Turn 2: the user puts the gym on Saturday morning — a pin.
+    const opened = await runPlannerAgent({
+      tasks,
+      preferences: defaultPreferences(),
+      busy: demoBusy(WEEK_START),
+      pins: [],
+      weekStartDate: WEEK_START,
+      nowISO: NOW,
+      message: 'use the weekend if it helps',
+      mode: 'local',
+    })
+    const pinned = await run('move the gym to Saturday morning', opened)
+    const gymPin = pinned.pins.find((pin) => pin.taskId === 't_gym')
+    assert.ok(gymPin, 'the gym pin was not created (or was refused) where the weekend is open')
+
+    // Turn 3: an unrelated instruction, sent with the pin the client is holding.
+    const after = await run('add a 90 minute writing block by Thursday', pinned)
+    assert.ok(
+      after.pins.some((pin) => pin.taskId === 't_gym' && pin.date === gymPin.date && pin.startMin === gymPin.startMin),
+      'the gym pin was dropped by an unrelated instruction',
+    )
+    const block = after.proposal.blocks.find((item) => item.taskId === 't_gym' && item.date === gymPin.date)
+    assert.equal(block?.startMin, gymPin.startMin, 'the pinned block moved after an unrelated instruction')
+  })
+
+  it('retires a pin it cannot honour, and says why (§D-021)', async () => {
+    const result = await runPlannerAgent({
+      tasks,
+      preferences: defaultPreferences(),
+      busy: demoBusy(WEEK_START),
+      pins: [{ taskId: 't_gym', date: addDaysISO(WEEK_START, 1), startMin: 10 * 60, minutes: 45 }],
+      weekStartDate: WEEK_START,
+      nowISO: NOW,
+      message: 'move the gym to Monday 10am',
+      mode: 'local',
+    })
+    const impossible = result.pins.find((pin) => pin.date === addDaysISO(WEEK_START, 1))
+    if (impossible) {
+      assert.equal(impossible.startMin, 10 * 60, 'an honoured pin changed position')
+    } else {
+      assert.ok(
+        result.proposal.report.droppedPins.includes('t_gym'),
+        'a pin vanished without being reported in droppedPins',
+      )
+      assert.ok(result.proposal.report.warnings.some((warning) => warning.code === 'pin-ignored'))
+    }
   })
 
   it('does not invent a change when the message carries none', () => {

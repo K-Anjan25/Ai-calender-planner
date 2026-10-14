@@ -206,6 +206,38 @@ describe('drag and drop', () => {
     })
   })
 
+  it('does not throw away a drag when the user then asks the agent something (N-9)', async () => {
+    const proposal = await buildDemoWeek()
+    const target = proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90)
+    assert.ok(target, 'no Monday block to drag')
+
+    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    strip()
+    const tile = tileFor(target)
+    const from = blockRect(0, target.startMin, target.minutes, windowOf(target.date))
+    applyRect(tile, from)
+    const wednesday = addDaysISO(proposal.weekStart, 2)
+    const to = { x: xForDay(2), y: yFor(13 * 60 + 30, windowOf(wednesday)) }
+
+    await act(async () => pointerDown(tile, { x: xForDay(0), y: from.top }))
+    await act(async () => pointerMove(to))
+    await act(async () => pointerUp(to))
+    await waitFor(() => assert.ok(usePlanner.getState().pins.some((pin) => pin.taskId === target.taskId)))
+
+    // Now talk to the agent about something else entirely. A drag is a decision; asking a question
+    // must not silently undo it.
+    await act(async () => {
+      await usePlanner.getState().sendMessage('what fits in the week?')
+    })
+
+    const pin = usePlanner.getState().pins.find((item) => item.taskId === target.taskId)
+    assert.ok(pin, 'the refinement erased the pin the user made by dragging')
+    assert.equal(pin.date, wednesday)
+    assert.equal(pin.startMin, 13 * 60 + 30)
+    const block = usePlanner.getState().proposal?.blocks.find((item) => item.taskId === target.taskId && item.date === wednesday)
+    assert.equal(block?.startMin, 13 * 60 + 30, 'the block left the spot the user put it in')
+  })
+
   it('refuses a drop onto a meeting, and says so instead of quietly moving it elsewhere', async () => {
     const proposal = await buildDemoWeek()
     const target = proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90)
@@ -305,9 +337,27 @@ describe('drag and drop', () => {
 })
 
 describe('keyboard parity', () => {
+  /**
+   * A block with a genuinely free quarter-hour after it. Most blocks in the demo week are packed
+   * against a meeting, where a move *should* be refused and reported (D-014) — that path has its
+   * own test; this one is about the move that works.
+   */
+  function movableBlock(proposal: PlanProposal): PlacedBlock | undefined {
+    const SHIFT = 15
+    const taken = (block: PlacedBlock, start: number, end: number) =>
+      proposal.busy.some((event) => event.date === block.date && event.startMin < end && start < event.endMin) ||
+      proposal.blocks.some((other) => other.id !== block.id && other.date === block.date && other.startMin < end && start < other.endMin)
+    return proposal.blocks.find((block) => {
+      if (block.kind !== 'task') return false
+      const hours = proposal.preferences.workingHours[block.weekday]
+      if (!hours || block.endMin + SHIFT > hours.end) return false
+      return !taken(block, block.endMin, block.endMin + SHIFT)
+    })
+  }
+
   it('moves a block with the arrow keys, exactly like a drag', async () => {
     const proposal = await buildDemoWeek()
-    const target = proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon')
+    const target = movableBlock(proposal)
     assert.ok(target)
     render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
     const tile = tileFor(target)
@@ -411,6 +461,31 @@ describe('conversation', () => {
   })
 })
 
+describe('recurrence in the task list (T-601)', () => {
+  it('shows the cadence of a repeating task instead of a bare count', async () => {
+    window.localStorage.clear()
+    await act(async () => {
+      usePlanner.getState().hydrate()
+      usePlanner.getState().setTasks([
+        {
+          id: 't_prs',
+          title: 'Review incoming PRs',
+          estimateMinutes: 30,
+          priority: 'P2',
+          energy: 'admin',
+          category: 'work',
+          splittable: false,
+          minChunkMinutes: 30,
+          repeatDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+          source: 'user',
+        },
+      ])
+    })
+    render(React.createElement(TaskInbox), { wrapper: Wrapper })
+    assert.ok(screen.getByText(/weekdays/i), 'the repeating task does not say when it repeats')
+  })
+})
+
 describe('calendar panel', () => {
   it('previews the exact events without any Google configuration', async () => {
     await buildDemoWeek()
@@ -437,6 +512,50 @@ describe('calendar panel', () => {
       assert.equal(state.status, 'done', state.message ?? 'the dry run failed')
       assert.ok((state.lastCount ?? 0) > 0, 'the dry run previewed nothing')
     })
+  })
+
+  it('exports the week as an .ics file with no Google account involved', async () => {
+    await buildDemoWeek()
+    await act(async () => {
+      await usePlanner.getState().refreshCapability()
+    })
+    render(React.createElement(CalendarPanel), { wrapper: Wrapper })
+
+    const button = screen.getByRole('button', { name: /download \.ics/i })
+    assert.equal(button.hasAttribute('disabled'), false, 'the export was gated behind Google')
+
+    // jsdom has no object URLs or downloads; record what the code tried to hand the browser.
+    const created: string[] = []
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = (blob: Blob) => {
+      created.push(blob.type)
+      return 'blob:paperweek'
+    }
+    URL.revokeObjectURL = () => {}
+    const click = HTMLAnchorElement.prototype.click
+    let downloaded: string | null = null
+    HTMLAnchorElement.prototype.click = function clickAnchor(this: HTMLAnchorElement) {
+      downloaded = this.download
+    }
+
+    try {
+      await act(async () => {
+        fireEvent.click(button)
+      })
+      await waitFor(() => {
+        const state = usePlanner.getState().syncState
+        assert.equal(state.status, 'done', state.message ?? 'the export failed')
+      })
+    } finally {
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+      HTMLAnchorElement.prototype.click = click
+    }
+
+    assert.equal(created.length, 1, 'the export did not produce a download')
+    assert.match(created[0] ?? '', /^text\/calendar/, 'the exported blob was not a calendar file')
+    assert.match(downloaded ?? '', /^paperweek-.*\.ics$/)
   })
 })
 

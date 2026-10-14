@@ -48,6 +48,8 @@ For each task, give:
 - minChunkMinutes: the shortest session that is still worth doing
 - location: only if the text implies one
 - repeatDays: weekday codes ['mon','tue',...] when the task repeats ("every weekday", "Mon/Wed/Fri"). For repeating tasks, estimateMinutes is PER OCCURRENCE.
+- recurrence: { byWeekday, interval?, count?, until? } when a repeat needs more than a day list — "every other Thursday" (interval 2), "weekdays until Friday" (until), "four times this week" (count). Omit it when repeatDays says everything.
+- dependsOn: ids of tasks that must finish first. Use it when the user says one thing needs another ("write the spec before the deck"), and say so in the reply — a hidden constraint is a surprise later.
 
 Also return notes: any ambiguity you resolved, one short sentence each.`
 

@@ -163,6 +163,7 @@ export function stubFetch(): void {
     ['/api/chat', () => import('@/app/api/chat/route')],
     ['/api/health', () => import('@/app/api/health/route')],
     ['/api/calendar/sync', () => import('@/app/api/calendar/sync/route')],
+    ['/api/export/ics', () => import('@/app/api/export/ics/route')],
   ] as const
 
   const original = globalThis.fetch

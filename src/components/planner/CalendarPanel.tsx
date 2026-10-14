@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { clsx } from 'clsx'
-import { CalendarCheck, CalendarX, CloudDownload, Link2, RotateCcw, ShieldCheck, Eye } from 'lucide-react'
+import { CalendarCheck, CalendarX, CloudDownload, Download, Eye, Link2, RotateCcw, ShieldCheck } from 'lucide-react'
 import { fmtDuration } from '@/lib/scheduler/slots'
 import { usePlanner } from '@/lib/store/planner-store'
 import { calendarAuthUrl } from '@/lib/api'
@@ -18,7 +18,7 @@ import { PaperSheet } from '@/components/paper/PaperSheet'
  */
 
 export function CalendarPanel() {
-  const { capability, proposal, syncState, dryRun, approveAndSync, rollback, refreshCapability } = usePlanner()
+  const { capability, proposal, syncState, dryRun, approveAndSync, rollback, refreshCapability, exportIcs } = usePlanner()
   const [selected, setSelected] = useState<string[] | null>(null)
   const [showPreflight, setShowPreflight] = useState(false)
 
@@ -163,6 +163,11 @@ export function CalendarPanel() {
             <PaperButton size="sm" variant="flat" disabled={!connected} onClick={() => void rollback()}>
               <RotateCcw size={13} aria-hidden="true" />
               Undo this plan
+            </PaperButton>
+            {/* No account, no scope, no server write: a file the user owns (T-604). */}
+            <PaperButton size="sm" variant="flat" disabled={taskBlocks.length === 0} onClick={() => void exportIcs()}>
+              <Download size={13} aria-hidden="true" />
+              Download .ics
             </PaperButton>
           </div>
 

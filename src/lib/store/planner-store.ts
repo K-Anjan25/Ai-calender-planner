@@ -77,6 +77,7 @@ type Actions = {
   explainBlock(blockId: string): Promise<void>
   refreshCapability(): Promise<void>
   dryRun(): Promise<void>
+  exportIcs(): Promise<void>
   approveAndSync(blockIds: string[]): Promise<void>
   rollback(): Promise<void>
 }
@@ -232,7 +233,8 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       proposal: result.data.proposal,
       tasks: result.data.proposal.tasks,
       preferences: result.data.proposal.preferences,
-      pins: [],
+      // The plan is the authority on which pins survived: no more, no fewer (D-021).
+      pins: result.data.proposal.pins,
       trace: result.data.trace,
       notes: result.data.notes,
       status: 'ready',
@@ -277,7 +279,8 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       proposal: data.proposal,
       tasks: data.tasks,
       preferences: data.preferences,
-      pins: [],
+      // A drag is a decision. Asking the agent a question must not undo it (N-9).
+      pins: data.proposal.pins,
       trace: data.trace,
       chatBusy: false,
       status: 'ready',
@@ -320,7 +323,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     }
     set({
       proposal: result.data.proposal,
-      pins: nextPins,
+      pins: result.data.proposal.pins,
       status: 'ready',
       trace: result.data.trace,
       selectedBlockId: result.data.proposal.blocks.find((b) => b.taskId === block.taskId)?.id ?? null,
@@ -425,6 +428,47 @@ export const usePlanner = create<State & Actions>((set, get) => ({
         lastCount: result.data.inserted,
       },
     })
+  },
+
+  async exportIcs() {
+    const { proposal, syncState } = get()
+    if (!proposal) return
+    set({ syncState: { ...syncState, status: 'syncing', message: 'Building the calendar file…' } })
+    try {
+      const blockIds = proposal.blocks.filter((block) => block.kind === 'task').map((block) => block.id)
+      const response = await fetch('/api/export/ics', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ proposal, approvedBlockIds: blockIds, includeMeetings: true }),
+      })
+      if (!response.ok) throw new Error(`Export failed (${response.status})`)
+      const blob = await response.blob()
+
+      // Same path a user expects from any "download" link: a real file, not a data URL.
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `paperweek-${proposal.weekStart}.ics`
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+
+      set({
+        syncState: {
+          status: 'done',
+          message: `Exported ${blockIds.length} blocks as an .ics file — import it in any calendar app.`,
+          lastCount: blockIds.length,
+        },
+      })
+    } catch (error) {
+      set({
+        syncState: {
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Could not build the calendar file.',
+        },
+      })
+    }
   },
 
   async approveAndSync(blockIds) {

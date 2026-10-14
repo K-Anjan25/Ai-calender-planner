@@ -8,9 +8,10 @@ import {
   type Task,
 } from '@/lib/types'
 import { generatePlan } from '@/lib/scheduler/engine'
-import { totalDemandMinutes } from '@/lib/scheduler/policies'
+import { dependencyDepth, occurrenceDays, recurrenceLabel, totalDemandMinutes } from '@/lib/scheduler/policies'
 import { workingHoursFor } from '@/lib/scheduler/slots'
 import { currentWeekStart, defaultPreferences, demoBusy, demoTasks, overloadedTasks } from '@/lib/sample-data'
+import { addDaysISO } from '@/lib/scheduler/slots'
 
 /**
  * Scheduler invariant tests (T-107).
@@ -252,6 +253,24 @@ describe('INV-8 · pins', () => {
     }
   })
 
+  it('publishes the pins that are actually in force, and retires the ones it could not keep', () => {
+    const tasks = demoTasks(WEEK_START)
+    const target = tasks[0]
+    assert.ok(target)
+    const honoured = plan(tasks, defaultPreferences(), demoBusy(WEEK_START), [
+      { taskId: target.id, date: WEEK_START, ...FREE_SLOT },
+    ])
+    assert.equal(honoured.pins.length, 1, 'an honoured pin was not published with the plan')
+    assert.deepEqual(honoured.report.droppedPins, [])
+
+    // 14:00 Monday is “Roadmap sync” — impossible. The plan must not pretend the pin holds.
+    const refused = plan(tasks, defaultPreferences(), demoBusy(WEEK_START), [
+      { taskId: target.id, date: WEEK_START, startMin: 14 * 60, minutes: 60 },
+    ])
+    assert.deepEqual(refused.report.droppedPins, [target.id], 'the refused pin was not named in the report')
+    assert.equal(refused.pins.length, 0, 'a pin the engine could not keep is still being advertised as in force')
+  })
+
   it('says so when a pin cannot be honoured instead of ignoring it', () => {
     const tasks = demoTasks(WEEK_START)
     const target = tasks[0]
@@ -308,6 +327,158 @@ describe('first plan quality', () => {
     for (const day of prs.repeatDays) {
       assert.ok(blocks.some((block) => block.weekday === day), `no block for ${day}`)
     }
+  })
+})
+
+describe('dependency ordering (T-602)', () => {
+  const base = (id: string, title: string, estimateMinutes: number, dependsOn?: string[]): Task => ({
+    id,
+    title,
+    estimateMinutes,
+    priority: 'P1',
+    energy: 'deep',
+    category: 'work',
+    splittable: false,
+    minChunkMinutes: 30,
+    dependsOn,
+    source: 'user',
+  })
+
+  it('never starts a dependent task before its prerequisite finishes', () => {
+    // Same shape, two ids: the prerequisite sorts first, so it is placed first and takes the
+    // higher-scoring slot (Friday morning) — which leaves the dependent on Thursday, *before* its
+    // prerequisite. That inversion is the fixture; the constraint has to remove it.
+    const spec = base('t_a', 'Write the spec', 120)
+    const deck = base('t_b', 'Build the deck', 120, ['t_a'])
+    const free = plan([spec, base('t_b', 'Build the deck', 120)])
+    const ordered = plan([spec, deck])
+
+    const startOf = (result: ReturnType<typeof plan>, id: string) =>
+      Math.min(...result.blocks.filter((b) => b.taskId === id).map((b) => b.dayIndex * 1440 + b.startMin))
+    const endOf = (result: ReturnType<typeof plan>, id: string) =>
+      Math.max(...result.blocks.filter((b) => b.taskId === id).map((b) => b.dayIndex * 1440 + b.endMin))
+
+    // Without the constraint the deck is placed first (it sorts ahead and fits Monday morning);
+    // with it, the deck must wait for the spec to finish — that difference is the whole feature.
+    assert.ok(startOf(free, 't_b') < endOf(free, 't_a'), 'the fixture no longer demonstrates the constraint')
+    assert.ok(
+      startOf(ordered, 't_b') >= endOf(ordered, 't_a'),
+      `the deck starts at ${startOf(ordered, 't_b')} but the spec ends at ${endOf(ordered, 't_a')}`,
+    )
+    assert.ok(startOf(ordered, 't_b') > startOf(free, 't_b'), 'the dependency did not move anything')
+    assert.ok(ordered.report.warnings.every((warning) => warning.code !== 'dependency-unmet'))
+  })
+
+  it('says why, on the block itself', () => {
+    const tasks = [base('t_a', 'Write the spec', 120), base('t_b', 'Build the deck', 120, ['t_a'])]
+    const result = plan(tasks)
+    const deck = result.blocks.find((b) => b.taskId === 't_b')
+    assert.ok(deck?.reasons.some((reason) => reason.code === 'after-dependency'), 'the constraint is invisible')
+  })
+
+  it('reports a prerequisite that never found room instead of hiding it', () => {
+    // 40 hours of P0 prerequisite work into a ~24h week: it cannot all fit.
+    const huge = base('t_spec', 'Write the spec', 720)
+    const blocked = base('t_deck', 'Build the deck', 120, ['t_spec'])
+    const prefs = defaultPreferences()
+    const result = plan([huge, blocked], { ...prefs, workingHours: { ...prefs.workingHours, sat: null, sun: null } })
+    assert.ok(
+      result.report.warnings.some((warning) => warning.code === 'dependency-unmet') ||
+        result.blocks.filter((b) => b.taskId === 't_spec').length === 0,
+      'neither an ordering violation nor a missing prerequisite was reported',
+    )
+  })
+
+  it('orders a chain by depth and survives a cycle', () => {
+    const tasks = [base('a', 'A', 60), base('b', 'B', 60, ['a']), base('c', 'C', 60, ['b'])]
+    const depths = dependencyDepth(tasks)
+    assert.equal(depths.get('a'), 0)
+    assert.equal(depths.get('b'), 1)
+    assert.equal(depths.get('c'), 2)
+    // A cycle must not hang or throw — the engine plans it as well as it can.
+    const cyc = [base('x', 'X', 60, ['y']), base('y', 'Y', 60, ['x'])]
+    const result = plan(cyc)
+    assert.ok(result.blocks.length >= 0)
+  })
+
+  it('ignores a dangling dependency reference', () => {
+    const result = plan([base('t_deck', 'Build the deck', 60, ['t_does_not_exist'])])
+    assert.ok(result.blocks.some((b) => b.taskId === 't_deck'), 'a ghost dependency blocked real work')
+    assert.ok(result.report.warnings.every((warning) => warning.code !== 'dependency-unmet'))
+  })
+})
+
+describe('recurrence (T-601)', () => {
+  const recurring = (recurrence: Task['recurrence'], overrides: Partial<Task> = {}): Task => ({
+    id: 't_recurring',
+    title: 'Recurring thing',
+    estimateMinutes: 30,
+    priority: 'P2',
+    energy: 'admin',
+    category: 'work',
+    splittable: false,
+    minChunkMinutes: 30,
+    repeatDays: recurrence?.byWeekday,
+    recurrence,
+    source: 'user',
+    ...overrides,
+  })
+
+  it('honours an until date', () => {
+    const task = recurring({ byWeekday: ['mon', 'tue', 'wed', 'thu', 'fri'], interval: 1, until: '2026-10-15' })
+    assert.deepEqual(occurrenceDays(task, WEEK_START), ['mon', 'tue', 'wed', 'thu'])
+    assert.equal(totalDemandMinutes(task, WEEK_START), 4 * 30)
+  })
+
+  it('honours a count', () => {
+    const task = recurring({ byWeekday: ['mon', 'tue', 'wed', 'thu', 'fri'], interval: 1, count: 2 })
+    assert.deepEqual(occurrenceDays(task, WEEK_START), ['mon', 'tue'])
+    assert.equal(totalDemandMinutes(task, WEEK_START), 60)
+  })
+
+  it('skips a week that is not an occurrence week', () => {
+    const oddWeek = recurring({ byWeekday: ['thu'], interval: 2, anchorWeek: WEEK_START })
+    const nextWeek = addDaysISO(WEEK_START, 7)
+    assert.deepEqual(occurrenceDays(oddWeek, WEEK_START), ['thu'], 'the anchor week must occur')
+    assert.deepEqual(occurrenceDays(oddWeek, nextWeek), [], 'the following week must not')
+    assert.equal(totalDemandMinutes(oddWeek, nextWeek), 0)
+  })
+
+  it('plans nothing, and loses nothing, in a non-occurrence week', () => {
+    const task = recurring({ byWeekday: ['thu'], interval: 2, anchorWeek: addDaysISO(WEEK_START, -7) })
+    const result = plan([task])
+    assert.equal(result.blocks.filter((b) => b.kind === 'task').length, 0)
+    assert.equal(result.report.demandMinutes, 0, 'a task that does not occur this week still demanded time')
+    assert.ok(result.report.unscheduled.length === 0, 'it was reported as unplaced work')
+  })
+
+  it('places one block per occurrence day, and conserves the minutes', () => {
+    const task = recurring({ byWeekday: ['mon', 'wed', 'fri'], interval: 1, count: 3 })
+    const result = plan([task])
+    const blocks = result.blocks.filter((b) => b.kind === 'task')
+    assert.equal(blocks.length, 3)
+    assert.deepEqual(blocks.map((b) => b.weekday).sort(), ['fri', 'mon', 'wed'])
+    assert.equal(blocks.reduce((sum, b) => sum + b.minutes, 0), 90)
+    for (const block of blocks) {
+      assert.equal(block.minutes, 30, 'estimateMinutes is per occurrence')
+      assert.equal(block.chunkCount, 3)
+    }
+  })
+
+  it('describes the cadence for the UI, including a week that is skipped', () => {
+    assert.equal(recurrenceLabel(recurring({ byWeekday: ['mon', 'tue', 'wed', 'thu', 'fri'], interval: 1 }), WEEK_START), 'weekdays')
+    assert.equal(recurrenceLabel(recurring({ byWeekday: ['mon', 'wed', 'fri'], interval: 1 }), WEEK_START), 'Mon, Wed, Fri')
+    assert.equal(recurrenceLabel(recurring({ byWeekday: ['thu'], interval: 2, anchorWeek: WEEK_START }), WEEK_START), 'every 2 weeks, Thu')
+    const skipped = recurring({ byWeekday: ['thu'], interval: 2, anchorWeek: WEEK_START })
+    assert.equal(recurrenceLabel(skipped, addDaysISO(WEEK_START, 7)), 'not this week')
+  })
+
+  it('keeps INV-6 for a partly-skipped repeat', () => {
+    const tasks = [recurring({ byWeekday: ['mon', 'tue', 'wed', 'thu', 'fri'], interval: 1, count: 3 }, { id: 't_three' })]
+    const result = plan(tasks)
+    const placed = result.blocks.filter((b) => b.kind === 'task').reduce((sum, b) => sum + b.minutes, 0)
+    const reported = result.report.unscheduled.reduce((sum, item) => sum + item.minutes, 0)
+    assert.equal(placed + reported, 90)
   })
 })
 

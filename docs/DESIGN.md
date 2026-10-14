@@ -188,6 +188,12 @@ Primitives in `src/components/paper/`:
 | `Grain` | Fixed fibre/tooth overlay + vignette. |
 | `LoadBar` | Paper strip fill showing planned-vs-capacity per day. |
 
+Cadence is *material*, not decoration: a repeating task wears a `↻` chip with its cadence spelled out
+(`weekdays`, `Mon, Wed, Fri`, `every 2 weeks, Thu`, `not this week`) using the same dyed-paper chip as
+a reason — so a repeat is legible at a glance without a second colour system. A dependent task says
+`after: <title>` on the same strip. Export is a plain `flat` button beside the calendar actions, and
+is deliberately *not* styled as a primary: taking the week away is not the main event.
+
 ### 9.1 Schedule tile anatomy
 
 ```

@@ -96,7 +96,7 @@ A task is only ✅ when **lint + build pass** and its acceptance criteria are me
 | T-601 | Recurring-task engine (daily/weekly RRULE) | P1 | "review PRs daily" currently expands to explicit tasks |
 | T-602 | Dependency enforcement (`dependsOn`) | P1 | Field exists; ordering not yet enforced |
 | T-603 | Multi-week horizon + rolling replan | P1 | Engine is week-scoped by design |
-| T-604 | ICS import/export | P2 | Google-first in MVP |
+| T-604 | ICS export | P2 | ✅ shipped post-MVP — `POST /api/export/ics`, `src/lib/ics.ts`, `tests/ics.test.ts` (12 assertions); see the note below |
 | T-605 | Persistence (DB) + accounts | P1 | MVP is stateless + Google |
 | T-606 | Per-user weight tuning from feedback | P2 | Collect signals now, tune in v2 |
 | T-607 | "What changed since yesterday" diff view | P2 | Reuses block diff from `/api/chat` |
@@ -112,12 +112,13 @@ A task is only ✅ when **lint + build pass** and its acceptance criteria are me
 | Types | `npx tsc --noEmit` | clean |
 | Lint | `npm run lint` | 0 errors, 0 warnings |
 | Build | `NODE_OPTIONS=--max-old-space-size=3072 npm run build` | succeeds (all routes) |
-| Tests | `npm test` | 64 / 64 pass (scheduler, agent, UI-in-jsdom) |
+| Tests | `npm test` | 101 / 101 pass (30 engine, 38 agent, 12 export, 21 UI-in-jsdom) |
 | Engine smoke | `npm run smoke` | demo FITS 78% · overloaded OVERBOOKED · invariants 0/0/0 |
-| Agent walkthrough | `npm run agent:check` | 5 conversational turns, all as designed |
+| Agent walkthrough | `npm run agent:check` | 9 conversational turns carrying tasks, preferences and pins — ends `PASS: 9 turns, 8 tasks, 1 pin carried` |
 | API | `POST /api/plan`, `POST /api/chat`, `POST /api/calendar/sync` | 200 with verified payloads |
 | Routes | `/`, `/planner`, `/api/health` | 200 |
 | Art | `npm run scene` | four scenes rasterised and inspected |
+| Export | `POST /api/export/ics` | 200, `text/calendar`, 12.6 kB, 20 VEVENTs, CRLF and 75-octet folding checked by an independent parser |
 
 **Not verified, and why:** there is no headless browser in the build sandbox. Components are now
 *executed* in jsdom (T-509), which covers behaviour but not paint — overlap, overflow, focus rings,
@@ -137,6 +138,34 @@ Three defects in the flagship interaction, every one of them invisible to review
 
 Two further inconsistencies were found the same way: `Dry run` was disabled unless Google was
 connected (contradicting D-015), and the calendar panel's unconfigured state was never asserted.
+
+**A fourth defect was found by the walkthrough (N-9), not by the UI run:** the client threw a drag
+away whenever the user then asked the agent anything. `buildWeek` and `sendMessage` reset `pins: []`,
+and the toolkit replaced its pin set on every `revise_plan` — so "what fits in the week?" silently
+undid a move the user had made. Fixed by making the plan the authority (D-021): the report names the
+pins it could not keep (`droppedPins`), the proposal publishes only the pins that are in force, and
+every path in the store adopts `proposal.pins`.
+
+---
+
+## Post-MVP: ICS export (T-604)
+
+The one backlog item pulled forward, because the product's argument is *honesty* and the only way to
+prove a planner is honest is to let a stranger take the week with them:
+
+- `POST /api/export/ics` takes the plan the client is displaying and returns `text/calendar`. No
+  Google, no OAuth, no cookie, no database — the same "works on a fresh clone" property as the dry
+  run (D-015), which makes it the export path that can never be broken by configuration.
+- The file is written to be *importable*, not merely present: CRLF endings, 75-octet folding on
+  octet (not character) boundaries, TEXT escaping, floating local `DTSTART`/`DTEND` with
+  `X-WR-TIMEZONE`, stable `UID:<blockId>@paperweek` so re-importing updates rather than duplicates,
+  `X-PAPERWEEK-*` properties for round-tripping, and a `VJOURNAL` carrying the verdict so the file
+  explains itself a month later.
+- Default scope is `kind === 'task'` only — a plan, not a diary; ritual rows (lunch, focus breaks)
+  and imported meetings are opt-in via `includeMeetings`.
+- Ten of the twelve assertions in `tests/ics.test.ts` are structural (folding, escaping, CRLF,
+  determinism, uniqueness), because a malformed `.ics` imports as *nothing at all* and gives the
+  user no way to tell why.
 
 ---
 
