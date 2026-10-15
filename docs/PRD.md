@@ -58,6 +58,10 @@ The failure modes are consistent and measurable:
 - ❌ Multi-account / multi-timezone-heavy enterprise calendars (single user, single primary TZ in MVP; TZ stored per user).
 - ❌ Auto-syncing without human approval. **Every write to a real calendar requires explicit confirmation** (see `RULES.md` §8).
 - ❌ Video/voice intake.
+- ❌ Team billing, seat management, invoices or tax handling (access tiers are described in §6.7; the
+  *payment* integration is deliberately a switch, not a checkout — D-025).
+- ❌ Server-side session revocation in the MVP (D-024: a signed cookie with no store; signing out clears
+  the browser, and a copied cookie stays valid until it expires).
 
 ## 4. Personas
 
@@ -162,6 +166,19 @@ When commitment > capacity, the app must not silently drop work. It presents a *
 | FR-6.2 | Category mix breakdown (deep / admin / health / life). | P2 |
 | FR-6.3 | Flag calendar anti-patterns: fragmentation, back-to-back marathons, no-break days, deadline cliffs. | P1 |
 
+### 6.7 Accounts, plans and access
+
+| Ref | Requirement | Status |
+| --- | --- | --- |
+| FR-7.1 | A visitor can evaluate the whole product — plan, drag, export — without an account. | ✅ `/planner` is open by default |
+| FR-7.2 | Sign in with Google, asking for **identity only** (`openid email profile`); the calendar grant is a separate, later consent. | ✅ `/api/auth/google`, D-026 |
+| FR-7.3 | Where Google is not configured, offer a **labelled demo session** rather than a dead button — the label appears wherever the account appears. | ✅ `/api/auth/demo`, D-027 |
+| FR-7.4 | The session is a signed, `httpOnly`, expiring cookie; a forged, edited or expired cookie resolves to signed-out. | ✅ `lib/auth/session.ts`, `tests/auth.test.ts` |
+| FR-7.5 | A self-hoster can make the planner private with `REQUIRE_AUTH=true`; the decision is enforced on the server, before any bundle is sent. | ✅ `app/planner/page.tsx` |
+| FR-7.6 | Redirect targets after sign-in are same-site paths only. | ✅ `safeNext()` |
+| FR-7.7 | Three access tiers are described and priced; if no payment provider is configured the page says so and offers a waitlist instead of a checkout. | ✅ `/pricing`, D-025 |
+| FR-7.8 | The deployment's real capability is readable by anyone: `/api/health` and `/api/auth/session` report booleans, never claims. | ✅ |
+
 ## 7. Scheduling specification (normative)
 
 The engine is deterministic and is the single source of truth for time. Full algorithm in `ARCHITECTURE.md` §5.
@@ -222,7 +239,9 @@ Structured + free-text intake · preference model · deterministic week schedule
 **Post-MVP, shipped (see `TASK.md`)**
 Recurring task engine with per-occurrence estimates (FR-1.4, T-601) · dependency enforcement with an
 ordering gate, an `after-dependency` reason and a `dependency-unmet` audit (FR-1.5, T-602) ·
-credential-free `.ics` export (FR-5.7–5.8, T-604).
+credential-free `.ics` export (FR-5.7–5.8, T-604) · the public site (landing, pricing, docs) ·
+signed-cookie authentication with a Google identity grant and a labelled demo session (FR-7.1–7.8, T-701
+… T-707) · a responsive-containment pass with an asserted overflow guard (T-708).
 
 **v1.1**
 Calendar *import* (and `.ics` as a sync target), multi-week horizon, plan templates, "what changed"
@@ -239,6 +258,8 @@ Team availability, focus-time defence against external invites, mobile PWA with 
 | Q2 | Default when a task can be split but the user has no preference? Splittable if ≥ 120 min. | Design+Eng | No |
 | Q3 | Do we honour a "deadline" as midnight of the day, or the stated time? | Product | MVP: midnight of stated date unless a time is given |
 | Q4 | Per-user weight tuning — collect feedback signals from day 1, train in v2. | Eng | No |
+| Q5 | Do we need server-side session revocation (a store, or short-lived sessions with refresh)? Today a copied cookie is valid until it expires. | Eng | Not for a single-user self-hosted tool; yes before multi-tenant seats |
+| Q6 | Which provider for billing, and does the free tier need a card at all? | Product | No — the switch is in place and the page is honest until then |
 
 ## 12. Risks
 

@@ -257,6 +257,39 @@ describe('conversational refinement', () => {
     assert.ok(result.changes.length > 0)
   })
 
+  it('reads an explicit time range, with or without the word "from"', () => {
+    // "I'm out Friday 12pm to 5pm" is how a person says it; demanding "from" was a parser's
+    // convenience, not theirs. Without the range, the same sentence silently became a one-hour
+    // blackout (12:00–13:00) — a plausible-looking answer to a question the user did not ask.
+    for (const message of ["I'm out Friday 12pm to 5pm", "I'm out Friday from 12pm to 5pm"]) {
+      const result = interpretLocally(message, {
+        nowISO: NOW,
+        weekStartDate: WEEK_START,
+        preferences: defaultPreferences(),
+        tasks,
+      })
+      const block = result.preferences?.blackouts.find((item) => item.weekday === 'fri')
+      assert.ok(block, `no Friday blackout for: ${message}`)
+      assert.equal(block?.start, 12 * 60, message)
+      assert.equal(block?.end, 17 * 60, `${message} — expected 12:00–17:00, got ${block?.start}–${block?.end}`)
+    }
+  })
+
+  it('does not read a meridiem-less "9 to 5" as a range', () => {
+    const result = interpretLocally("I'm out Friday 9 to 5", {
+      nowISO: NOW,
+      weekStartDate: WEEK_START,
+      preferences: defaultPreferences(),
+      tasks,
+    })
+    const block = result.preferences?.blackouts.find((item) => item.weekday === 'fri')
+    // A bare hour is read as the time the absence starts (09:00 for one hour), which is the existing
+    // rule for "out at 9". What it must not do is invent a 09:00–17:00 blackout from "9 to 5": without
+    // a meridiem that reading is a guess, and a guess here silently deletes an afternoon of capacity.
+    assert.equal(block?.start, 9 * 60)
+    assert.notEqual(block?.end, 17 * 60, 'a meridiem-less "9 to 5" was treated as a range')
+  })
+
   it('understands a working-hours change with minutes', () => {
     const result = interpretLocally('start at 8:30', { nowISO: NOW, weekStartDate: WEEK_START, preferences: defaultPreferences(), tasks })
     assert.equal(result.preferences?.workingHours.mon?.start, 8 * 60 + 30)

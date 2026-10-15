@@ -315,10 +315,15 @@ Server truth is `PlanProposal`; the client never recomputes placement. Drag-and-
 src/
   app/
     layout.tsx                     fonts, paper grain, theme
-    page.tsx                       marketing surface (diorama hero)
-    planner/page.tsx               main workspace
+    page.tsx                       landing page (diorama hero, how it works, features)
+    pricing/page.tsx               three tiers; waitlist when no payment provider (D-025)
+    docs/page.tsx                  the six documents, live env matrix, API table, deploy checklist
+    signin/ · signup/page.tsx      AuthPanel in sign-in / sign-up mode
+    planner/page.tsx               server gate (REQUIRE_AUTH) → workspace
+    planner/workspace.tsx          the client workspace island
     api/plan/route.ts              generate / regenerate w/ pins
     api/chat/route.ts              agent refinement + diff
+    api/auth/session|demo|google|callback|signout/route.ts
     api/calendar/{auth,callback,sync}/route.ts
     api/health/route.ts            capability probe
     api/export/ics/route.ts        credential-free .ics export (T-604)
@@ -327,12 +332,18 @@ src/
     paper/                         design-system primitives (see DESIGN.md §9)
       PaperCard · PaperButton · PaperInput · PaperChip · PaperTabs
       DioramaScene · Grain · CutEdge · LayerStack · PaperSheet
+      CalendraMark                 the calendar glyph + wordmark
+    site/
+      SiteHeader · SiteFooter      shared chrome for every non-planner page
+      AuthPanel                    one panel, two modes (sign in / sign up)
     planner/
       TaskInbox · PreferencePanel · WeekGrid · ScheduleBlock · AgentChat
       PlanReportPanel · TradeoffPanel · InsightsRail · CalendarPanel
 tests/
-  harness/{setup-dom,dom}.ts       jsdom + fetch→route-handler bridge + geometry
-  scheduler.test.ts  agent.test.ts  ics.test.ts  ui.test.ts
+  harness/{setup-dom,dom,walk}.ts   jsdom + fetch→route-handler bridge + geometry + source walk
+  scheduler.test.ts  agent.test.ts  ics.test.ts  ui.test.ts  perf.test.ts
+  auth.test.ts                     signature forgery, expiry, open-redirect targets
+  responsive.test.ts               overflow guard installed; wide elements contained
 scripts/
   run-tests.mjs                    cross-platform test runner (TASK.md T-509)
   lib/
@@ -340,6 +351,10 @@ scripts/
     scheduler/{engine,slots,policies,conflicts,score}.ts
     agent/{planner-agent,tools,prompts,providers,local-reasoner}.ts
     google/{calendar,oauth,scopes}.ts
+    auth/session.ts                signed-cookie sessions, demo identity, safe redirects
+    auth/google.ts                 identity grant (openid email profile) + ID-token verify
+    billing.ts                     is a payment provider configured? (D-025)
+    use-session.ts                 client session hook (loading → user | null)
     ics.ts                         RFC 5545 writer (folding, escaping, UIDs)
     store/planner-store.ts
 docs/  PRD.md ARCHITECTURE.md RULES.md DESIGN.md TASK.md MEMORY.md
@@ -349,13 +364,48 @@ docs/  PRD.md ARCHITECTURE.md RULES.md DESIGN.md TASK.md MEMORY.md
 
 | Env var | Required | Effect when absent |
 | --- | --- | --- |
+| `AUTH_SECRET` | **yes in production** | sessions are signed with a development key, and `/api/auth/session` reports `secretConfigured: false` |
+| `REQUIRE_AUTH` | no | `/planner` is public (an evaluable demo) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | no | "Sign in with Google" hides itself; demo sessions remain |
+| `AUTH_REDIRECT_URI` / `GOOGLE_REDIRECT_URI` | no | derived from the request origin |
 | `LLM_PROVIDER` | no | defaults to `local` |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | no | provider resolves to `local` (demo mode) |
 | `LLM_MODEL` | no | per-provider default in `providers.ts` |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` | no | calendar features disabled, plan unaffected |
+| `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_TEAM` | no | `/pricing` renders a waitlist instead of checkout |
 | `DEMO_MODE` | no | auto-enabled when no keys are present |
 
+The canonical, copy-pasteable version of this table is `.env.example`; `/docs` renders it from the same
+helpers the runtime reads, so the page cannot drift from the app.
+
 Every optional integration degrades to a working product (§1.2).
+
+## 10b. Authentication & sessions
+
+```
+browser ──POST /api/auth/demo──────────────▶ session.ts: sign({demo identity}) ──▶ Set-Cookie
+browser ──GET  /api/auth/google────────────▶ identity scopes (openid email profile) ──▶ Google
+Google  ──▶ /api/auth/callback?code&state──▶ verify state (constant time)
+                                         └─▶ exchange code → verify ID token → sign session
+browser ──GET  /api/auth/session───────────▶ decode + verify + expiry check ──▶ {user|null}
+browser ──POST /api/auth/signout───────────▶ clear cookie
+```
+
+The cookie is `base64url(payload).base64url(HMAC-SHA256(payload))`. The payload carries the user and
+an expiry; the signature is compared in constant time; an expired cookie is treated as no cookie.
+There is no session store, so **there is no server-side revocation** (D-024) — signing out clears the
+cookie, and a copy of the cookie remains valid until it expires. That is the same trade as D-010, made
+for the same reason, and it is stated in the code, not just the docs.
+
+Identity and calendar access are **two grants on purpose** (D-026). A session proves who you are; it
+confers no access to a calendar. `GET /api/calendar/auth` is a separate redirect the user triggers by
+clicking *Connect Google Calendar*, with its own state cookie and its own scopes.
+
+The planner gate is decided on the **server**, before any client bundle is sent: `REQUIRE_AUTH=true`
+and no session → `redirect('/signin?next=…')`. `next` passes through `safeNext()`, which accepts only
+same-site paths, so the sign-in page cannot be turned into an open redirect.
+
+A **demo session** is a real signed session (D-027): same code path, identity labelled
+`demo@calendra.local` / "Demo session", and no path from it to a real calendar.
 
 ## 11. Testing strategy
 
@@ -403,6 +453,15 @@ Those remain T-507.
 - Route handlers validate every payload with zod before use; no unvalidated input reaches the scheduler or the calendar writer.
 - No analytics or third-party scripts in MVP.
 - Scopes are minimal and requested incrementally (calendar only when the user clicks Connect).
+- Session cookies are `httpOnly`, `sameSite=lax`, `secure` in production, HMAC-SHA256 signed with
+  `AUTH_SECRET`, verified in constant time, with the expiry re-checked on every read. A forged or edited
+  cookie resolves to "no session", never to a partial one.
+- OAuth `state` is a random nonce in an `httpOnly` cookie, compared verbatim; a mismatch aborts the
+  exchange instead of completing half a sign-in.
+- `next=` redirect targets are filtered by `safeNext()`: same-site paths only, so `//evil.example` and
+  absolute URLs fall back to `/planner`.
+- No secrets are exposed to the client: `/api/health` and `/api/auth/session` report *capability booleans*
+  (`configured`, `secretConfigured`), never key material or partial values.
 
 ## 14. Known constraints & deliberate trade-offs
 
@@ -412,4 +471,6 @@ Those remain T-507.
 | Greedy + repair instead of global optimisation (ILP/CP) | Extremely fast, explainable, deterministic. Slightly suboptimal packing; acceptable at MVP scale and worth it for the reason-by-construction model. |
 | Recompute-on-drag (server round trip) | One source of scheduling truth over instant local feel; mitigated by optimistic UI. |
 | No DB in MVP | Zero-setup demo, deployable anywhere; state is client-held + Google Calendar. Persistence is v1.1. |
+| Sessions in a signed cookie, not a table (D-024) | Deployable with no store and no migration; the cost is no server-side revocation — signing out clears the browser, not the token. |
+| Billing is a switch, not an integration (D-025) | The pricing page can never offer a button that cannot charge; the cost is no self-serve upgrade on an unconfigured deployment. |
 | Tailwind v4 CSS-first tokens, no config file | Tokens live in `globals.css` `@theme`; one file to review for design drift. |

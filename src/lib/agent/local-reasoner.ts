@@ -531,7 +531,13 @@ export function interpretLocally(
       evening: { start: 17 * 60, end: 22 * 60 },
       all: { start: 8 * 60, end: 18 * 60 },
     }
-    const range2 = /\b(?:from|between)\b/.test(lower) ? parseRange(lower) : null
+    // A range is read from "from 12pm to 5pm" / "between 9 and 11", or from a bare "12pm to 5pm".
+    // The bare form needs a meridiem on the closing time ("9 to 5" stays ambiguous and is left alone),
+    // and `parseRange` still requires both ends to be real clock times in order.
+    const explicitRange =
+      /\b(?:from|between)\b/.test(lower) ||
+      /\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:to|until|till|–|-)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/.test(lower)
+    const range2 = explicitRange ? parseRange(lower) : null
     const window = range2 ?? (time ? { start: time.hour * 60, end: time.hour * 60 + 60 } : windows[half] ?? windows.all)
     const blackout: Blackout = {
       id: `bo_${weekday}_${window.start}`,

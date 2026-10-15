@@ -193,6 +193,40 @@ prove a planner is honest is to let a stranger take the week with them:
 
 ---
 
+## Round 3: production scope (T-701 … T-709, 2026-10-15)
+
+Requested: "head to complete production" — a real front door, accounts, pricing, and the copy cleaned of
+material references. What that turned into:
+
+| # | Task | Where | Status |
+| --- | --- | --- | --- |
+| T-701 | Remove the "paper, not plastic" section and every paper-material reference from user-facing copy; keep the style, drop the vocabulary | `src/app/page.tsx` ("Trustworthy by construction"; the layer cards lost their numbers; the hero caption and section heading lost craft nouns) | ✅ done |
+| T-702 | A logo that says what the product is: a calendar glyph, not a stack of layers | `components/paper/CalendraMark.tsx` — bound leaf, header band, month grid; `currentColor`, so it inherits tone | ✅ done |
+| T-703 | Shared site chrome: nav for the product sections, **Pricing**, **Docs**, and the account block | `components/site/SiteHeader.tsx` + `SiteFooter.tsx`; mobile disclosure; the account slot reserves its height so session resolution causes no shift | ✅ done |
+| T-704 | Landing page rebuilt as a real front page: hero, live week excerpt, how it works, features, CTA | `src/app/page.tsx` | ✅ done |
+| T-705 | Authentication: sign up / sign in with Google, identity scopes only, plus a labelled demo session | `lib/auth/*`, `api/auth/*`, `/signin`, `/signup` (D-024, D-026, D-027) | ✅ done |
+| T-706 | An optional private mode: `REQUIRE_AUTH=true` gates `/planner` on the **server**, with a filtered `next=` | `app/planner/page.tsx`, `safeNext()` | ✅ done |
+| T-707 | Pricing page with three tiers, an FAQ, and an honest state when no payment provider is configured | `/pricing`, `lib/billing.ts` (D-025) | ✅ done |
+| T-708 | Text overflow fixed and, as far as this environment allows, asserted | `globals.css` guard + `tests/responsive.test.ts`; see the caveat below | ✅ done |
+| T-709 | Docs page carrying the six documents, the live environment matrix, the API table and the deploy checklist | `/docs`, `.env.example`, README | ✅ done |
+
+### What was deliberately not done
+
+A payment **integration**. The pricing page describes three tiers, and when no `STRIPE_*` variables are
+present it says billing is not connected and takes a waitlist — rather than showing a *Upgrade* button
+that cannot charge. That is D-025, and it is the same rule as the rest of the product: never claim a
+capability the deployment does not have.
+
+### Caveat on T-708, stated rather than buried
+
+There is no browser and no layout engine in this environment. `tests/responsive.test.ts` asserts the two
+*mechanisms* behind the reported overflow — that the global `overflow-wrap`/`max-width` guard is still
+installed, and that no element forcing a width above 320px escapes its scroll container — and asserts
+that overflow was not merely hidden at the root. It cannot prove a page *looks* right at 375px. Real
+viewport verification remains T-507.
+
+---
+
 ## Definition of done (any task)
 
 1. Implements the FR/INV it references, nothing more.

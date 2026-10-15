@@ -164,6 +164,9 @@ export function stubFetch(): void {
     ['/api/health', () => import('@/app/api/health/route')],
     ['/api/calendar/sync', () => import('@/app/api/calendar/sync/route')],
     ['/api/export/ics', () => import('@/app/api/export/ics/route')],
+    ['/api/auth/session', () => import('@/app/api/auth/session/route')],
+    ['/api/auth/demo', () => import('@/app/api/auth/demo/route')],
+    ['/api/auth/signout', () => import('@/app/api/auth/signout/route')],
   ] as const
 
   const original = globalThis.fetch

@@ -200,6 +200,7 @@ Primitives in `src/components/paper/`:
 | `DioramaScene` | Layered SVG scenery. Props: `variant` (`dawn`/`focus`/`dusk`/`week`), `density`. Parallax on scroll at ≤ 6px. |
 | `DioramaLayer` | One SVG silhouette layer with its own translateZ-equivalent offset + drop shadow. |
 | `Grain` | Fixed fibre/tooth overlay + vignette. |
+| `CalendraMark` | The product mark: a bound calendar leaf (header band, two binding rings, month grid, one marked day) in `currentColor`, sized by a single `size` prop. The day grid is drawn as cut tiles, so the glyph belongs to the same material world as the rest of the UI while still reading as *calendar* at 24px. Shipped with `CalendraLogo` (mark + wordmark) for the header, footer and auth panel. |
 | `LoadBar` | Paper strip fill showing planned-vs-capacity per day. |
 
 Cadence is *material*, not decoration: a repeating task wears a `↻` chip with its cadence spelled out
@@ -220,12 +221,33 @@ is deliberately *not* styled as a primary: taking the week away is not the main 
 
 States: `default` · `hover` (lift) · `dragging` (rotate −1.2deg, lift) · `pinned` (kraft pin strip + kraft left edge) · `conflict` (rose dashed cut outline + 2px offset ghost) · `done/none`.
 
+### 9.2 The public site is the same material, quieter
+
+`/`, `/pricing`, `/docs`, `/signin` and `/signup` share `SiteHeader` and `SiteFooter` and are built from
+the same primitives as the workspace — one sheet per section, cut edges between them, chips for facts —
+but with a strictly reduced palette: no `P0`/conflict colours (those mean something specific inside the
+planner and must not leak into marketing), and no diorama scene competing with the hero.
+
+**Copy carries no material vocabulary.** The requested cleanup removed the "paper, not plastic" card and
+every other reference to the *material* from user-facing text: the section is now "Four layers, stacked
+in this order", the cards have no index numbers, and the hero caption reads "Every layer below is a real
+constraint". The layered look stays; the metaphor moves from the surface to the architecture, where it
+is true. Internal class names (`paper-fibre`, `paper-tooth`) and the token palette are unchanged — they
+are implementation, not copy (RULES L8).
+
 ## 10. Layout
 
 - **Board:** max-width 1440px, padding 24–40px, centred diorama stage with visible cream margin.
 - **Planner workspace:** 3 columns ≥ 1280px → `[Inbox 300px] [Week grid 1fr] [Report 340px]`. Below 1280px → grid + collapsible rails. Below 900px → single column, tabbed.
 - **Week grid:** 7 day columns × hour rows (06:00–23:00 default, clamped to the user's earliest/latest working bound ±1h). 15-minute slot = 14px. Day columns are sheets; the *whole grid* sits on a kraft well so it reads as a cut recess.
 - **Spacing scale:** 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64. Generous — paper objects need air.
+- **Containment is a layout requirement, not a nicety.** Nothing may exceed its sheet at 320px. Two
+  mechanisms, both global (`globals.css`): `overflow-wrap: break-word` on every text element, so a long
+  URL, email or 40-character task title breaks instead of widening its parent; `max-width: 100%` on
+  `img/svg/video/canvas/table/pre`. A wide table (the docs environment matrix, `min-w-[720px]`) is
+  allowed **only** inside an `overflow-x-auto` wrapper — `tests/responsive.test.ts` enforces that rule
+  and asserts overflow was not simply hidden at the root. If a sheet ever scrolls sideways on a phone,
+  fix the child, don't clip the parent.
 - **Overlap layout:** colliding tiles split column width and get a 2px vertical offset so both cut edges stay visible (a real diorama cue).
 
 ## 11. Iconography

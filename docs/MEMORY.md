@@ -4,7 +4,7 @@
 | --- | --- |
 | Document | Memory / decision log / context for future contributors and agents |
 | Version | 1.0 |
-| Last updated | 2026-10-14 |
+| Last updated | 2026-10-15 |
 | Related | `PRD.md`, `ARCHITECTURE.md`, `RULES.md`, `DESIGN.md`, `TASK.md` |
 
 > **Read this first.** It is the short-term memory of the project: what exists, why it is the way it
@@ -12,21 +12,24 @@
 
 ---
 
-## 1. Current state (2026-10-14)
+## 1. Current state (2026-10-15)
 
 | Area | State |
 | --- | --- |
 | Product | **Calendra** (renamed from Paperweek, 2026-10-14 — D-022) |
-| Branch | `main` (initial commit `a512bc0`), full MVP implemented on top |
+| Branch | `arena/d6e1cd24-ai-calender-planner` (working); `main` holds the MVP baseline |
 | Docs | PRD, ARCHITECTURE, RULES, DESIGN, TASK, MEMORY — all written |
 | Engine | `lib/scheduler/*` complete: horizon → triage/chunk → place → repair → evaluate. Deterministic. |
 | Agent | `lib/agent/*` complete: 5 tools, 4 providers, `LocalReasoner` demo path, structured output + 1 repair |
 | Calendar | `lib/google/*` + OAuth routes + sync route with upsert/dryRun/409-on-drift; plus `POST /api/export/ics` — the same week as a file, with no account of any kind |
-| UI | Cut-paper diorama design system + 3-column planner workspace + marketing page |
+| UI | Cut-paper diorama design system + 3-column planner workspace |
+| Public site | Landing (`/`), pricing (`/pricing`), docs (`/docs`), sign-in/sign-up (`/signin`, `/signup`) — one `SiteHeader`/`SiteFooter` chrome, no material copy, no index numbers on the layer cards |
+| Auth | **Sessions are signed cookies, not rows**: `/api/auth/{session,demo,google,callback,signout}` (D-024). Google sign-in asks for identity only; the calendar grant stays separate (D-026). `REQUIRE_AUTH=true` makes `/planner` private |
 | Modes | **Demo mode works with zero env vars** — this is the default and the test path |
-| Tests | 103 assertions, all green: `tests/scheduler.test.ts` (INV-1…8, dependency ordering, recurrence, seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters, free-text cadence), `tests/ics.test.ts` (RFC 5545 structure, escaping, determinism), `tests/ui.test.ts` (**the components, executed in jsdom** against the real routes and engine), `tests/perf.test.ts` (drag cost: forced layouts + render coalescing) |
+| Tests | 109 assertions, all green: `tests/scheduler.test.ts` (INV-1…8, dependency ordering, recurrence, seeded property sweep), `tests/agent.test.ts` (boundaries, lexicons, adapters, free-text cadence), `tests/ics.test.ts` (RFC 5545 structure, escaping, determinism), `tests/ui.test.ts` (**the components, executed in jsdom** against the real routes and engine), `tests/perf.test.ts` (drag cost: forced layouts + render coalescing), `tests/auth.test.ts` (signature forgery, expiry, open-redirect targets), `tests/responsive.test.ts` (the overflow guard is installed and no wide element escapes its container) |
 | Verified | types, lint (0/0), production build, `npm test`, `npm run smoke`, `npm run agent:check`, live API round-trips, four rendered scenes |
-| Known gaps | Real-browser verification (T-507 — jsdom is not a browser: no layout, no paint, no OAuth redirect), persistence, multi-week horizon (T-603), calendar *import* (only export is shipped), `.ics` is not yet a first-class sync target alongside Google |
+| Billing | The **switch**, not an integration: `lib/billing.ts` detects `STRIPE_*`; `/pricing` renders checkout when they exist and a waitlist that says why when they do not (D-025) |
+| Known gaps | Real-browser verification (T-507 — jsdom is not a browser: no layout, no paint, no OAuth redirect), **no server-side session revocation** (D-024), persistence, multi-week horizon (T-603), calendar *import* (only export is shipped), no payment provider wired |
 
 ## 2. What this product is (one paragraph)
 
@@ -66,6 +69,11 @@ Format: **D-nnn · date · decision — rationale — consequence.**
 | **D-022** | 2026-10-14 | **The product is named Calendra, not Paperweek.** | The style was named after the product, which made the name describe the *material* rather than the *job*. A planner has to say what it does. | Renamed across UI copy, metadata, docs, package name, `.ics` PRODID/UID domain, Google markers (`calendraBlockId`/`calendraPlanId`), label suffix (`· CAL`), cookies and the storage key. A stored session from an older build is ignored rather than migrated (no users to migrate). |
 | **D-023** | 2026-10-14 | **No `mix-blend-mode` on repeated chrome, and geometry is measured once per gesture.** | An Interaction-to-Next-Paint warning pointed at a chip, but the chip was a symptom: blended layers cannot be composited independently, so every repaint beneath one re-blends it — and the texture sat on every chip, button *and* a fixed full-viewport grain. The drag also read `clientWidth`/`getBoundingClientRect()` per `pointermove`, forcing a synchronous reflow per event. | The textures keep their noise and opacity but drop the blend (greyscale at 3.5–5% is visually indistinguishable). The drag measures the strip once at `pointerdown` (`geometryRef`) and memoises the day columns. Measured: **72 → 0 forced layouts per 24 moves; 345ms → 181ms** (`tests/perf.test.ts`). |
 | **D-021** | 2026-10-14 | **A pin the engine cannot honour is retired, not retried.** | Re-sending an impossible pin every turn repeats a warning the user has already read and makes the client's pin list a lie about what is in force. | `PlanReport.droppedPins` names the task ids; `proposal.pins` contains **only** honoured pins; the store sets `pins = proposal.pins` after every plan, chat turn and drag; the toolkit prunes its context the same way. The user loses the drag, never the explanation. |
+
+| **D-024** | 2026-10-15 | **Sessions are HMAC-signed cookies, not database rows.** | The MVP has no database (D-010), and adding one to store four fields would make the app undeployable without Postgres — the opposite of the zero-setup property the product is built on. | `calendra_session` = base64url payload + `HMAC-SHA256` signature (`AUTH_SECRET`), `httpOnly` + `sameSite=lax` + `secure` in production, constant-time compare, expiry re-checked on every read. **Consequence, stated plainly:** there is no revocation list — signing out clears the cookie, and a copied cookie stays valid until it expires. |
+| **D-025** | 2026-10-15 | **Billing ships the switch, not a payment integration.** | The pricing page must never show a button that cannot charge. A checkout flow with no keys produces exactly that, and a half-integrated Stripe is a liability, not a feature. | `billingConfig()` reads `STRIPE_SECRET_KEY` + a price id; present → `/pricing` renders checkout, absent → a waitlist and a sentence saying billing is not connected on this deployment. One function decides, so the page cannot claim what the deployment cannot do. |
+| **D-026** | 2026-10-15 | **Sign-in asks for identity only; the calendar grant is a separate, later consent.** | Asking for read/write access to someone's calendar *before they have an account* is how a product burns trust on first contact. Identity (`openid email profile`) is what a session needs; the calendar is what planning needs, and planning is not the first thing a new user does. | `lib/auth/google.ts` owns the identity grant and never touches calendar scopes; `/api/auth/callback` verifies the ID token and does not trust the profile endpoint; the calendar flow (`calendra_gcal_state`) is unchanged and independent. One OAuth client, two redirect URIs, two explicit moments of intent. |
+| **D-027** | 2026-10-15 | **A demo session is a real session with a labelled identity.** | The alternative — a fake "signed in with Google" state — would make the one thing the product is honest about (what it actually did) a lie in the first screen. | `POST /api/auth/demo` signs `demo@calendra.local` / "Demo session" through the same code path as a Google user. Every surface that shows the account shows the demo label, and a demo session cannot reach a real calendar. |
 
 ## 4. Invariants cheat-sheet
 
@@ -149,6 +157,31 @@ column it lands on, and `DayColumn` is memoised.
 | Forced layout reads | 72 | 0 |
 | Wall clock (jsdom, indicative) | 345 ms | 181 ms |
 
+## 5d. Production round (2026-10-15)
+
+The site grew a real front door: landing page, pricing, docs, sign-in/up, and an auth layer. What was
+learned, in the order it bit:
+
+1. **`cookies()` needs Next's request scope.** Unit-testing a route handler that reads `cookies()` from
+   the jsdom harness throws *"`cookies` was called outside a request scope"*. Faking the scope would
+   test the fake. The routes with security consequence were split: the pure parts (signature, expiry,
+   redirect target) are unit-tested, the handlers are verified over HTTP with a real cookie jar.
+2. **A server page cannot be rendered by the jsdom harness.** `/planner` is now a server component that
+   decides the gate before sending a bundle, with the client workspace beside it — `git mv page.tsx
+   workspace.tsx`. The UI tests import the island. This is the right architecture (no auth flash, no
+   client-side redirect) *and* it means the page's gate is verified over HTTP, not in jsdom.
+3. **`npx tsc` installs a different package** (`tsc@2.0.4`). Use `./node_modules/.bin/tsc`, i.e.
+   `npm run typecheck`.
+4. **`fuser -k` can lose a race with `next start`.** Killing the port and immediately starting the new
+   server leaves the *old* one bound and the new one dying with `EADDRINUSE` — while curl happily
+   answers from the old process, so a config change looks like it was ignored. Stop the managed process
+   first, then start.
+5. **Text overflow has two causes, and only one is `break-word`.** A long unbroken token needs
+   `overflow-wrap`; a flex/grid child needs `min-width: 0` or it refuses to shrink and pushes the layout
+   instead of wrapping. The global guard covers the first; `tests/responsive.test.ts` asserts no
+   element forcing a width above 320px escapes its scroll container, and asserts the guard is still
+   installed. It cannot prove the page *looks* right — there is no layout engine here — and it says so.
+
 ## 6. Open threads / next actions
 
 | # | Thread | Owner | Notes |
@@ -174,6 +207,7 @@ column it lands on, and `DayColumn` is memoised.
 | 2026-10-14 | Renamed the product to **Calendra** and fixed the reported INP problem. The rename touched 25 files (copy, metadata, docs, package name, `.ics` PRODID/UIDs, Google markers, label suffix `· CAL`, cookies, storage key). The performance work is recorded as D-023 and measured in `tests/perf.test.ts`: the blend modes came off the repeated chrome, the drag stopped reading layout per `pointermove` (72 → 0 forced layouts) and the day columns were memoised (345 ms → 181 ms over 24 moves). 103 assertions green, lint 0, build clean. |
 | 2026-10-14 | Post-MVP round three. `npm run agent:check` (N-9) rewritten to carry pins across turns — which found a real defect within minutes: the client threw a drag away whenever the user then asked the agent anything (`buildWeek`/`sendMessage` reset `pins: []`), and the toolkit replaced its pin set on every `revise_plan`. Fixed by making the plan the authority (D-021): `PlanReport.droppedPins`, `proposal.pins` = honoured pins only, store adopts it after every path, toolkit prunes its context. Harness now ends `PASS: 9 turns, 8 tasks, 1 pin carried`. Two assertions added at the engine boundary and two at the conversation boundary; `npm test` 101/101. |
 | 2026-10-14 | Post-MVP round two. T-601 recurrence and T-602 dependencies implemented end-to-end (schema → policies → engine → score → parser → prompts → UI), with `occurrenceDays()`/`recurrenceLabel()`/`dependencyDepth()`/`dependencyConflicts()` and an `AWAITING_DEPENDENCY` gate; 29 scheduler assertions and 36 agent assertions, including a fixture that *proves* the constraint bites (the dependent is placed **before** its prerequisite without it). T-604 shipped: credential-free `.ics` export (`src/lib/ics.ts` + `POST /api/export/ics` + a cell in `CalendarPanel`), 12 structural assertions, verified over HTTP (12.6 kB, 20 VEVENTs, CRLF, folding, balance, unique UIDs) and with an independent parser check. Parser now reads "every other Thursday", "until Thursday", "N times this week" — and spreads a bare count across deterministic days (D-019). `npm test` 97/97. |
+| 2026-10-15 | Production round. Removed the paper-material copy (the "Paper, not plastic" card became "Trustworthy by construction"; the hero caption and section headings lost their craft vocabulary) and replaced the layer glyph with a **calendar mark** (`CalendraMark`: bound leaf, header band, month grid). Landing page rebuilt with real navigation (How it works, Features, Pricing, Docs) plus `SiteHeader`/`SiteFooter` shared chrome, and `/pricing`, `/docs`, `/signin`, `/signup` added. Auth landed as signed cookie sessions with a Google identity grant, a labelled demo session, and an optional `REQUIRE_AUTH` gate on `/planner` (D-024…D-027). Billing ships the switch, not an integration (D-025). Overflow guard added and, where it can be, asserted. `npm test` 109/109, lint 0, typecheck clean, 19 routes built. |
 | 2026-10-14 | Verification round. Added 46 assertions (engine invariants + agent/adapters); the tests immediately caught four real defects, all fixed: (1) `z.string().datetime()` rejected the engine's own wall-clock deadlines, breaking every follow-up request — D-013; (2) ritual tiles could be laid over meetings — D-016; (3) refused pins were silently relocated — D-014; (4) "do not use the weekend" was matched by the weekend-*enable* rule — gotcha 16. Also: dry-run sync no longer needs Google config (D-015), refinement replies now report preference and block-level movement (D-017), hydration-safe calendar dates (gotcha 17), block explanations wired end-to-end through `explain_block`, README + `.env.example` rewritten, `package.json` `scaffold` → `calendra` with `test`/`smoke`/`agent:check`/`scene` scripts. |
 
 ## 8. How to use this file

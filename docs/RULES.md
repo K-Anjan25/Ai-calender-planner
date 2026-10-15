@@ -23,7 +23,8 @@
 | **L5** | **Degrade, never break.** Every optional integration has a working fallback path. | The demo must always run. |
 | **L6** | **Deterministic scheduling.** No `Date.now()`, `Math.random()`, or locale-dependent comparison inside `lib/scheduler/*`. | INV-7 idempotence. |
 | **L7** | **Validate at the boundary.** Every route handler parses its body with zod before use. | Untrusted input never reaches the engine. |
-| **L8** | **Paper, not plastic.** Visual tokens come from `DESIGN.md` only. No bare hex, no default Tailwind palette, no pure black, no flat shadows. | The design *is* the differentiator. |
+| **L8** | **Material discipline.** Visual tokens come from `DESIGN.md` only. No bare hex, no default Tailwind palette, no pure black, no flat shadows, and no material vocabulary in user-facing copy. | The design *is* the differentiator — and the *style* is not the pitch. |
+| **L9** | **Never claim a capability the deployment does not have.** A missing key of any kind — model, calendar, session secret, payment provider — becomes an honest state or a hidden control, never a button that silently fails. | The product's entire argument is that it tells the truth about the week; it cannot start by lying about itself. |
 
 ## 2. Language & tooling
 
@@ -107,6 +108,25 @@ app/*  →  components/*  →  store/*  →  lib/{agent,google}  →  lib/schedu
 - Set an explicit timeout on every outbound call (LLM 20 s, Google 10 s).
 - No secrets in responses, ever — not even a masked prefix.
 
+## 9b. Auth & session rules
+
+- **Two grants, never bundled.** A session proves identity (`openid email profile` only). Calendar access
+  is a separate redirect the user triggers deliberately (`D-026`). Do not add a calendar scope to the
+  sign-in URL, however convenient it looks.
+- **The session is signed, and the signature is checked in constant time.** No JWT library, no
+  `decode()`-then-trust path: `decodeSession()` verifies before it parses uses, and returns `null` on any
+  doubt (`D-024`).
+- **A demo session is a real session with a labelled identity** (`D-027`) — never a fake signed-in state,
+  and never allowed to reach a real calendar.
+- **Redirect targets are same-site paths.** Anything arriving from a query string goes through
+  `safeNext()`. A redirect parameter is untrusted input like any other (L7).
+- **Gate on the server.** A private page decides before sending a client bundle — no client-side
+  redirect, no flash of the protected UI.
+- **State nonces for every OAuth flow**, stored in an `httpOnly` cookie and compared verbatim; a
+  mismatch aborts the exchange. Never complete half a sign-in.
+- **Sessions are not revoked server-side.** That is a known, documented limit, not an oversight: do not
+  describe sign-out as "invalidating the session", and do not build a UI that implies a device list.
+
 ## 10. UI rules
 
 - **Server Components by default**; add `'use client'` only where interaction demands it, as deep in the tree as possible.
@@ -118,6 +138,12 @@ app/*  →  components/*  →  store/*  →  lib/{agent,google}  →  lib/schedu
 - Respect `prefers-reduced-motion` — animations collapse to opacity-only or none. See `DESIGN.md` §7.
 - Text contrast ≥ 4.5:1 on paper surfaces; never place `ink-faint` on `paper-sand` for body copy.
 - Loading states are **paper skeletons** (cut-out placeholders), never spinners alone.
+- **Nothing overflows its sheet.** Text breaks rather than widening its container (the global guard in
+  `globals.css`); a deliberately wide child lives inside an `overflow-x-auto` wrapper. Never fix an
+  overflow by clipping at the root — `tests/responsive.test.ts` fails if you do.
+- **User-facing copy names the product, not the material.** The layered look is the design language, not
+  the pitch: no "paper", "card stock", "hand-cut" or "glued" in strings a user reads (`DESIGN.md` §9.2).
+  Internal class names are free to say `paper-fibre` — that is implementation.
 
 ## 11. Scope & process rules
 
@@ -142,3 +168,7 @@ app/*  →  components/*  →  store/*  →  lib/{agent,google}  →  lib/schedu
 | Auto-syncing to Google "to be helpful" | Violates L2. |
 | A spinner with no skeleton | Feels like a web app, not a paper object. |
 | Client-side secrets or tokens | Security. |
+| A "Sign in" button when no OAuth client is configured | Violates L9. Hide it and say why. |
+| A checkout button when no payment provider is configured | Violates L9. Offer the waitlist. |
+| A calendar scope added to the sign-in flow | Bundles a consent the user has not been asked for (D-026). |
+| `overflow-x: hidden` on `html`/`body` to hide a layout bug | The page is still broken; now it is broken silently. |

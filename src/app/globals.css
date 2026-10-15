@@ -148,6 +148,31 @@
    Paper materials (DESIGN.md §2, §4, §6)
    ================================================================== */
 
+@layer base {
+  /*
+   * Text overflow guard.
+   *
+   * Two classes of bug produced text escaping its card:
+   *  - a long unbroken token (a URL, an email, a 40-character task title typed without spaces) cannot
+   *    wrap under the default `overflow-wrap: normal`, so it forces the line box wider than its parent;
+   *  - a flex or grid child defaults to `min-width: auto`, so it refuses to shrink below its content
+   *    and pushes the layout instead of wrapping.
+   *
+   * `overflow-wrap: break-word` lets a word break only when it would otherwise overflow, so prose is
+   * unaffected. `hyphens: none` keeps it explicit. Headings are included because a headline is where a
+   * long word is most visible.
+   */
+  :where(h1, h2, h3, h4, p, li, dd, dt, td, th, span, a, code, strong, em, figcaption) {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  /* Media never exceeds its container. */
+  :where(img, svg, video, canvas, table, pre) {
+    max-width: 100%;
+  }
+}
+
 @layer components {
   /* Laid-paper fibre: directional grain, multiplied over any surface. */
   .paper-fibre {

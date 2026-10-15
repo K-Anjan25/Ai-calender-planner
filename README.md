@@ -81,30 +81,49 @@ Both properties are asserted in `tests/perf.test.ts`, because neither is visible
 | Forced layout reads | 72 | **0** |
 | Wall clock (jsdom, indicative) | 345 ms | **181 ms** |
 
+### Pages
+
+| Route | What it is |
+| --- | --- |
+| `/` | Landing page: the promise, how it works, what is different, pricing CTA. |
+| `/pricing` | Three tiers. Says so out loud when no payment provider is configured. |
+| `/signin`, `/signup` | Sign in with Google, or a clearly-labelled demo session. |
+| `/planner` | The workspace. Open by default; private when `REQUIRE_AUTH=true`. |
+| `/docs` | The six documents, the live environment matrix, the API reference and the deployment guide. |
+
 ### Going live
 
 Copy `.env.example` to `.env.local` and fill in what you have. **Everything is optional**; each
-piece degrades to something honest rather than to a crash.
+piece degrades to something honest rather than to a crash. The full matrix, with what each variable
+does when it is absent, is on `/docs` — rendered from the same helpers the runtime reads, so the
+documentation cannot drift from the app.
 
 ```bash
-# Real language model (pick one; omit entirely to stay on the local reasoner)
-LLM_PROVIDER=openai            # openai | anthropic | google | local
-OPENAI_API_KEY=sk-…
-LLM_MODEL=gpt-4o-mini          # any model id the provider accepts
+# Sessions — required in production, or cookies are signed with a public dev key
+AUTH_SECRET=$(openssl rand -base64 32)
+REQUIRE_AUTH=true              # optional: make /planner private
 
-# Real calendar writes (planning works without it; sync stays available as a dry run)
+# Google: one OAuth client, two separate grants (identity, then calendar)
 GOOGLE_CLIENT_ID=…
 GOOGLE_CLIENT_SECRET=…
-GOOGLE_REDIRECT_URI=http://localhost:3000/api/calendar/callback
 
-DEMO_MODE=false                # false hides demo data and the demo banner
+# Real language model (omit entirely to stay on the deterministic local reasoner)
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-…
 ```
 
-Google setup, briefly: create an OAuth client (Web application) in Google Cloud Console, add
-`http://localhost:3000/api/calendar/callback` as a redirect URI, enable the **Google Calendar
-API**, then click *Connect Google Calendar* in the planner. Tokens live in an httpOnly cookie —
-there is no database, and revocation is one *Disconnect* away. Scopes are
-`calendar.events` and `calendar.readonly`, nothing more.
+**Google setup, in order:** create a project in Google Cloud Console → *APIs & Services* → *Enable
+APIs* → **Google Calendar API** → *Credentials* → *Create credentials* → **OAuth client ID** → *Web
+application* → add **both** redirect URIs (`/api/auth/callback` for sign-in and
+`/api/calendar/callback` for the calendar grant, localhost and production) → copy the client id and
+secret into the environment → publish the *OAuth consent screen* (or add test users, or only listed
+accounts can sign in).
+
+**Two grants, two moments of intent.** Sign-in asks for `openid email profile` — who you are, nothing
+else. Calendar access is requested separately, later, when you click *Connect Google Calendar*.
+Bundling them would mean asking for read/write access to someone's calendar before they have created
+an account. Tokens live in an httpOnly cookie — there is no database, and revocation is one
+*Disconnect* away. Scopes are `calendar.events` and `calendar.readonly`, nothing more.
 
 If a live key is present but the call fails, the agent falls back to the local reasoner and says so
 in the chat rather than failing the request. `GET /api/health` always reports what is actually
@@ -221,6 +240,19 @@ re-attempted forever, because silently moving your block would be the one thing 
   (`unscheduled ≥ max(minBlock, 2% of demand)`), and trade-offs must recover at least one slot.
 - **Demo mode is labelled.** With no keys, the UI says the reasoner is local. It doesn't pretend.
 - **Nothing writes itself.** Approve specific blocks; dry run first; roll back in one click.
+
+## Auth, in one paragraph
+
+The session is a **signed cookie**, not a database row: base64url JSON payload, HMAC-SHA256
+signature, `httpOnly`, `sameSite=lax`, constant-time verification, and an expiry checked on every
+read. A forged or edited cookie fails the signature check. It is real authentication but not
+server-side revocation — signing out clears the cookie, and a copied cookie stays valid until it
+expires. That trade is deliberate and documented (`D-025`); revocation needs a store, which is the
+same reason the Google tokens live in a cookie (`D-010`).
+
+With no credentials at all, sign-in falls back to a **demo session**: the same signing mechanism, an
+identity labelled `Demo session` / `demo@calendra.local` everywhere it appears, and no ability to
+write to a real calendar. The app never shows a sign-in button that cannot work without saying so.
 
 ## Known limits
 
