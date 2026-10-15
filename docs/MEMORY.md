@@ -73,6 +73,8 @@ Format: **D-nnn · date · decision — rationale — consequence.**
 | **D-024** | 2026-10-15 | **Sessions are HMAC-signed cookies, not database rows.** | The MVP has no database (D-010), and adding one to store four fields would make the app undeployable without Postgres — the opposite of the zero-setup property the product is built on. | `calendra_session` = base64url payload + `HMAC-SHA256` signature (`AUTH_SECRET`), `httpOnly` + `sameSite=lax` + `secure` in production, constant-time compare, expiry re-checked on every read. **Consequence, stated plainly:** there is no revocation list — signing out clears the cookie, and a copied cookie stays valid until it expires. |
 | **D-025** | 2026-10-15 | **Billing ships the switch, not a payment integration.** | The pricing page must never show a button that cannot charge. A checkout flow with no keys produces exactly that, and a half-integrated Stripe is a liability, not a feature. | `billingConfig()` reads `STRIPE_SECRET_KEY` + a price id; present → `/pricing` renders checkout, absent → a waitlist and a sentence saying billing is not connected on this deployment. One function decides, so the page cannot claim what the deployment cannot do. |
 | **D-026** | 2026-10-15 | **Sign-in asks for identity only; the calendar grant is a separate, later consent.** | Asking for read/write access to someone's calendar *before they have an account* is how a product burns trust on first contact. Identity (`openid email profile`) is what a session needs; the calendar is what planning needs, and planning is not the first thing a new user does. | `lib/auth/google.ts` owns the identity grant and never touches calendar scopes; `/api/auth/callback` verifies the ID token and does not trust the profile endpoint; the calendar flow (`calendra_gcal_state`) is unchanged and independent. One OAuth client, two redirect URIs, two explicit moments of intent. |
+| **D-028** | 2026-10-15 | **A control’s default width belongs in the components layer, not in its class list.** | The rules panel was reported as "text overflowing". The cause was not the markup: `PaperInput` carried `w-full` in its base classes, so every caller’s `className="w-[86px]"` was dead. Both are utilities at the same specificity, and Tailwind emits `.w-full` *after* arbitrary widths — so the cascade always chose 100%, and the working-hours rows ran out of their sheet. | `.paper-field { width: 100%; min-width: 0 }` lives in `@layer components`, where every utility beats it. Callers size fields however they like (`w-[86px]`, `flex-1 min-w-[74px]`); `tests/layout.test.ts` fails if `w-full` reappears in a field’s base classes. The same trap is waiting for any component that hardcodes a property a caller might override. |
+| **D-029** | 2026-10-15 | **The week keeps a legible minimum width and scrolls; it does not compress.** | Seven day columns sharing a phone’s width is 43px each — the title, the time and the reason chips cannot be read at any font size, and the reported experience was "the worst UI". A calendar you cannot read is not a responsive calendar. | Below ~720px the grid scrolls sideways with the hour gutter `sticky left-0`, so "when" is never scrolled away. The drag maths is unaffected: geometry is measured once per gesture and `clientX - rect.left` is content-relative. On a tile, `touch-action: none` keeps the gesture a drag instead of a page pan. |
 | **D-027** | 2026-10-15 | **A demo session is a real session with a labelled identity.** | The alternative — a fake "signed in with Google" state — would make the one thing the product is honest about (what it actually did) a lie in the first screen. | `POST /api/auth/demo` signs `demo@calendra.local` / "Demo session" through the same code path as a Google user. Every surface that shows the account shows the demo label, and a demo session cannot reach a real calendar. |
 
 ## 4. Invariants cheat-sheet
@@ -182,6 +184,41 @@ learned, in the order it bit:
    element forcing a width above 320px escapes its scroll container, and asserts the guard is still
    installed. It cannot prove the page *looks* right — there is no layout engine here — and it says so.
 
+## 5e. The UI-defect round (2026-10-15)
+
+Reported after the production round: *"in demo session in rules section the working hours has the
+contents, texts overflowing, and your week has so many ui hanging, ui bug, errors, and worst ui
+experiences."* Six real defects, each with a mechanism worth remembering:
+
+1. **`w-full` in a component’s base classes cancels the caller’s width.** `PaperInput`,
+   `PaperSelect` and `PaperTextarea` all carried it, so all eleven `w-[86px]` / `w-[90px]` /
+   `w-[84px]` overrides in the rules panel were dead code and every field became 100% of its row.
+   Fixed at the source with `.paper-field` in the components layer (**D-028**), then the rows were
+   rewritten to share space (`flex-1 min-w-[74px]`) instead of demanding a fixed width.
+   *Diagnosis tip:* read the **built** CSS, not the source — `grep -o '\.w-\[86px\]{[^}]*}'` and
+   compare byte offsets with `.w-full`. Nothing in the TSX reveals this.
+2. **`flex-1` beside four fixed siblings collapses to a sliver.** The blackout row was one wrapping
+   flex row: the label had `basis: 0` and the select and two time inputs set a floor the sheet could
+   not shrink below. Two rows (name / when) instead of one.
+3. **Seven day columns at any width.** Now a minimum width inside a scroller (**D-029**).
+4. **`localStorage.setItem` per input event.** Synchronous disk I/O on the main thread, ~60×/second
+   while a slider was dragged — the app did not hang, it was writing. Coalesced to a leading write
+   plus at most one trailing write per 250 ms; `tests/perf.test.ts` asserts ≤2 writes for 60 events.
+5. **`days` depended on the whole `preferences` object.** Any change rebuilt the array, changed every
+   `day` prop, changed `beginDrag`/`onBlockKeyDown` (both close over `days`), and re-rendered all
+   seven memoised columns and every tile in them. It is built from the two values that decide it now.
+6. **Equal start times stacked tiles on top of each other.** `layoutColumns` counted "tiles that
+   started earlier" as the column index, so two blocks at 09:00 both got index 0 and half the width —
+   one invisible and ungrabbable, with no error anywhere. Now a greedy interval colouring
+   (`layoutColumns`, four tests). The engine never places two tasks on the same minute, but a ritual
+   row can land on a task and a drag preview always can.
+
+Smaller ones fixed in the same pass: the first and last hour labels were centred on their rule, so
+they hung half a line outside the grid; a 15-minute protected band is 11px tall with a 13px label, so
+its label spilled into the next slot (now `overflow-hidden`); tiles lost their last line to
+`overflow: hidden` rather than declaring what fits (`titleClamp` / `chipBudget`); the `+n` reason
+counter was computed against a different number of chips than were shown; band keys could collide.
+
 ## 6. Open threads / next actions
 
 | # | Thread | Owner | Notes |
@@ -207,6 +244,7 @@ learned, in the order it bit:
 | 2026-10-14 | Renamed the product to **Calendra** and fixed the reported INP problem. The rename touched 25 files (copy, metadata, docs, package name, `.ics` PRODID/UIDs, Google markers, label suffix `· CAL`, cookies, storage key). The performance work is recorded as D-023 and measured in `tests/perf.test.ts`: the blend modes came off the repeated chrome, the drag stopped reading layout per `pointermove` (72 → 0 forced layouts) and the day columns were memoised (345 ms → 181 ms over 24 moves). 103 assertions green, lint 0, build clean. |
 | 2026-10-14 | Post-MVP round three. `npm run agent:check` (N-9) rewritten to carry pins across turns — which found a real defect within minutes: the client threw a drag away whenever the user then asked the agent anything (`buildWeek`/`sendMessage` reset `pins: []`), and the toolkit replaced its pin set on every `revise_plan`. Fixed by making the plan the authority (D-021): `PlanReport.droppedPins`, `proposal.pins` = honoured pins only, store adopts it after every path, toolkit prunes its context. Harness now ends `PASS: 9 turns, 8 tasks, 1 pin carried`. Two assertions added at the engine boundary and two at the conversation boundary; `npm test` 101/101. |
 | 2026-10-14 | Post-MVP round two. T-601 recurrence and T-602 dependencies implemented end-to-end (schema → policies → engine → score → parser → prompts → UI), with `occurrenceDays()`/`recurrenceLabel()`/`dependencyDepth()`/`dependencyConflicts()` and an `AWAITING_DEPENDENCY` gate; 29 scheduler assertions and 36 agent assertions, including a fixture that *proves* the constraint bites (the dependent is placed **before** its prerequisite without it). T-604 shipped: credential-free `.ics` export (`src/lib/ics.ts` + `POST /api/export/ics` + a cell in `CalendarPanel`), 12 structural assertions, verified over HTTP (12.6 kB, 20 VEVENTs, CRLF, folding, balance, unique UIDs) and with an independent parser check. Parser now reads "every other Thursday", "until Thursday", "N times this week" — and spreads a bare count across deterministic days (D-019). `npm test` 97/97. |
+| 2026-10-15 | UI-defect round. The rules panel’s working hours overflowed because `w-full` in the control’s base classes made every caller’s width override dead code (D-028, proven by reading the built CSS); the week grid squeezed seven days into a phone’s width (D-029, now a legible minimum inside a scroller with a sticky hour gutter); slider drags wrote to `localStorage` ~60×/second; `days` was rebuilt on every preference change, re-rendering the whole week; and two tiles starting at the same minute were drawn on top of each other. Six fixes, five new tests, 132/132 green. |
 | 2026-10-15 | Production round. Removed the paper-material copy (the "Paper, not plastic" card became "Trustworthy by construction"; the hero caption and section headings lost their craft vocabulary) and replaced the layer glyph with a **calendar mark** (`CalendraMark`: bound leaf, header band, month grid). Landing page rebuilt with real navigation (How it works, Features, Pricing, Docs) plus `SiteHeader`/`SiteFooter` shared chrome, and `/pricing`, `/docs`, `/signin`, `/signup` added. Auth landed as signed cookie sessions with a Google identity grant, a labelled demo session, and an optional `REQUIRE_AUTH` gate on `/planner` (D-024…D-027). Billing ships the switch, not an integration (D-025). Overflow guard added and, where it can be, asserted. `npm test` 109/109, lint 0, typecheck clean, 19 routes built. |
 | 2026-10-14 | Verification round. Added 46 assertions (engine invariants + agent/adapters); the tests immediately caught four real defects, all fixed: (1) `z.string().datetime()` rejected the engine's own wall-clock deadlines, breaking every follow-up request — D-013; (2) ritual tiles could be laid over meetings — D-016; (3) refused pins were silently relocated — D-014; (4) "do not use the weekend" was matched by the weekend-*enable* rule — gotcha 16. Also: dry-run sync no longer needs Google config (D-015), refinement replies now report preference and block-level movement (D-017), hydration-safe calendar dates (gotcha 17), block explanations wired end-to-end through `explain_block`, README + `.env.example` rewritten, `package.json` `scaffold` → `calendra` with `test`/`smoke`/`agent:check`/`scene` scripts. |
 

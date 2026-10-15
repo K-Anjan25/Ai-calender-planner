@@ -200,6 +200,7 @@ Primitives in `src/components/paper/`:
 | `DioramaScene` | Layered SVG scenery. Props: `variant` (`dawn`/`focus`/`dusk`/`week`), `density`. Parallax on scroll at ≤ 6px. |
 | `DioramaLayer` | One SVG silhouette layer with its own translateZ-equivalent offset + drop shadow. |
 | `Grain` | Fixed fibre/tooth overlay + vignette. |
+| `.paper-field` | The default width/`min-width` for a field, in the **components** layer so any width utility overrides it. See D-028 — this is the fix for the rules-panel overflow. |
 | `CalendraMark` | The product mark: a bound calendar leaf (header band, two binding rings, month grid, one marked day) in `currentColor`, sized by a single `size` prop. The day grid is drawn as cut tiles, so the glyph belongs to the same material world as the rest of the UI while still reading as *calendar* at 24px. Shipped with `CalendraLogo` (mark + wordmark) for the header, footer and auth panel. |
 | `LoadBar` | Paper strip fill showing planned-vs-capacity per day. |
 
@@ -241,6 +242,18 @@ are implementation, not copy (RULES L8).
 - **Planner workspace:** 3 columns ≥ 1280px → `[Inbox 300px] [Week grid 1fr] [Report 340px]`. Below 1280px → grid + collapsible rails. Below 900px → single column, tabbed.
 - **Week grid:** 7 day columns × hour rows (06:00–23:00 default, clamped to the user's earliest/latest working bound ±1h). 15-minute slot = 14px. Day columns are sheets; the *whole grid* sits on a kraft well so it reads as a cut recess.
 - **Spacing scale:** 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64. Generous — paper objects need air.
+- **A control’s width is the caller’s decision.** Field defaults live in `globals.css` as
+  `.paper-field` inside `@layer components`, never as `w-full` in a component’s class list: utilities
+  beat components, so a caller can always override — whereas `w-full` in the base classes silently
+  beat every `w-[Npx]` a caller passed (D-028). The rules panel sizes fields with `flex-1
+  min-w-[74px]`, so a row adapts to a 300px rail and to a 900px one without a second variant.
+- **A calendar keeps a legible minimum and scrolls.** Below ~720px the week grid scrolls sideways
+  rather than compressing seven days into 43px slivers, with the hour gutter `sticky left-0` so
+  "when" never leaves the screen. Tiles set `touch-action: none`, or a phone scrolls the page instead
+  of dragging the block (D-029).
+- **A tile declares what fits.** Content is chosen by the tile’s own height — a one-line title clamp
+  under 75 minutes, no reason chips under 90, two at most under 150, and a `+n` counter that always
+  agrees with the chips actually rendered. `.paper-tile` clips, so unplanned overflow is silent.
 - **Containment is a layout requirement, not a nicety.** Nothing may exceed its sheet at 320px. Two
   mechanisms, both global (`globals.css`): `overflow-wrap: break-word` on every text element, so a long
   URL, email or 40-character task title breaks instead of widening its parent; `max-width: 100%` on

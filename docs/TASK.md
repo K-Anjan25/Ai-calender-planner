@@ -227,6 +227,24 @@ viewport verification remains T-507.
 
 ---
 
+## Round 4: reported UI defects (T-710 … T-715, 2026-10-15)
+
+Reported against the demo session: the rules panel's working hours overflow, and "the worst UI" in the
+week grid. Each item below was reproduced, root-caused, fixed, and covered.
+
+| # | Defect | Root cause | Fix |
+| --- | --- | --- | --- |
+| T-710 | Working-hours rows overflowed the sheet | `w-full` in `PaperInput`'s base classes made every caller's `w-[86px]` dead code — same specificity, and Tailwind emits `.w-full` later (D-028) | `.paper-field` in the components layer; rows rewritten as `flex-1 min-w-[74px]`; `tests/layout.test.ts` |
+| T-711 | Blackout row collapsed to a sliver | One wrapping row: a `basis: 0` label beside four fixed controls that set an unshrinkable floor | Split into a name row and a when row |
+| T-712 | Week grid unreadable on a narrow window | Seven `flex-1` day columns at any width | Legible minimum inside an `overflow-x-auto` scroller, sticky hour gutter, `touch-action: none` on tiles (D-029) |
+| T-713 | Sliders felt like the app had hung | `localStorage.setItem` on every input event (synchronous disk I/O, ~60×/s) and `days` rebuilt on every preference change, re-rendering all seven columns | Coalesced writes (leading + one trailing per 250 ms) and `days` built from the two values that decide it |
+| T-714 | Two tiles starting at the same minute covered each other | `layoutColumns` used "tiles that started earlier" as the column index | Greedy interval colouring, four assertions |
+| T-715 | Small clip-and-spill defects | First/last hour labels centred on the grid edge; 15-minute band with a 13px label; tiles losing their last line to `overflow: hidden`; a `+n` chip counter computed against the wrong base; colliding band keys | Pinned edge labels, `overflow-hidden` bands, height-aware tile density, corrected counter, indexed keys |
+
+`npm test` 132/132 · lint 0 · typecheck clean.
+
+---
+
 ## Definition of done (any task)
 
 1. Implements the FR/INV it references, nothing more.

@@ -198,3 +198,47 @@ describe('drag performance (INP)', () => {
   })
 
 })
+
+/**
+ * The rules panel writes to localStorage on every input event.
+ *
+ * `localStorage.setItem` is synchronous disk I/O on the main thread. A range input fires `change` per
+ * pixel, so dragging the buffer slider used to write the entire task list ~60×/second; the drag lagged
+ * behind the cursor and the app read as hung. The write is now coalesced — the first call still writes
+ * immediately, so storage is never stale for long, and the rest fold into at most one more write.
+ */
+describe('preference edits do not thrash storage', () => {
+  it('coalesces a burst of slider events into at most two writes', async () => {
+    const realSetItem = window.localStorage.setItem.bind(window.localStorage)
+    let writes = 0
+    window.localStorage.setItem = ((...args: Parameters<Storage['setItem']>) => {
+      writes += 1
+      return realSetItem(...args)
+    }) as Storage['setItem']
+
+    try {
+      writes = 0
+      // Sixty events, as a slider dragged across its track delivers them.
+      await act(async () => {
+        for (let minutes = 0; minutes <= 59; minutes += 1) {
+          usePlanner.getState().setPreferences({ bufferMinutes: minutes % 46 })
+        }
+      })
+      assert.ok(writes <= 1, `60 slider events produced ${writes} synchronous writes before settling`)
+
+      // Let the coalescing window close, then confirm the latest value did land.
+      await act(async () => {
+        await new Promise((resolve) => window.setTimeout(resolve, 320))
+      })
+      assert.ok(writes <= 2, `60 slider events produced ${writes} writes in total — must coalesce to a leading + one trailing`)
+
+      const stored = JSON.parse(window.localStorage.getItem('calendra.session.v1') ?? '{}') as {
+        preferences?: { bufferMinutes?: number }
+      }
+      // The burst ended on `59 % 46`; the trailing write must carry that, not an earlier value.
+      assert.equal(stored.preferences?.bufferMinutes, 59 % 46, 'the trailing write lost the final value')
+    } finally {
+      window.localStorage.setItem = realSetItem
+    }
+  })
+})

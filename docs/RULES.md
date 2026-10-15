@@ -138,6 +138,12 @@ app/*  →  components/*  →  store/*  →  lib/{agent,google}  →  lib/schedu
 - Respect `prefers-reduced-motion` — animations collapse to opacity-only or none. See `DESIGN.md` §7.
 - Text contrast ≥ 4.5:1 on paper surfaces; never place `ink-faint` on `paper-sand` for body copy.
 - Loading states are **paper skeletons** (cut-out placeholders), never spinners alone.
+- **A component never hardcodes a property it also lets the caller pass.** A default width/colour/radius
+  belongs in `@layer components`, not in the element's own class list: utilities beat components, so the
+  caller wins — whereas a utility in the base classes ties with the caller's and wins on source order
+  (D-028). This is what made every `w-[86px]` in the rules panel dead code.
+- **A calendar is never compressed below legibility.** If a grid cannot fit, it scrolls, with its axis
+  labels pinned. Seven columns in a phone's width is not a responsive layout (D-029).
 - **Nothing overflows its sheet.** Text breaks rather than widening its container (the global guard in
   `globals.css`); a deliberately wide child lives inside an `overflow-x-auto` wrapper. Never fix an
   overflow by clipping at the root — `tests/responsive.test.ts` fails if you do.
@@ -172,3 +178,6 @@ app/*  →  components/*  →  store/*  →  lib/{agent,google}  →  lib/schedu
 | A checkout button when no payment provider is configured | Violates L9. Offer the waitlist. |
 | A calendar scope added to the sign-in flow | Bundles a consent the user has not been asked for (D-026). |
 | `overflow-x: hidden` on `html`/`body` to hide a layout bug | The page is still broken; now it is broken silently. |
+| A light/dark hex, radius or width written inline "just this once" in a component's base classes | It outranks the call site and cannot be overridden (D-028). Put the default in `@layer components`. |
+| `localStorage.setItem` inside an input/`change` handler | Synchronous disk I/O per event; the drag feels like a hang (T-713). Coalesce it. |
+| Sizing a grid by `flex-1` with no floor | Columns become slivers and the content is unreadable (D-029). |

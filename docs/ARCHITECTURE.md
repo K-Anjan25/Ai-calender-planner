@@ -440,6 +440,20 @@ which is how a test computes where 13:30 is without reimplementing the layout.
 overlap, no overflow, no focus ring, no responsive reflow, and the OAuth redirect cannot be followed.
 Those remain T-507.
 
+## 11b. Client persistence & re-render discipline
+
+The store writes to `localStorage` — the only durable storage there is (D-010) — and that is
+synchronous disk I/O on the main thread. One write per click is free; one per *input event* is not.
+`persist()` therefore writes immediately and then at most once more per 250 ms, holding the newest
+state *reference* (the store replaces objects rather than mutating them) and stringifying only when it
+actually writes. Sixty slider events produce at most two writes; `tests/perf.test.ts` asserts it.
+
+The same discipline applies to rendering. `WeekGrid` builds its seven days from the two settings that
+decide them — `workingHours` and `weekStartsOn` — rather than from the whole `preferences` object,
+because `beginDrag` and `onBlockKeyDown` close over that array: a new array identity propagates through
+the memoised `DayColumn`s and re-renders every tile on the sheet. Changing the buffer width must not
+re-render the week.
+
 ## 12. Performance
 
 - Scheduler is O(chunks × slots); at MVP scale (~60 × 700) it is sub-100 ms in-process. Free slots are pre-indexed by day and sorted once.

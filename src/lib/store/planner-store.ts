@@ -84,16 +84,57 @@ type Actions = {
 
 const STORAGE_KEY = 'calendra.session.v1'
 
-function persist(state: Pick<State, 'tasks' | 'preferences' | 'demoSet' | 'mode'>) {
-  if (typeof window === 'undefined') return
+/**
+ * Write to localStorage, coalesced.
+ *
+ * `localStorage.setItem` is *synchronous* disk I/O on the main thread. That is invisible when it runs
+ * once per click and painful when it runs once per input event: a range input fires `change` on every
+ * pixel, so dragging the buffer slider wrote the entire task list ~60×/second, each write blocking the
+ * paint the drag was waiting for. The slider felt like the app had hung; it had not, it was on fire.
+ *
+ * Leading write (storage is correct immediately), then at most one trailing write per window. The
+ * pending value is the latest, so nothing is lost — only the intermediate states, which nothing reads.
+ */
+const PERSIST_COALESCE_MS = 250
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+/**
+ * The latest state waiting to be written.
+ *
+ * A reference, not a serialised string: `persist` runs on every input event, and stringifying the
+ * whole task list 60×/second costs more than the write it is preparing for. The store replaces state
+ * objects rather than mutating them, so holding the newest reference is safe — nothing writes through
+ * it after the fact.
+ */
+let pending: Pick<State, 'tasks' | 'preferences' | 'demoSet' | 'mode'> | null = null
+
+function writeNow() {
+  if (pending === null) return
+  const snapshot = pending
+  pending = null
   try {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ tasks: state.tasks, preferences: state.preferences, demoSet: state.demoSet, mode: state.mode }),
+      JSON.stringify({
+        tasks: snapshot.tasks,
+        preferences: snapshot.preferences,
+        demoSet: snapshot.demoSet,
+        mode: snapshot.mode,
+      }),
     )
   } catch {
     // Storage is a convenience, not a requirement. A full or blocked quota must not break planning.
   }
+}
+
+function persist(state: Pick<State, 'tasks' | 'preferences' | 'demoSet' | 'mode'>) {
+  if (typeof window === 'undefined') return
+  pending = state
+  if (persistTimer !== null) return // a write is already scheduled; it will pick up the latest value
+  writeNow()
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    writeNow()
+  }, PERSIST_COALESCE_MS)
 }
 
 function request(now: Date) {

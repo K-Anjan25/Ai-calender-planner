@@ -184,7 +184,14 @@ export type Occupancy = {
  * Static occupancy: what the day already contains before planning
  * ------------------------------------------------------------------ */
 
-function weekendHours(mode: Preferences['weekendMode']): { start: number; end: number } | null {
+/**
+ * Weekend hours, from the mode alone.
+ *
+ * Exported so callers that only need a *day window* can pass the two values that decide it instead of
+ * a whole `Preferences` object — which is what lets `WeekGrid` depend on exactly what it reads and
+ * skip re-rendering the week when an unrelated preference changes (see the note there).
+ */
+export function weekendHours(mode: Preferences['weekendMode']): { start: number; end: number } | null {
   if (mode === 'off') return null
   if (mode === 'light') return { start: 10 * 60, end: 13 * 60 }
   return { start: 9 * 60, end: 17 * 60 }

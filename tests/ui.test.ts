@@ -153,6 +153,28 @@ describe('the workspace renders a real week', () => {
     }
   })
 
+  it('keeps the week inside a scroller instead of squeezing it, and puts the gutter on top', async () => {
+    const proposal = await buildDemoWeek()
+    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+
+    const stripElement = document.querySelector('[data-day-strip]')
+    assert.ok(stripElement, 'the day strip is missing')
+
+    // Walk up to the element that owns the horizontal overflow.
+    let scroller: HTMLElement | null = stripElement.parentElement
+    while (scroller && !/(^|\s)overflow-x-auto(\s|$)/.test(scroller.className)) scroller = scroller.parentElement
+    assert.ok(scroller, 'the week is not inside a horizontal scroller — it will squeeze to a sliver on a phone')
+
+    const floor = scroller.querySelector('[class*="min-w-["]')
+    assert.ok(floor, 'the week has no minimum width, so seven days will compress to unreadable columns')
+
+    // A 15-minute band is 11px tall; its label must not spill into the slot below it.
+    const lunch = screen.getAllByText(/^Lunch$/i)[0]
+    const band = lunch.closest('div[aria-hidden="true"]')
+    assert.ok(band, 'the lunch band is not rendered as a band')
+    assert.match(band.className, /overflow-hidden/, 'the protected band does not clip its own label')
+  })
+
   it('labels each tile with its time, priority and reasons', async () => {
     const proposal = await buildDemoWeek()
     const block = proposal.blocks.find((item) => item.kind === 'task' && item.reasons.length > 0)

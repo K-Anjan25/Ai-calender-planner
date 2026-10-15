@@ -167,7 +167,9 @@ export function PaperInput({
   return (
     <input
       className={clsx(
-        'paper-well w-full rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-faint',
+        // `paper-field`, not `w-full`: see the note in globals.css — `w-full` here makes every
+        // caller's width override dead code.
+        'paper-well paper-field rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-faint',
         'bg-paper-ivory focus:bg-paper-ivory transition-colors',
         'focus-visible:outline-2 focus-visible:outline-teal-deep',
         className,
@@ -184,7 +186,7 @@ export function PaperTextarea({
   return (
     <textarea
       className={clsx(
-        'paper-well w-full resize-y rounded-[var(--radius-well)] px-3 py-2 text-sm leading-relaxed text-ink placeholder:text-ink-faint',
+        'paper-well paper-field resize-y rounded-[var(--radius-well)] px-3 py-2 text-sm leading-relaxed text-ink placeholder:text-ink-faint',
         'bg-paper-ivory',
         className,
       )}
@@ -288,7 +290,7 @@ export function PaperSelect({
   return (
     <select
       className={clsx(
-        'paper-well w-full appearance-none rounded-[var(--radius-cut-xs)] bg-paper-ivory px-2.5 py-1.5 text-sm text-ink',
+        'paper-well paper-field appearance-none rounded-[var(--radius-cut-xs)] bg-paper-ivory px-2.5 py-1.5 text-sm text-ink',
         className,
       )}
       {...rest}

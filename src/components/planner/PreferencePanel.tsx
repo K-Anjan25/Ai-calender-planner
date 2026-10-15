@@ -64,30 +64,35 @@ export function PreferencePanel() {
             const hours = preferences.workingHours[weekday]
             return (
               <li key={weekday} className="flex items-center gap-2">
-                <span className="w-[54px] shrink-0 text-xs font-bold text-ink-soft">{WEEKDAY_SHORT[weekday]}</span>
+                <span className="w-[42px] shrink-0 text-xs font-bold text-ink-soft">{WEEKDAY_SHORT[weekday]}</span>
                 <PaperToggle checked={Boolean(hours)} onChange={() => toggleWorkday(weekday)} label={`${WEEKDAY_LABEL[weekday]} is a working day`} tone="olive" />
+                {/*
+                  The two bounds share whatever is left after the toggle, and each keeps a floor it
+                  will not shrink past instead of forcing the row wider than the sheet. Fixed pixel
+                  widths here were what overflowed the rail; `flex-1 min-w-0` cannot.
+                */}
                 {hours ? (
-                  <span className="flex items-center gap-1">
+                  <span className="flex min-w-0 flex-1 items-center gap-1">
                     <PaperInput
                       type="time"
                       aria-label={`${WEEKDAY_LABEL[weekday]} start`}
-                      className="w-[86px]"
+                      className="min-w-[74px] flex-1"
                       step={900}
                       value={toTime(hours.start)}
                       onChange={(event) => setHours(weekday, 'start', fromTime(event.target.value))}
                     />
-                    <span className="text-ink-faint">–</span>
+                    <span className="shrink-0 text-ink-faint">–</span>
                     <PaperInput
                       type="time"
                       aria-label={`${WEEKDAY_LABEL[weekday]} end`}
-                      className="w-[86px]"
+                      className="min-w-[74px] flex-1"
                       step={900}
                       value={toTime(hours.end)}
                       onChange={(event) => setHours(weekday, 'end', fromTime(event.target.value))}
                     />
                   </span>
                 ) : (
-                  <span className="text-xs text-ink-faint">off</span>
+                  <span className="ml-auto text-xs text-ink-faint">off</span>
                 )}
               </li>
             )
@@ -117,11 +122,11 @@ export function PreferencePanel() {
             ))}
           </div>
           {peakId === 'custom' ? (
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex min-w-0 items-center gap-2">
               <PaperInput
                 type="time"
                 aria-label="Focus peak start"
-                className="w-[90px]"
+                className="min-w-[74px] flex-1"
                 value={toTime(customPeak.start)}
                 onChange={(event) => {
                   const start = fromTime(event.target.value)
@@ -129,11 +134,11 @@ export function PreferencePanel() {
                   update({ focusPeak: { start, end: customPeak.end } })
                 }}
               />
-              <span className="text-ink-faint">–</span>
+              <span className="shrink-0 text-ink-faint">–</span>
               <PaperInput
                 type="time"
                 aria-label="Focus peak end"
-                className="w-[90px]"
+                className="min-w-[74px] flex-1"
                 value={toTime(customPeak.end)}
                 onChange={(event) => {
                   const end = fromTime(event.target.value)
@@ -147,19 +152,19 @@ export function PreferencePanel() {
 
         <div>
           <PaperLabel>Low-energy window — where admin goes</PaperLabel>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <PaperInput
               type="time"
               aria-label="Low-energy window start"
-              className="w-[90px]"
+              className="min-w-[74px] flex-1"
               value={toTime(preferences.energyTrough?.start ?? 15 * 60)}
               onChange={(event) => update({ energyTrough: { start: fromTime(event.target.value), end: preferences.energyTrough?.end ?? 17 * 60 } })}
             />
-            <span className="text-ink-faint">–</span>
+            <span className="shrink-0 text-ink-faint">–</span>
             <PaperInput
               type="time"
               aria-label="Low-energy window end"
-              className="w-[90px]"
+              className="min-w-[74px] flex-1"
               value={toTime(preferences.energyTrough?.end ?? 17 * 60)}
               onChange={(event) => update({ energyTrough: { start: preferences.energyTrough?.start ?? 15 * 60, end: fromTime(event.target.value) } })}
             />
@@ -239,7 +244,7 @@ export function PreferencePanel() {
 
       <PaperSheet className="p-3.5">
         <h3 className="mb-2 text-[15px]">Lunch</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <PaperToggle
             checked={Boolean(preferences.lunch)}
             onChange={(next) =>
@@ -249,22 +254,22 @@ export function PreferencePanel() {
             tone="olive"
           />
           {lunch ? (
-            <span className="flex items-center gap-1">
+            <span className="flex min-w-0 flex-1 items-center gap-1">
               <PaperInput
                 type="time"
                 aria-label="Lunch start"
-                className="w-[90px]"
+                className="min-w-[74px] flex-1"
                 value={toTime(lunch.start)}
                 onChange={(event) => {
                   const start = fromTime(event.target.value)
                   update({ lunch: { minutes: lunch.minutes, start, end: start + 60 } })
                 }}
               />
-              <span className="text-ink-faint">–</span>
+              <span className="shrink-0 text-ink-faint">–</span>
               <PaperInput
                 type="time"
                 aria-label="Lunch end"
-                className="w-[90px]"
+                className="min-w-[74px] flex-1"
                 value={toTime(lunch.end)}
                 onChange={(event) => update({ lunch: { start: lunch.start, minutes: lunch.minutes, end: fromTime(event.target.value) } })}
               />
@@ -299,67 +304,80 @@ export function PreferencePanel() {
         ) : (
           <ul className="space-y-1.5">
             {preferences.blackouts.map((blackout, index) => (
-              <li key={blackout.id} className="paper-well flex flex-wrap items-center gap-1.5 p-2">
-                <PaperInput
-                  aria-label="Blackout label"
-                  className="min-w-0 flex-1"
-                  value={blackout.label}
-                  onChange={(event) => {
-                    const blackouts = [...preferences.blackouts]
-                    blackouts[index] = { ...blackout, label: event.target.value }
-                    update({ blackouts })
-                  }}
-                />
-                <PaperSelect
-                  aria-label="Blackout day"
-                  className="w-[86px]"
-                  value={blackout.weekday ?? 'every'}
-                  onChange={(event) => {
-                    const blackouts = [...preferences.blackouts]
-                    blackouts[index] = {
-                      ...blackout,
-                      weekday: event.target.value === 'every' ? undefined : (event.target.value as Weekday),
-                    }
-                    update({ blackouts })
-                  }}
-                >
-                  <option value="every">Daily</option>
-                  {WEEKDAYS.map((weekday) => (
-                    <option key={weekday} value={weekday}>
-                      {WEEKDAY_SHORT[weekday]}
-                    </option>
-                  ))}
-                </PaperSelect>
-                <PaperInput
-                  type="time"
-                  aria-label="Blackout start"
-                  className="w-[84px]"
-                  value={toTime(blackout.start)}
-                  onChange={(event) => {
-                    const blackouts = [...preferences.blackouts]
-                    blackouts[index] = { ...blackout, start: fromTime(event.target.value) }
-                    update({ blackouts })
-                  }}
-                />
-                <PaperInput
-                  type="time"
-                  aria-label="Blackout end"
-                  className="w-[84px]"
-                  value={toTime(blackout.end)}
-                  onChange={(event) => {
-                    const blackouts = [...preferences.blackouts]
-                    blackouts[index] = { ...blackout, end: fromTime(event.target.value) }
-                    update({ blackouts })
-                  }}
-                />
-                <button
-                  type="button"
-                  aria-label={`Remove ${blackout.label}`}
-                  className="text-ink-faint hover:text-rose-deep"
-                  onClick={() => update({ blackouts: preferences.blackouts.filter((item) => item.id !== blackout.id) })}
-                >
-                  <Trash2 size={13} aria-hidden="true" />
-                </button>
+              /*
+               * Two rows, not one wrapped row.
+               *
+               * One row of five controls cannot fit a 330px rail at any font size: the label is
+               * `flex-1` (basis 0) so it collapses to a sliver rather than wrapping, and the four
+               * fixed controls beside it set a floor the sheet cannot shrink below. Splitting it into
+               * a name row and a when row means every control has a real width at every rail size.
+               */
+              <li key={blackout.id} className="paper-well grid gap-1.5 p-2">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <PaperInput
+                    aria-label="Blackout label"
+                    className="min-w-0 flex-1"
+                    value={blackout.label}
+                    onChange={(event) => {
+                      const blackouts = [...preferences.blackouts]
+                      blackouts[index] = { ...blackout, label: event.target.value }
+                      update({ blackouts })
+                    }}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remove ${blackout.label}`}
+                    className="shrink-0 rounded-[var(--radius-cut-xs)] p-1 text-ink-faint hover:bg-paper-sand hover:text-rose-deep"
+                    onClick={() => update({ blackouts: preferences.blackouts.filter((item) => item.id !== blackout.id) })}
+                  >
+                    <Trash2 size={13} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <PaperSelect
+                    aria-label="Blackout day"
+                    className="w-[86px] shrink-0"
+                    value={blackout.weekday ?? 'every'}
+                    onChange={(event) => {
+                      const blackouts = [...preferences.blackouts]
+                      blackouts[index] = {
+                        ...blackout,
+                        weekday: event.target.value === 'every' ? undefined : (event.target.value as Weekday),
+                      }
+                      update({ blackouts })
+                    }}
+                  >
+                    <option value="every">Daily</option>
+                    {WEEKDAYS.map((weekday) => (
+                      <option key={weekday} value={weekday}>
+                        {WEEKDAY_SHORT[weekday]}
+                      </option>
+                    ))}
+                  </PaperSelect>
+                  <PaperInput
+                    type="time"
+                    aria-label="Blackout start"
+                    className="min-w-[74px] flex-1"
+                    value={toTime(blackout.start)}
+                    onChange={(event) => {
+                      const blackouts = [...preferences.blackouts]
+                      blackouts[index] = { ...blackout, start: fromTime(event.target.value) }
+                      update({ blackouts })
+                    }}
+                  />
+                  <span className="shrink-0 text-ink-faint">–</span>
+                  <PaperInput
+                    type="time"
+                    aria-label="Blackout end"
+                    className="min-w-[74px] flex-1"
+                    value={toTime(blackout.end)}
+                    onChange={(event) => {
+                      const blackouts = [...preferences.blackouts]
+                      blackouts[index] = { ...blackout, end: fromTime(event.target.value) }
+                      update({ blackouts })
+                    }}
+                  />
+                </div>
               </li>
             ))}
           </ul>

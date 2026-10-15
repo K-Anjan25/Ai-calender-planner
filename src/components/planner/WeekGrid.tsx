@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { Sun, Coffee } from 'lucide-react'
 import { SNAP_MINUTES, WEEKDAY_SHORT, type BusyEvent, type PlacedBlock, type Preferences, type Weekday } from '@/lib/types'
-import { fmtClock, fmtDuration, workingHoursFor } from '@/lib/scheduler/slots'
+import { fmtClock, fmtDuration, weekendHours } from '@/lib/scheduler/slots'
 import { usePlanner } from '@/lib/store/planner-store'
 import { ScheduleBlock, BusyBlock } from '@/components/planner/ScheduleBlock'
 import { PaperWell } from '@/components/paper/PaperSheet'
@@ -61,9 +61,25 @@ export function WeekGrid({
   useEffect(() => setMounted(true), [])
 
   const resolvedStart = weekStart ?? (mounted ? startOfCurrentWeek(preferences) : null)
+
+  /**
+   * The week's shape, built from the two settings that decide it — nothing else.
+   *
+   * `days` used to depend on the whole `preferences` object, so *any* change rebuilt the array: drag
+   * the buffer slider, tick "protect lunch", and every `day` prop changed identity, which changed
+   * `beginDrag` and `onBlockKeyDown` (both close over `days`), which re-rendered all seven memoised
+   * `DayColumn`s and every tile inside them. A slider therefore re-rendered the whole week at ~60 Hz.
+   *
+   * `workingHours` and `weekStartsOn` keep their identity across unrelated preferences patches
+   * (`setPreferences` replaces only the key that changed), so depending on them exactly — rather than
+   * on their container — is what lets the columns sit still while the rest of the panel changes.
+   */
+  const workingHours = preferences.workingHours
+  const weekendMode = preferences.weekendMode
+  const weekStartsOn = preferences.weekStartsOn
   const days = useMemo(
-    () => (resolvedStart ? weekDays(preferences, resolvedStart) : []),
-    [preferences, resolvedStart],
+    () => (resolvedStart ? weekDays(workingHours, weekendMode, weekStartsOn, resolvedStart) : []),
+    [workingHours, weekendMode, weekStartsOn, resolvedStart],
   )
   const { selectedBlockId, selectBlock, pinBlock, status, filters } = usePlanner()
   const dragRef = useRef<DragDescriptor | null>(null)
@@ -279,7 +295,8 @@ export function WeekGrid({
           <h2 className="text-[19px] leading-none">Your week</h2>
           <span className="text-xs font-semibold text-ink-faint">{weekLabel}</span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] font-semibold text-ink-soft">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-ink-soft">
+          <span className="sr-only">Colour key</span>
           <span className="flex items-center gap-1">
             <span className="h-2.5 w-2.5 rounded-[3px] bg-teal" aria-hidden="true" /> deep
           </span>
@@ -306,63 +323,93 @@ export function WeekGrid({
           <div className="pointer-events-none absolute inset-0 z-30 rounded-[var(--radius-well)] bg-paper-cream/45" aria-hidden="true" />
         ) : null}
 
-        <div className="flex">
-          <div className="w-12 shrink-0 sm:w-14" aria-hidden="true" />
-          {days.map((day) => (
-            <div key={day.date} className="min-w-0 flex-1 px-0.5 text-center">
-              <div className="mb-1 flex flex-col items-center gap-0.5">
-                <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-soft">
-                  {WEEKDAY_SHORT[day.weekday]}
-                </span>
-                <span className="tnum text-[10px] font-semibold text-ink-faint">{day.date.slice(8)}</span>
-                <DayLoadPip planned={plannedByDay.get(day.date) ?? 0} capacity={day.capacity} />
+        {/*
+          One scroller for the header row *and* the strip, so a day label can never drift out of line
+          with its own column.
+          
+          Below roughly 720px of available width the week stops compressing and starts scrolling. Seven
+          days sharing 300px is 43px a day: the title, the time and the reason chips cannot be read at
+          any font size, and the tiles turn into a barcode. A fixed minimum per day plus a horizontal
+          scroll keeps every column legible — which is the whole job of a calendar — and the hour
+          gutter is `sticky` so "when" is never scrolled out of view.
+
+          The maths still holds: a drag measures `columnsRef` once at `pointerdown`, and
+          `clientX - rect.left` is content-relative, so a scrolled strip drops where it looks like it
+          should (see `geometryRef`).
+        */}
+        <div className="overflow-x-auto overscroll-x-contain pb-1">
+          <div className="min-w-[720px]">
+            <div className="flex">
+              <div className="sticky left-0 z-20 w-12 shrink-0 bg-paper-sand sm:w-14" aria-hidden="true" />
+              {days.map((day) => (
+                <div key={day.date} className="min-w-0 flex-1 px-0.5 text-center">
+                  <div className="mb-1 flex flex-col items-center gap-0.5">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-soft">
+                      {WEEKDAY_SHORT[day.weekday]}
+                    </span>
+                    <span className="tnum text-[10px] font-semibold text-ink-faint">{day.date.slice(8)}</span>
+                    <DayLoadPip planned={plannedByDay.get(day.date) ?? 0} capacity={day.capacity} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="relative flex"
+              style={{ height: days[0] ? ((days[0].windowEnd - days[0].windowStart) / 60) * HOUR_HEIGHT : 600 }}
+            >
+              {/* hour gutter: printed onto the well, outside the drop-target strip, stuck to the left */}
+              <div className="sticky left-0 z-20 w-12 shrink-0 bg-paper-sand sm:w-14" aria-hidden="true">
+                {hourMarks(days[0]).map((mark) => {
+                  /* The window starts and ends on the hour, so the first and last labels sit exactly on
+                     the edge. Centring them there hangs half a line of text outside the well — over the
+                     day/date header above and off the bottom of the grid. They are pinned inside
+                     instead; only the labels in between are centred on their rule. */
+                  const atStart = mark.minute === days[0]?.windowStart
+                  const atEnd = mark.minute === days[0]?.windowEnd
+                  return (
+                    <span
+                      key={mark.minute}
+                      className={clsx(
+                        'tnum absolute right-2 text-[10px] font-semibold text-ink-faint',
+                        atStart ? 'translate-y-0' : atEnd ? '-translate-y-full' : '-translate-y-1/2',
+                      )}
+                      style={{ top: ((mark.minute - (days[0]?.windowStart ?? 0)) / 60) * HOUR_HEIGHT }}
+                    >
+                      {fmtClock(mark.minute)}
+                    </span>
+                  )
+                })}
+              </div>
+
+              {/* data-day-strip is the measurement target for drag maths and for the jsdom UI tests. */}
+              <div ref={columnsRef} data-day-strip="" className="flex min-w-0 flex-1">
+                {days.map((day) => (
+                  <DayColumn
+                    key={day.date}
+                    day={day}
+                    blocks={byDay.blocksFor.get(day.date) ?? NO_BLOCKS}
+                    meetings={byDay.meetingsFor.get(day.date) ?? NO_MEETINGS}
+                    /* Scoped to the target: the other six columns receive a stable `null`, so the
+                       memoised column skips them entirely while a drag is in flight. */
+                    ghost={ghost && ghost.date === day.date ? ghost : null}
+                    draggingId={draggingId}
+                    selectedBlockId={selectedBlockId}
+                    minuteToY={minuteToY}
+                    onSelect={selectBlock}
+                    onBeginDrag={beginDrag}
+                    onKeyDown={onBlockKeyDown}
+                  />
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-
-        <div
-          className="relative flex"
-          style={{ height: days[0] ? ((days[0].windowEnd - days[0].windowStart) / 60) * HOUR_HEIGHT : 600 }}
-        >
-          {/* hour gutter: printed onto the well, outside the drop-target strip */}
-          <div className="relative w-12 shrink-0 sm:w-14" aria-hidden="true">
-            {hourMarks(days[0]).map((mark) => (
-              <span
-                key={mark.minute}
-                className="tnum absolute right-2 -translate-y-1/2 text-[10px] font-semibold text-ink-faint"
-                style={{ top: ((mark.minute - (days[0]?.windowStart ?? 0)) / 60) * HOUR_HEIGHT }}
-              >
-                {fmtClock(mark.minute)}
-              </span>
-            ))}
-          </div>
-
-          {/* data-day-strip is the measurement target for drag maths and for the jsdom UI tests. */}
-          <div ref={columnsRef} data-day-strip="" className="flex min-w-0 flex-1">
-            {days.map((day) => (
-              <DayColumn
-                key={day.date}
-                day={day}
-                blocks={byDay.blocksFor.get(day.date) ?? NO_BLOCKS}
-                meetings={byDay.meetingsFor.get(day.date) ?? NO_MEETINGS}
-                /* Scoped to the target: the other six columns receive a stable `null`, so the
-                   memoised column skips them entirely while a drag is in flight. */
-                ghost={ghost && ghost.date === day.date ? ghost : null}
-                draggingId={draggingId}
-                selectedBlockId={selectedBlockId}
-                minuteToY={minuteToY}
-                onSelect={selectBlock}
-                onBeginDrag={beginDrag}
-                onKeyDown={onBlockKeyDown}
-              />
-            ))}
           </div>
         </div>
       </PaperWell>
 
       <p className="mt-2 px-1 text-[11px] text-ink-faint">
-        Drag a block to move it, or use the arrows once it is focused. Anything you place yourself is pinned and survives a rebuild.
+        Drag a block to move it, or use the arrows once it is focused. Anything you place yourself is pinned and survives a
+        rebuild. On a narrow window the week scrolls sideways rather than squeezing seven days into a sliver.
       </p>
     </div>
   )
@@ -401,24 +448,37 @@ function DayLoadPip({ planned, capacity }: { planned: number; capacity: number }
   const ratio = Math.min(1.15, planned / capacity)
   const tone = ratio > 1 ? 'bg-rose' : ratio > 0.85 ? 'bg-terracotta' : 'bg-olive'
   return (
-    <span className="flex items-center gap-1" title={`${fmtDuration(planned)} planned of ${fmtDuration(capacity)} usable`}>
-      <span className="h-1 w-8 overflow-hidden rounded-full bg-paper-kraft" aria-hidden="true">
+    <span className="flex min-w-0 items-center gap-1" title={`${fmtDuration(planned)} planned of ${fmtDuration(capacity)} usable`}>
+      <span className="h-1 w-6 shrink-0 overflow-hidden rounded-full bg-paper-kraft" aria-hidden="true">
         <span className={clsx('block h-full rounded-full', tone)} style={{ width: `${Math.min(100, ratio * 100)}%` }} />
       </span>
-      <span className="tnum text-[9.5px] font-bold text-ink-faint">{fmtDuration(planned)}</span>
+      <span className="tnum text-[9.5px] font-bold whitespace-nowrap text-ink-faint">{fmtDuration(planned)}</span>
     </span>
   )
 }
 
 type DayMeta = { weekday: Weekday; date: string; windowStart: number; windowEnd: number; capacity: number }
 
-function weekDays(preferences: Preferences, weekStart: string): DayMeta[] {
+function weekDays(
+  workingHours: Preferences['workingHours'],
+  weekendMode: Preferences['weekendMode'],
+  weekStartsOn: Weekday,
+  weekStart: string,
+): DayMeta[] {
   const order: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-  const offset = order.indexOf(preferences.weekStartsOn)
+  const offset = order.indexOf(weekStartsOn)
   const rotated = [...order.slice(offset), ...order.slice(0, offset)]
 
   return rotated.map((weekday, index) => {
-    const hours = workingHoursFor(preferences, weekday)
+    // Same resolution as `workingHoursFor`, spelled out here so this grid depends on the two values
+    // that decide a day window rather than on the object that carries them.
+    const explicit = workingHours[weekday]
+    const hours =
+      explicit && explicit.end > explicit.start
+        ? explicit
+        : weekday === 'sat' || weekday === 'sun'
+          ? weekendHours(weekendMode)
+          : null
     const date = addDays(weekStart, index)
     return {
       weekday,
@@ -580,16 +640,23 @@ function ProtectedBands({ day }: { day: DayMeta }) {
   }
   return (
     <>
-      {bands.map((band) => (
+      {bands.map((band, bandIndex) => (
         <div
-          key={`${band.label}_${band.start}`}
+          // Index included: two windows can legitimately share a label and a start time ("Busy"
+          // at 15:00 on two rows of the list), and a duplicate key drops one of them silently.
+          key={`${bandIndex}_${band.label}_${band.start}`}
           aria-hidden="true"
-          className={clsx('pointer-events-none absolute inset-x-0 border-y border-dashed border-[color:rgba(120,98,70,0.18)]', band.tone)}
+          className={clsx(
+            // `overflow-hidden`: a 15-minute band is 11px tall and its label is 13px. Without this the
+            // text spills over the neighbouring slot instead of being clipped to its own window.
+            'pointer-events-none absolute inset-x-0 overflow-hidden border-y border-dashed border-[color:rgba(120,98,70,0.18)]',
+            band.tone,
+          )}
           style={{ top: ((band.start - day.windowStart) / 60) * HOUR_HEIGHT, height: Math.max(8, ((band.end - band.start) / 60) * HOUR_HEIGHT) }}
         >
-          <span className="mt-0.5 ml-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.06em] text-ink-faint">
-            {band.icon}
-            {band.label}
+          <span className="mt-0.5 ml-1 flex min-w-0 items-center gap-1 text-[9px] font-bold uppercase tracking-[0.06em] whitespace-nowrap text-ink-faint">
+            <span className="shrink-0">{band.icon}</span>
+            <span className="min-w-0 truncate">{band.label}</span>
           </span>
         </div>
       ))}
@@ -598,17 +665,52 @@ function ProtectedBands({ day }: { day: DayMeta }) {
 }
 
 /**
- * Side-by-side layout for overlapping tiles. A real diorama overlaps its layers rather than hiding
- * one, so colliding tiles split the column and shift vertically by 2px (DESIGN.md §10).
+ * Side-by-side layout for overlapping tiles (DESIGN.md §10).
+ *
+ * The first version counted how many tiles started *before* this one and used that as the column
+ * index. That is only correct when no two tiles share a start: two blocks starting at 09:00 both got
+ * index 0 and width 50%, so they were drawn on top of each other and the one underneath was simply
+ * invisible — no error, no warning, just a block the user could not see or grab. The engine will not
+ * place two tasks at the same minute, but a ritual row (lunch, a focus break) can land on a task, and
+ * a drag preview always can.
+ *
+ * A calendar lays overlaps out the way a greedy interval colouring does: walk the cluster in time
+ * order and give each tile the first column whose last tile has already *ended*. Every tile then has
+ * its own column, and a cluster's width is the number of columns it needed.
  */
-function layoutColumns(blocks: PlacedBlock[]): Map<string, { index: number; columns: number }> {
+export function layoutColumns(blocks: PlacedBlock[]): Map<string, { index: number; columns: number }> {
   const result = new Map<string, { index: number; columns: number }>()
-  const sorted = [...blocks].sort((a, b) => a.startMin - b.startMin)
-  for (const block of sorted) {
-    const overlapping = sorted.filter((other) => other.id !== block.id && other.startMin < block.endMin && block.startMin < other.endMin)
-    const index = overlapping.filter((other) => other.startMin < block.startMin).length
-    result.set(block.id, { index, columns: Math.max(1, overlapping.length + 1) })
+  const sorted = [...blocks].sort((a, b) => a.startMin - b.startMin || b.minutes - a.minutes)
+
+  /** A run of tiles connected by overlap: nothing outside it can share columns with anything inside. */
+  const cluster: { block: PlacedBlock; index: number }[] = []
+  let clusterEnd = Number.NEGATIVE_INFINITY
+
+  const flush = () => {
+    if (cluster.length === 0) return
+    const width = cluster.reduce((most, item) => Math.max(most, item.index + 1), 1)
+    for (const item of cluster) result.set(item.block.id, { index: item.index, columns: width })
+    cluster.length = 0
   }
+
+  /** When each column is free again. */
+  let freeAt: number[] = []
+
+  for (const block of sorted) {
+    if (block.startMin >= clusterEnd) {
+      flush()
+      freeAt = []
+      clusterEnd = block.endMin
+    } else {
+      clusterEnd = Math.max(clusterEnd, block.endMin)
+    }
+    let index = freeAt.findIndex((end) => end <= block.startMin)
+    if (index === -1) index = freeAt.length
+    freeAt[index] = block.endMin
+    cluster.push({ block, index })
+  }
+  flush()
+
   return result
 }
 

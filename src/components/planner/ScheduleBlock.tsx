@@ -52,7 +52,20 @@ export function ScheduleBlock({
 }) {
   const accent = ENERGY_ACCENT[block.energy as Energy] ?? 'kraft'
   const isSpecial = block.kind !== 'task'
-  const reasons = block.reasons.filter((reason) => reason.code !== 'pinned').slice(0, compact ? 1 : 2)
+  /**
+   * How much of a tile actually fits.
+   *
+   * The tile's height is fixed by the block's duration, and `.paper-tile` clips what does not fit —
+   * so a 45-minute tile showing a two-line title, a time row and two reason chips did not overflow
+   * the sheet, it silently lost its last line. Content is therefore chosen by available height:
+   * a title needs ~26px, a time row ~14px, a chip row ~18px.
+   */
+  const minutes = block.minutes
+  const titleClamp = minutes < 75 ? 'line-clamp-1' : 'line-clamp-2'
+  const showTime = !compact && minutes >= 45
+  const chipBudget = compact || minutes < 90 ? 0 : minutes < 150 ? 1 : 2
+  const reasons = block.reasons.filter((reason) => reason.code !== 'pinned').slice(0, chipBudget)
+  const hiddenReasons = block.reasons.filter((reason) => reason.code !== 'pinned').length - reasons.length
 
   return (
     <button
@@ -67,6 +80,9 @@ export function ScheduleBlock({
       }${block.pinned ? ', pinned in place' : ''}${block.conflict ? `, flagged ${block.conflict.replace('-', ' ')}` : ''}`}
       className={clsx(
         'paper-tile group absolute text-left transition-[transform,box-shadow] duration-150 ease-[var(--ease-paper)]',
+        // `touch-none` is what makes the gesture a drag rather than a page scroll on a phone: without
+        // it the browser claims the touch for scrolling and `pointermove` never fires on the tile.
+        'touch-none select-none',
         'focus-visible:outline-2 focus-visible:outline-teal-deep',
         dragging ? 'paper-lifted cursor-grabbing' : 'hover:-translate-y-px hover:shadow-[var(--shadow-lift)] cursor-grab',
         selected && 'ring-2 ring-teal-deep/70 ring-offset-1 ring-offset-paper-ivory',
@@ -80,7 +96,7 @@ export function ScheduleBlock({
 
       <span className={clsx('block pl-2.5 pr-1.5 pt-1', compact ? 'pb-0.5' : 'pb-1.5')}>
         <span className="flex items-start justify-between gap-1">
-          <span className={clsx('line-clamp-2 font-semibold text-ink', compact ? 'text-[10.5px] leading-[1.25]' : 'text-[12px] leading-tight')}>
+          <span className={clsx(titleClamp, 'min-w-0 font-semibold text-ink', compact ? 'text-[10.5px] leading-[1.25]' : 'text-[12px] leading-tight')}>
             {block.title}
           </span>
           <span className="mt-[1px] flex shrink-0 items-center gap-1">
@@ -89,24 +105,30 @@ export function ScheduleBlock({
             {block.conflict ? <TriangleAlert size={9} className="text-rose-deep" aria-hidden="true" /> : null}
           </span>
         </span>
-        {!compact ? (
-          <span className="tnum mt-0.5 block text-[10.5px] font-semibold text-ink-soft">
-            {fmtClock(block.startMin)}–{fmtClock(block.endMin)} · {fmtDuration(block.minutes)}
-            {block.chunkCount > 1 ? ` · ${block.chunkIndex + 1}/${block.chunkCount}` : ''}
+        {showTime ? (
+          // The clock range is the one thing a tile must always say; the duration and chunk counter
+          // follow it and are allowed to be cut by the next chip rather than wrapping the tile taller.
+          <span className="tnum mt-0.5 block overflow-hidden text-ellipsis whitespace-nowrap text-[10.5px] font-semibold text-ink-soft">
+            {fmtClock(block.startMin)}–{fmtClock(block.endMin)}
+            <span className="text-ink-faint">
+              {' · '}
+              {fmtDuration(block.minutes)}
+              {block.chunkCount > 1 ? ` · ${block.chunkIndex + 1}/${block.chunkCount}` : ''}
+            </span>
           </span>
         ) : null}
-        {!compact && reasons.length > 0 && !isSpecial ? (
-          <span className="mt-1 flex flex-wrap gap-1">
+        {reasons.length > 0 && !isSpecial ? (
+          <span className="mt-1 flex flex-wrap gap-1 overflow-hidden">
             {reasons.map((reason) => (
               <span
                 key={reason.code}
-                className="rounded-[var(--radius-cut-xs)] bg-paper-sand/90 px-1 py-[1px] text-[9.5px] font-bold text-ink-soft"
+                className="truncate rounded-[var(--radius-cut-xs)] bg-paper-sand/90 px-1 py-[1px] text-[9.5px] font-bold text-ink-soft"
               >
                 {reason.label}
               </span>
             ))}
-            {block.reasons.length > 3 ? (
-              <span className="px-1 py-[1px] text-[9.5px] font-bold text-ink-faint">+{block.reasons.length - 2}</span>
+            {hiddenReasons > 0 ? (
+              <span className="px-1 py-[1px] text-[9.5px] font-bold text-ink-faint">+{hiddenReasons}</span>
             ) : null}
           </span>
         ) : null}
@@ -134,9 +156,9 @@ export function BusyBlock({ block, style }: { block: { title: string; startMin: 
       className="absolute overflow-hidden rounded-[var(--radius-cut-xs)] border border-frost-deep/25 bg-frost-light/60 px-1.5 py-1"
       title={`${block.title} · ${fmtClock(block.startMin)}–${fmtClock(block.endMin)}`}
     >
-      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] text-frost-deep/90">
+      <div className="flex min-w-0 items-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] text-frost-deep/90">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-frost-deep/60" aria-hidden="true" />
-        <span className="truncate">{block.title}</span>
+        <span className="min-w-0 truncate">{block.title}</span>
       </div>
       <p className="tnum text-[10px] font-semibold text-frost-deep/70">
         {fmtClock(block.startMin)}–{fmtClock(block.endMin)}
