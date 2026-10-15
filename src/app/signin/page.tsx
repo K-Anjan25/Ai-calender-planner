@@ -24,12 +24,13 @@ export default async function SignInPage({
   if (session && params.redirect === '1') redirect(next)
 
   const error = typeof params.error === 'string' ? params.error : undefined
+  const errorHost = typeof params.host === 'string' ? params.host : undefined
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-x-clip">
       <SiteHeader />
       <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 sm:px-8">
-        <AuthPanel mode="signin" error={error} next={next} />
+        <AuthPanel mode="signin" error={error} errorHost={errorHost} next={next} />
       </div>
       <SiteFooter />
     </main>

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { authRedirectUri } from '@/lib/auth/google'
 import { decodeSession, demoUser, encodeSession, safeNext, type SessionUser } from '@/lib/auth/session'
-import { FALLBACK_ORIGIN, requestOrigin } from '@/lib/request-origin'
+import { FALLBACK_ORIGIN, googleOriginProblem, requestOrigin } from '@/lib/request-origin'
 import { calendarConfig } from '@/lib/google/scopes'
 
 /**
@@ -124,6 +124,57 @@ describe('the redirect URI follows the request, not the build machine', () => {
 
   it('falls back to the request URL when nothing is forwarded', () => {
     assert.equal(requestOrigin(new Request('http://localhost:4000/api/auth/google')), 'http://localhost:4000')
+  })
+})
+
+describe('addresses Google will refuse are caught before it does', () => {
+  /*
+   * Next prints a LAN address in its dev banner (`Network: http://192.168.1.2:3000`), so it is the
+   * natural thing to open when you want to try the app on a phone. Google answers with
+   *
+   *   device_id and device_name are required for private IP: http://192.168.1.2:3000/api/auth/callback
+   *
+   * which is its limited-input-device flow asking for parameters this app has no reason to send, and
+   * it tells the user nothing about the cause. The app checks first and explains instead (RULES L9).
+   */
+  it('flags private network addresses, including the usual dev LAN', () => {
+    for (const host of ['192.168.1.2', '10.0.0.7', '172.16.4.9', '172.31.255.1', '169.254.1.1']) {
+      const problem = googleOriginProblem(`http://${host}:3000`)
+      assert.equal(problem?.reason, 'private-network', `${host} was not flagged as a private address`)
+      assert.equal(problem?.host, host, 'the problem must name the host so the page can show it')
+    }
+  })
+
+  it('flags bare IPs and invented TLDs, which Google also refuses', () => {
+    // No TLD at all.
+    assert.equal(googleOriginProblem('http://8.8.8.8:3000')?.reason, 'not-public')
+    assert.equal(googleOriginProblem('http://buildbox:3000')?.reason, 'not-public')
+    // Reserved TLDs — `.local` is the one mDNS hands out, `.test` the one test suites use.
+    assert.equal(googleOriginProblem('http://calendra.local:3000')?.reason, 'not-public')
+    assert.equal(googleOriginProblem('http://calendra.test')?.reason, 'not-public')
+  })
+
+  it('accepts loopback and real hosts', () => {
+    for (const origin of [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'https://aicalenderplanner.vercel.app',
+      'https://aicalenderplanner-git-main-abc.vercel.app',
+      'https://calendra.example.com',
+      'https://deep.subdomain.example.co.uk',
+    ]) {
+      assert.equal(googleOriginProblem(origin), null, `${origin} should be usable as a redirect target`)
+    }
+  })
+
+  it('never blocks the deployed case it was written to protect', () => {
+    // The regression that would matter most: a real deployment being refused.
+    const origin = requestOrigin(
+      new Request('http://10.0.0.4:3000/api/auth/google', {
+        headers: { 'x-forwarded-host': 'aicalenderplanner-git-main-abc.vercel.app', 'x-forwarded-proto': 'https' },
+      }),
+    )
+    assert.equal(googleOriginProblem(origin), null)
   })
 })
 

@@ -18,12 +18,13 @@ export default async function SignUpPage({
   const next = safeNext(typeof params.next === 'string' ? params.next : null)
   const plan = typeof params.plan === 'string' ? params.plan : undefined
   const error = typeof params.error === 'string' ? params.error : undefined
+  const errorHost = typeof params.host === 'string' ? params.host : undefined
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-x-clip">
       <SiteHeader />
       <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 sm:px-8">
-        <AuthPanel mode="signup" error={error} next={next} plan={plan} />
+        <AuthPanel mode="signup" error={error} errorHost={errorHost} next={next} plan={plan} />
       </div>
       <SiteFooter />
     </main>

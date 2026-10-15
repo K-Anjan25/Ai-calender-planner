@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { safeNext } from '@/lib/auth/session'
+import { readEnv } from '@/lib/google/scopes'
 import { AUTH_STATE_COOKIE, googleAuthConfig, googleClient, identityAuthUrl } from '@/lib/auth/google'
-import { requestOrigin } from '@/lib/request-origin'
+import { googleOriginProblem, requestOrigin } from '@/lib/request-origin'
 
 /**
  * GET /api/auth/google — start Sign in with Google.
@@ -26,6 +27,19 @@ export async function GET(request: Request) {
     // Honest degradation: there is no fake sign-in. The user is told what is missing and offered the
     // demo session instead (D-025).
     return NextResponse.redirect(new URL(`/signin?error=not_configured&next=${encodeURIComponent(next)}`, url.origin))
+  }
+
+  /*
+   * A private network address is not a redirect target Google accepts, and it answers with an error
+   * page about the limited-input-device flow that says nothing about the real cause. Rather than send
+   * the user there, explain it here — unless an explicit redirect URI was configured, which is the
+   * supported way to front a LAN address with a public one (a tunnel or a proxy).
+   */
+  const problem = googleOriginProblem(origin)
+  if (problem && !readEnv('AUTH_REDIRECT_URI')) {
+    return NextResponse.redirect(
+      new URL(`/signin?error=origin&host=${encodeURIComponent(problem.host)}`, url.origin),
+    )
   }
 
   const client = await googleClient(origin)

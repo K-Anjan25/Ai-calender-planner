@@ -121,8 +121,19 @@ export function curlPath(x: number, y: number, r: number, turns = 1.4): string {
   return parts.join(' ')
 }
 
-function birds(path: string, layer: number, fill = '#6C6052'): DioramaShape {
-  return { id: `birds-${layer}-${path.length}`, layer, fill, d: path }
+/**
+ * A pair of birds.
+ *
+ * The id takes a **name**, not a property of the path. It used to be built from `path.length`, which
+ * looks unique and is not: two different flight paths can be exactly the same number of characters,
+ * and these two are both 37 — so both birds rendered with the key `birds-3-37`. React then has two
+ * children claiming the same identity, which it warns about and resolves unpredictably (one can be
+ * duplicated or dropped on a re-render), and the console error points at `DioramaScene`, nowhere near
+ * the cause. Shape ids must be unique within a scene; `tests/diorama.test.ts` now enforces that for
+ * every variant, because this class of bug will otherwise recur with the next shape added.
+ */
+function birds(path: string, layer: number, name: string, fill = '#6C6052'): DioramaShape {
+  return { id: `birds-${name}`, layer, fill, d: path }
 }
 
 /* ------------------------------------------------------------------ *
@@ -198,8 +209,8 @@ function landscape(variant: 'dawn' | 'dusk'): DioramaScene {
     /* --- layer 3: sun + birds -------------------------------------------- */
     { id: 'sun-halo', layer: 3, fill: '#F2EAD9', opacity: 0.62, circles: [{ cx: 812, cy: 202, r: 96 }] },
     { id: 'sun', layer: 3, fill: sun, circles: [{ cx: 812, cy: 202, r: 58 }] },
-    birds('M 500 196 q 16 -14 32 0 q 16 -14 32 0', 3),
-    birds('M 578 168 q 11 -10 22 0 q 11 -10 22 0', 3),
+    birds('M 500 196 q 16 -14 32 0 q 16 -14 32 0', 3, 'far'),
+    birds('M 578 168 q 11 -10 22 0 q 11 -10 22 0', 3, 'near'),
     /* --- layer 4: far hills ---------------------------------------------- */
     { id: 'far-hill-left', layer: 4, fill: farHill, d: hillPath(-40, 640, 452, 292, -0.04) },
     { id: 'far-hill-right', layer: 4, fill: farHill, d: hillPath(560, 1260, 452, 306, 0.05) },

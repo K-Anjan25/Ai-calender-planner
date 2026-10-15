@@ -245,6 +245,17 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 
 ---
 
+## Round 5: reported runtime defects (T-716, T-717, 2026-10-15)
+
+| # | Report | Root cause | Fix |
+| --- | --- | --- | --- |
+| T-716 | `Encountered two children with the same key, birds-3-37` | The bird shapes built their React key from `path.length`, and both flight paths happen to be exactly 37 characters (D-031) | `birds()` takes an explicit name; four assertions in `tests/diorama.test.ts` — uniqueness per variant, stability across builds, and a render of all four scenes that fails on any duplicate-key warning. Both levels were verified to fail on the old id. |
+| T-717 | `Access blocked: device_id and device_name are required for private IP: http://192.168.1.2:3000/...` | Next prints a LAN address in its dev banner, so it is the natural thing to open on a phone; Google cannot use a private IP as a redirect target and its error page explains nothing (D-032) | `googleOriginProblem()` catches private ranges, bare IPs and reserved TLDs; the app explains in place and names the host, instead of bouncing the user to Google's error. Loopback and deployed hosts are asserted *not* to be flagged. |
+
+147/147 tests · lint 0 · typecheck clean · build clean.
+
+---
+
 ## Definition of done (any task)
 
 1. Implements the FR/INV it references, nothing more.

@@ -129,6 +129,12 @@ request, so a preview URL, a production domain and localhost all work with the s
 host simply has to be registered. If you set `AUTH_REDIRECT_URI`, it must match one of the registered
 URIs exactly, including the scheme.
 
+**Testing locally:** open `http://localhost:3000`, not the `Network:` address Next prints. Google refuses
+a private IP as a redirect target (it answers with `device_id and device_name are required for private
+IP`, which is its limited-input-device flow, and says nothing useful about the cause). The app detects
+that case and tells you rather than sending you to Google's error page. To try it from a phone, put it
+behind a public HTTPS address — a tunnel, or your deployment — and register that host.
+
 **Two grants, two moments of intent.** Sign-in asks for `openid email profile` — who you are, nothing
 else. Calendar access is requested separately, later, when you click *Connect Google Calendar*.
 Bundling them would mean asking for read/write access to someone's calendar before they have created

@@ -27,16 +27,21 @@ const ERROR_COPY: Record<string, string> = {
   state: 'That sign-in attempt expired or did not match. Please try again.',
   exchange: 'Google accepted the request but the identity could not be verified. Please try again.',
   required: 'The planner on this deployment is private. Sign in to continue.',
+  origin:
+    'Google cannot use this address as a redirect target, so sign-in cannot start from here. Open the app at http://localhost:3000 on this machine, or use the public URL you deployed to. (To test from a phone, put the app behind a public HTTPS address — a tunnel or your deployment — rather than the local network address.)',
 }
 
 export function AuthPanel({
   mode,
   error,
+  errorHost,
   next = '/planner',
   plan,
 }: {
   mode: 'signin' | 'signup'
   error?: string
+  /** The host Google refused, when it refused one — named in the message so the cause is obvious. */
+  errorHost?: string
   next?: string
   plan?: string
 }) {
@@ -122,7 +127,15 @@ export function AuthPanel({
             {errorMessage ? (
               <p className="mt-4 flex items-start gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(150,80,60,0.35)] bg-rose-light/60 px-3 py-2.5 text-[12px] leading-relaxed text-ink">
                 <AlertTriangle size={14} className="mt-px shrink-0 text-rose-deep" aria-hidden="true" />
-                <span>{errorMessage}</span>
+                <span>
+                  {errorMessage}
+                  {error === 'origin' && errorHost ? (
+                    <>
+                      {' '}
+                      Google refused <code className="font-mono break-all text-[11.5px]">{errorHost}</code>.
+                    </>
+                  ) : null}
+                </span>
               </p>
             ) : null}
 
