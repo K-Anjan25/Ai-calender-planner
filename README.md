@@ -114,10 +114,20 @@ OPENAI_API_KEY=sk-…
 
 **Google setup, in order:** create a project in Google Cloud Console → *APIs & Services* → *Enable
 APIs* → **Google Calendar API** → *Credentials* → *Create credentials* → **OAuth client ID** → *Web
-application* → add **both** redirect URIs (`/api/auth/callback` for sign-in and
-`/api/calendar/callback` for the calendar grant, localhost and production) → copy the client id and
-secret into the environment → publish the *OAuth consent screen* (or add test users, or only listed
-accounts can sign in).
+application* → **leave *Authorised JavaScript origins* empty** (this app has no browser-side Google
+SDK; it is a server-side code exchange) → add **both** redirect URIs, for localhost and for the host
+you actually deploy on:
+
+```
+http://localhost:3000/api/auth/callback      https://<your-host>/api/auth/callback
+http://localhost:3000/api/calendar/callback  https://<your-host>/api/calendar/callback
+```
+
+→ copy the client id and secret into the environment → publish the *OAuth consent screen* (or add
+test users, or only listed accounts can sign in). The redirect URI is resolved from the incoming
+request, so a preview URL, a production domain and localhost all work with the same client — each
+host simply has to be registered. If you set `AUTH_REDIRECT_URI`, it must match one of the registered
+URIs exactly, including the scheme.
 
 **Two grants, two moments of intent.** Sign-in asks for `openid email profile` — who you are, nothing
 else. Calendar access is requested separately, later, when you click *Connect Google Calendar*.

@@ -18,8 +18,8 @@ export type StoredTokens = {
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 
-export async function getOAuthClient() {
-  const { configured, redirectUri } = calendarConfig()
+export async function getOAuthClient(origin?: string) {
+  const { configured, redirectUri } = calendarConfig(origin)
   if (!configured) return null
   const { google } = await import('googleapis')
   return new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, redirectUri)
@@ -94,10 +94,17 @@ export function randomState(): string {
  * An authorised client for API calls. Refreshes when the access token is missing or expired, and
  * persists the refreshed token back to the cookie (FR-5.6).
  */
-export async function authorisedClient(): Promise<{ client: unknown } | { error: 'CALENDAR_NOT_CONFIGURED' | 'CALENDAR_NOT_CONNECTED' }> {
+/**
+ * A client for **API calls** (free/busy, insert, patch, delete) using the stored refresh token.
+ *
+ * `origin` is accepted for symmetry and is not otherwise used on this path: the redirect URI only
+ * participates in the authorisation-code exchange (`getOAuthClient` at the callback), never in a
+ * refresh or an API request. Refreshing with a localhost redirect URI is therefore correct.
+ */
+export async function authorisedClient(origin?: string): Promise<{ client: unknown } | { error: 'CALENDAR_NOT_CONFIGURED' | 'CALENDAR_NOT_CONNECTED' }> {
   const tokens = await readTokens()
   if (!tokens?.refreshToken) return { error: 'CALENDAR_NOT_CONNECTED' }
-  const client = await getOAuthClient()
+  const client = await getOAuthClient(origin)
   if (!client) return { error: 'CALENDAR_NOT_CONFIGURED' }
 
   client.setCredentials({

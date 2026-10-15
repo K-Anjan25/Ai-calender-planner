@@ -384,6 +384,7 @@ Every optional integration degrades to a working product (§1.2).
 ```
 browser ──POST /api/auth/demo──────────────▶ session.ts: sign({demo identity}) ──▶ Set-Cookie
 browser ──GET  /api/auth/google────────────▶ identity scopes (openid email profile) ──▶ Google
+                                          redirect_uri = <this request's origin>/api/auth/callback
 Google  ──▶ /api/auth/callback?code&state──▶ verify state (constant time)
                                          └─▶ exchange code → verify ID token → sign session
 browser ──GET  /api/auth/session───────────▶ decode + verify + expiry check ──▶ {user|null}
@@ -399,6 +400,16 @@ for the same reason, and it is stated in the code, not just the docs.
 Identity and calendar access are **two grants on purpose** (D-026). A session proves who you are; it
 confers no access to a calendar. `GET /api/calendar/auth` is a separate redirect the user triggers by
 clicking *Connect Google Calendar*, with its own state cookie and its own scopes.
+
+**The redirect URI is resolved from the request, never from the build** (`lib/request-origin.ts`).
+Google matches `redirect_uri` against the registered list *exactly*, so a hardcoded
+`http://localhost:3000/...` makes every deployment fail with `redirect_uri_mismatch` however correct
+the client id and secret are — and worse, on the paths where Google does not reject it, it sends the
+user's browser back to the developer's machine. The origin is read from `X-Forwarded-Host` /
+`X-Forwarded-Proto` (Vercel terminates TLS at its edge, so the internal request is `http://` on an
+internal host) and falls back to the request URL. `AUTH_REDIRECT_URI` and `GOOGLE_REDIRECT_URI` still
+win, for proxies and tunnels. The result: one OAuth client works on localhost, on a preview URL and on
+a custom domain, and only the hosts you actually use have to be registered.
 
 The planner gate is decided on the **server**, before any client bundle is sent: `REQUIRE_AUTH=true`
 and no session → `redirect('/signin?next=…')`. `next` passes through `safeNext()`, which accepts only

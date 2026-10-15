@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { safeNext } from '@/lib/auth/session'
 import { AUTH_STATE_COOKIE, googleAuthConfig, googleClient, identityAuthUrl } from '@/lib/auth/google'
+import { requestOrigin } from '@/lib/request-origin'
 
 /**
  * GET /api/auth/google — start Sign in with Google.
@@ -15,7 +16,10 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
-  const config = googleAuthConfig()
+  // The redirect URI is built from this request's own origin, so one OAuth client works on
+  // localhost, on a preview URL and on a custom domain. See `lib/request-origin.ts`.
+  const origin = requestOrigin(request)
+  const config = googleAuthConfig(origin)
   const next = safeNext(url.searchParams.get('next'))
 
   if (!config.configured) {
@@ -24,7 +28,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/signin?error=not_configured&next=${encodeURIComponent(next)}`, url.origin))
   }
 
-  const client = await googleClient()
+  const client = await googleClient(origin)
   if (!client) {
     return NextResponse.redirect(new URL('/signin?error=not_configured', url.origin))
   }

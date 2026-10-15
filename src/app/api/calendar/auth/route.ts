@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { authUrlFor, getOAuthClient, randomState, setStateCookie } from '@/lib/google/oauth'
+import { requestOrigin } from '@/lib/request-origin'
 import { isCalendarConfigured } from '@/lib/google/scopes'
 
 /**
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/planner?calendar=unconfigured', url.origin))
   }
 
-  const client = await getOAuthClient()
+  const client = await getOAuthClient(requestOrigin(request))
   if (!client) {
     return NextResponse.redirect(new URL('/planner?calendar=unconfigured', url.origin))
   }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { safeNext, writeSession } from '@/lib/auth/session'
 import { AUTH_STATE_COOKIE, exchangeCodeForIdentity } from '@/lib/auth/google'
+import { requestOrigin } from '@/lib/request-origin'
 
 /**
  * GET /api/auth/callback — finish Sign in with Google.
@@ -26,7 +27,9 @@ export async function GET(request: Request) {
   }
 
   const next = safeNext(decodeURIComponent(state.split('.').slice(1).join('.') || ''))
-  const identity = await exchangeCodeForIdentity(code)
+  // The token exchange must present the *same* redirect_uri the authorisation request used, or
+  // Google refuses the code. Both resolve from their own request's origin, which is the same host.
+  const identity = await exchangeCodeForIdentity(code, requestOrigin(request))
   if (!identity) {
     return NextResponse.redirect(new URL('/signin?error=exchange', url.origin))
   }

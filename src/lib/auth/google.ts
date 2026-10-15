@@ -1,3 +1,4 @@
+import { FALLBACK_ORIGIN } from '@/lib/request-origin'
 import { readEnv } from '@/lib/google/scopes'
 
 /**
@@ -23,21 +24,35 @@ export type AuthConfig = {
   redirectUri: string
 }
 
-export function authRedirectUri(): string {
-  return readEnv('AUTH_REDIRECT_URI') ?? readEnv('GOOGLE_REDIRECT_URI')?.replace(/\/api\/calendar\/callback$/, '/api/auth/callback') ?? 'http://localhost:3000/api/auth/callback'
+/**
+ * The redirect URI for the **sign-in** grant.
+ *
+ * It must be the host the browser is on, not a build-time constant: Google matches the value sent to
+ * the authorisation endpoint against the registered URIs exactly, so a deployed instance that asked
+ * for `http://localhost:3000/...` would send the user's browser back to the developer's machine.
+ * `origin` comes from the request (`lib/request-origin.ts`) and makes one OAuth client work on
+ * localhost, on a preview URL and on a custom domain. The env vars still win, for proxies and
+ * tunnels where the public origin differs from the one the request arrived on.
+ */
+export function authRedirectUri(origin?: string): string {
+  return (
+    readEnv('AUTH_REDIRECT_URI') ??
+    readEnv('GOOGLE_REDIRECT_URI')?.replace(/\/api\/calendar\/callback$/, '/api/auth/callback') ??
+    `${origin ?? FALLBACK_ORIGIN}/api/auth/callback`
+  )
 }
 
-export function googleAuthConfig(): AuthConfig {
+export function googleAuthConfig(origin?: string): AuthConfig {
   const clientId = readEnv('GOOGLE_CLIENT_ID')
   const clientSecret = readEnv('GOOGLE_CLIENT_SECRET')
   const missing: string[] = []
   if (!clientId) missing.push('GOOGLE_CLIENT_ID')
   if (!clientSecret) missing.push('GOOGLE_CLIENT_SECRET')
-  return { configured: missing.length === 0, missing, redirectUri: authRedirectUri() }
+  return { configured: missing.length === 0, missing, redirectUri: authRedirectUri(origin) }
 }
 
-export async function googleClient() {
-  const config = googleAuthConfig()
+export async function googleClient(origin?: string) {
+  const config = googleAuthConfig(origin)
   if (!config.configured) return null
   const { google } = await import('googleapis')
   return new google.auth.OAuth2(readEnv('GOOGLE_CLIENT_ID'), readEnv('GOOGLE_CLIENT_SECRET'), config.redirectUri)
@@ -64,8 +79,10 @@ export type GoogleIdentity = { id: string; email: string; name: string; picture?
  * one fewer network hop on the sign-in critical path, and the token is signature-verified by the
  * library against Google's keys.
  */
-export async function exchangeCodeForIdentity(code: string): Promise<GoogleIdentity | null> {
-  const client = await googleClient()
+export async function exchangeCodeForIdentity(code: string, origin?: string): Promise<GoogleIdentity | null> {
+  // Same `origin` as the authorisation request: the token exchange must present the identical
+  // `redirect_uri` or Google rejects the code.
+  const client = await googleClient(origin)
   if (!client) return null
   try {
     const { tokens } = await client.getToken(code)

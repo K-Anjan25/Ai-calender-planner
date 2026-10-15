@@ -5,6 +5,7 @@ import {
   readStateCookie,
   storeTokens,
 } from '@/lib/google/oauth'
+import { requestOrigin } from '@/lib/request-origin'
 
 /**
  * GET /api/calendar/callback — finish the consent flow.
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/planner?calendar=state_mismatch', url.origin))
   }
 
-  const client = await getOAuthClient()
+  const client = await getOAuthClient(requestOrigin(request))
   if (!client) {
     return NextResponse.redirect(new URL('/planner?calendar=unconfigured', url.origin))
   }
