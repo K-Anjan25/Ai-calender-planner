@@ -289,3 +289,12 @@ visibility is unchanged: removing website links cannot make GitHub files private
 Favicon metadata explicitly links versioned PNG assets (64px favicon and 180px Apple touch icon) to
 avoid stale browser caches. Built-server HTTP checks: `/docs` and `/docs/MEMORY.md` 404, `/legal`
 and both icon assets 200; sign-in HTML includes the new icon URL and no docs links. 157 tests pass.
+
+### 2026-10-16 — customer copy is not an implementation report
+
+Standing user preference: do not place technical demo-session descriptions or work-in-progress
+explanations in customer-facing UI. Removed the signed-session/identity paragraphs, retained a
+concise Demo badge, simplified unavailable sign-in errors and removed payment implementation notes.
+Keep essential safety/privacy/error messages and do not imply unavailable purchases work.
+Operator diagnostics remain in API responses and repository docs, not public marketing copy.
+Verified 158 tests pass, lint and both typechecks clean.

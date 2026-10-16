@@ -133,11 +133,9 @@ export default function PricingPage() {
 
         {!billing.configured ? (
           <div className="mt-6 flex flex-wrap items-center gap-3 rounded-[var(--radius-cut-sm)] border border-dashed border-[color:rgba(120,98,70,0.3)] bg-paper-ivory/70 px-4 py-3">
-            <PaperChip tone="kraft">Billing not connected</PaperChip>
+            <PaperChip tone="kraft">Free planner</PaperChip>
             <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink-soft">
-              Paid plans are not available yet. Razorpay checkout with UPI is planned, but payment verification
-              and account upgrades are not implemented. Adding API keys alone will not enable purchases.
-              You can use the free planner now.
+              Start with the free planner. Paid plans are not available for purchase.
             </p>
           </div>
         ) : null}

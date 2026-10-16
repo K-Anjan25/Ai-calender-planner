@@ -42,3 +42,15 @@ it('explicitly links a versioned PNG favicon and an Apple touch icon', () => {
     assert.equal(readFileSync('public/' + name).subarray(0, 8).toString('hex'), '89504e470d0a1a0a')
   }
 })
+
+
+it('keeps implementation notes out of customer-facing auth and pricing copy', () => {
+  const auth = readFileSync('src/components/site/AuthPanel.tsx', 'utf8')
+  assert.equal(auth.includes('A real signed session with a clearly-labelled identity'), false)
+  assert.equal(auth.includes('a real signed session with a labelled identity'), false)
+  assert.equal(auth.includes('demo@calendra.local'), false)
+  assert.equal(auth.includes('This deployment cannot see'), false)
+  const pricing = readFileSync('src/app/pricing/page.tsx', 'utf8')
+  assert.equal(pricing.includes('Adding API keys alone'), false)
+  assert.equal(pricing.includes('Paid plans are not available for purchase.'), true)
+})

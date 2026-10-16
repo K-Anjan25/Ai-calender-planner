@@ -22,32 +22,12 @@ import { useSession } from '@/lib/use-session'
 
 const ERROR_COPY: Record<string, string> = {
   not_configured:
-    'Sign in with Google is not configured on this deployment, so the demo session is the way in. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable it.',
+    'Google sign-in is temporarily unavailable. Try the demo instead.',
   state: 'That sign-in attempt expired or did not match. Please try again.',
   exchange: 'Google accepted the request but the identity could not be verified. Please try again.',
   required: 'The planner on this deployment is private. Sign in to continue.',
   origin:
     'Google cannot use this address as a redirect target, so sign-in cannot start from here. Open the app at http://localhost:3000 on this machine, or use the public URL you deployed to. (To test from a phone, put the app behind a public HTTPS address — a tunnel or your deployment — rather than the local network address.)',
-}
-
-/**
- * Names the variables the deployment cannot see, as separate `<code>` spans.
- *
- * The previous copy always read "needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET", which is ambiguous
- * exactly when it matters: a deployment missing one of the two is a different situation from one
- * missing both, and only the reader can tell which they are looking at.
- */
-function MissingNames({ names }: { names: string[] }) {
-  return (
-    <>
-      {names.map((name, index) => (
-        <span key={name}>
-          {index > 0 ? (index === names.length - 1 ? ' and ' : ', ') : null}
-          <code className="font-mono">{name}</code>
-        </span>
-      ))}
-    </>
-  )
 }
 
 export function AuthPanel({
@@ -71,15 +51,6 @@ export function AuthPanel({
   const isSignUp = mode === 'signup'
   const query = `?next=${encodeURIComponent(next)}`
   const errorMessage = error ? (ERROR_COPY[error] ?? 'Something went wrong. Please try again.') : null
-  /**
-   * Older servers may omit the diagnostic list; retain the generic list for compatibility.
-   * Failed session reads have a separate error state and never render this diagnosis.
-   */
-  const missingGoogle =
-    capabilities.googleMissing.length > 0
-      ? capabilities.googleMissing
-      : ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
-
   const enterDemo = async () => {
     setBusy(true)
     try {
@@ -126,12 +97,7 @@ export function AuthPanel({
             <PaperChip tone="olive">Already signed in</PaperChip>
             <h2 className="mt-3 text-[20px] leading-tight">{user.name}</h2>
             <p className="mt-1 text-[13px] break-words text-ink-soft">{user.email}</p>
-            {user.provider === 'demo' ? (
-              <p className="mt-3 rounded-[var(--radius-cut-sm)] bg-paper-kraft/60 px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
-                This is a <strong>demo session</strong> — a real signed session with a labelled identity. It proves nothing
-                about who you are, and it cannot write to a real calendar.
-              </p>
-            ) : null}
+            {user.provider === 'demo' ? <PaperChip tone="kraft">Demo</PaperChip> : null}
             <div className="mt-5 flex flex-wrap gap-2">
               <PaperLink href={next} tone="teal">
                 Continue to the planner
@@ -179,15 +145,12 @@ export function AuthPanel({
               {status === 'error' ? (
                 <p role="alert" className="text-[11.5px] leading-relaxed text-ink-soft">
                   Could not check sign-in availability. Reload to retry, or try Continue with Google above.
-                  This does not mean your environment variables are missing.
                 </p>
               ) : null}
 
               {status === 'ready' && !capabilities.googleSignIn ? (
                 <p className="text-[11.5px] leading-relaxed text-ink-faint">
-                  This deployment cannot see <MissingNames names={missingGoogle} />, so Google sign-in is off. Set{' '}
-                  {missingGoogle.length === 1 ? 'it' : 'them'} in this project’s environment, then redeploy and open the new deployment. Until then, the demo
-                  session below works exactly the same.
+                  Google sign-in is temporarily unavailable. Try the demo instead.
                 </p>
               ) : null}
 
@@ -201,10 +164,7 @@ export function AuthPanel({
                 {busy ? 'Starting…' : 'Continue with a demo session'}
                 {busy ? null : <ArrowRight size={14} aria-hidden="true" />}
               </PaperButton>
-              <p className="text-[11.5px] leading-relaxed text-ink-faint">
-                A real signed session with a clearly-labelled identity (<code className="font-mono">demo@calendra.local</code>
-                ). It cannot write to a real calendar, and you can promote it to a Google account later.
-              </p>
+
             </div>
 
             <p className="mt-6 border-t border-dashed border-[color:rgba(120,98,70,0.22)] pt-4 text-[11px] leading-relaxed text-ink-faint">
