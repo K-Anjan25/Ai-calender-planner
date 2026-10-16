@@ -258,3 +258,13 @@ counter was computed against a different number of chips than were shown; band k
 - **When you hit a surprising bug:** add it to §5 as a numbered gotcha, phrased as the *lesson*, not the incident.
 - **When you finish a session:** append to §7 and refresh §6.
 - **Never** delete a decision row; supersede it with a new row that references the old one (`supersedes D-004`).
+
+### 2026-10-16 — deployment sign-in diagnostics
+
+The dashboard listing confirms names and scopes, not the values visible to an existing deployment.
+`/api/auth/session` now exposes `googleMissing` (names only), and the sign-in panel names exactly
+what is absent. A failed session fetch has a separate `error` state: it is not evidence that
+credentials are missing. Earlier statements that a disabled button could *only* mean missing
+variables were incorrect because the hook swallowed fetch failures. Verification: 151 tests,
+lint, and both application/test typechecks pass. Hosted verification remains blocked by Vercel
+Authentication; request the user's new deployment URL and `/api/auth/session` response, never secrets.

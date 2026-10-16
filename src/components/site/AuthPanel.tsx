@@ -31,6 +31,26 @@ const ERROR_COPY: Record<string, string> = {
     'Google cannot use this address as a redirect target, so sign-in cannot start from here. Open the app at http://localhost:3000 on this machine, or use the public URL you deployed to. (To test from a phone, put the app behind a public HTTPS address — a tunnel or your deployment — rather than the local network address.)',
 }
 
+/**
+ * Names the variables the deployment cannot see, as separate `<code>` spans.
+ *
+ * The previous copy always read "needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET", which is ambiguous
+ * exactly when it matters: a deployment missing one of the two is a different situation from one
+ * missing both, and only the reader can tell which they are looking at.
+ */
+function MissingNames({ names }: { names: string[] }) {
+  return (
+    <>
+      {names.map((name, index) => (
+        <span key={name}>
+          {index > 0 ? (index === names.length - 1 ? ' and ' : ', ') : null}
+          <code className="font-mono">{name}</code>
+        </span>
+      ))}
+    </>
+  )
+}
+
 export function AuthPanel({
   mode,
   error,
@@ -52,6 +72,14 @@ export function AuthPanel({
   const isSignUp = mode === 'signup'
   const query = `?next=${encodeURIComponent(next)}`
   const errorMessage = error ? (ERROR_COPY[error] ?? 'Something went wrong. Please try again.') : null
+  /**
+   * Older servers may omit the diagnostic list; retain the generic list for compatibility.
+   * Failed session reads have a separate error state and never render this diagnosis.
+   */
+  const missingGoogle =
+    capabilities.googleMissing.length > 0
+      ? capabilities.googleMissing
+      : ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
 
   const enterDemo = async () => {
     setBusy(true)
@@ -150,11 +178,18 @@ export function AuthPanel({
                 Continue with Google
               </PaperLink>
 
+              {status === 'error' ? (
+                <p role="alert" className="text-[11.5px] leading-relaxed text-ink-soft">
+                  Could not check sign-in availability. Reload to retry, or try Continue with Google above.
+                  This does not mean your environment variables are missing.
+                </p>
+              ) : null}
+
               {status === 'ready' && !capabilities.googleSignIn ? (
                 <p className="text-[11.5px] leading-relaxed text-ink-faint">
-                  Google sign-in needs <code className="font-mono">GOOGLE_CLIENT_ID</code> and{' '}
-                  <code className="font-mono">GOOGLE_CLIENT_SECRET</code>. Until then, use the demo session below — the
-                  planner works exactly the same.
+                  This deployment cannot see <MissingNames names={missingGoogle} />, so Google sign-in is off. Set{' '}
+                  {missingGoogle.length === 1 ? 'it' : 'them'} in this project’s environment, then redeploy and open the new deployment. Until then, the demo
+                  session below works exactly the same.
                 </p>
               ) : null}
 

@@ -20,15 +20,21 @@ export type SessionUser = {
 }
 
 export type SessionState = {
-  status: 'loading' | 'ready'
+  status: 'loading' | 'ready' | 'error'
   user: SessionUser | null
-  capabilities: { googleSignIn: boolean; secretConfigured: boolean; required: boolean }
+  capabilities: {
+    googleSignIn: boolean
+    /** Names of the Google variables this deployment cannot see. Empty when sign-in is on. */
+    googleMissing: string[]
+    secretConfigured: boolean
+    required: boolean
+  }
 }
 
 const INITIAL: SessionState = {
   status: 'loading',
   user: null,
-  capabilities: { googleSignIn: false, secretConfigured: false, required: false },
+  capabilities: { googleSignIn: false, googleMissing: [], secretConfigured: false, required: false },
 }
 
 export function useSession() {
@@ -42,9 +48,18 @@ export function useSession() {
         data: { user: SessionUser | null; capabilities: SessionState['capabilities'] }
       }
       if (!payload.ok) throw new Error('unreadable')
-      setState({ status: 'ready', user: payload.data.user, capabilities: payload.data.capabilities })
+      // `googleMissing` is defaulted rather than trusted: a client bundle cached from an earlier
+      // deployment can outlive the server that shaped the payload, and an undefined list would
+      // crash the panel that reads it.
+      const capabilities = payload.data.capabilities
+      setState({
+        status: 'ready',
+        user: payload.data.user,
+        capabilities: { ...capabilities, googleMissing: capabilities.googleMissing ?? [] },
+      })
     } catch {
-      setState({ ...INITIAL, status: 'ready' })
+      // A failed request does not prove that credentials are missing.
+      setState({ ...INITIAL, status: 'error' })
     }
   }, [])
 

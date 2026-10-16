@@ -2,7 +2,7 @@ import './harness/setup-dom'
 
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { authRedirectUri } from '@/lib/auth/google'
+import { authRedirectUri, googleAuthConfig } from '@/lib/auth/google'
 import { decodeSession, demoUser, encodeSession, safeNext, type SessionUser } from '@/lib/auth/session'
 import { FALLBACK_ORIGIN, googleOriginProblem, requestOrigin } from '@/lib/request-origin'
 import { calendarConfig } from '@/lib/google/scopes'
@@ -175,6 +175,74 @@ describe('addresses Google will refuse are caught before it does', () => {
       }),
     )
     assert.equal(googleOriginProblem(origin), null)
+  })
+})
+
+/**
+ * "Sign-in is off" is not a diagnosis; "GOOGLE_CLIENT_SECRET is absent" is.
+ *
+ * Reported from a real Vercel deployment: the variables were added in the dashboard, the deployment
+ * was not rebuilt, and the panel said only that sign-in needed *both* names — which reads as "my
+ * values are wrong" rather than "this build has never seen them". The list below is what lets the
+ * panel tell those apart, so it is asserted the same way as the other security-adjacent state.
+ */
+describe('the deployment reports which Google variables it cannot see', () => {
+  const KEYS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const
+
+  const withEnv = (values: Partial<Record<(typeof KEYS)[number], string | undefined>>) => {
+    const saved = KEYS.map((key) => [key, process.env[key]] as const)
+    for (const key of KEYS) delete process.env[key]
+    for (const [key, value] of Object.entries(values)) {
+      if (value !== undefined) process.env[key] = value
+    }
+    return () => {
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+  }
+
+  it('names exactly the one that is absent, not both', () => {
+    const restore = withEnv({ GOOGLE_CLIENT_ID: '1234.apps.googleusercontent.com' })
+    try {
+      const config = googleAuthConfig()
+      assert.equal(config.configured, false)
+      assert.deepEqual(config.missing, ['GOOGLE_CLIENT_SECRET'])
+    } finally {
+      restore()
+    }
+  })
+
+  it('names both when the deployment has neither', () => {
+    const restore = withEnv({})
+    try {
+      assert.deepEqual(googleAuthConfig().missing, ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'])
+    } finally {
+      restore()
+    }
+  })
+
+  it('names neither once both are present', () => {
+    const restore = withEnv({ GOOGLE_CLIENT_ID: '1234.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'GOCSPX-x' })
+    try {
+      const config = googleAuthConfig()
+      assert.equal(config.configured, true)
+      assert.deepEqual(config.missing, [])
+    } finally {
+      restore()
+    }
+  })
+
+  it('counts a whitespace-only value as absent rather than as configured', () => {
+    // The classic Vercel paste: a value that looks filled in but is empty. `readEnv` trims, so this is
+    // reported as a missing variable instead of being handed to Google as an empty client id.
+    const restore = withEnv({ GOOGLE_CLIENT_ID: '   ', GOOGLE_CLIENT_SECRET: 'GOCSPX-x' })
+    try {
+      assert.deepEqual(googleAuthConfig().missing, ['GOOGLE_CLIENT_ID'])
+    } finally {
+      restore()
+    }
   })
 })
 

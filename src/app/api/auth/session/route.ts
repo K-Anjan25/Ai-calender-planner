@@ -16,6 +16,8 @@ export async function GET() {
       expiresAt: session ? new Date(session.exp * 1000).toISOString() : null,
       capabilities: {
         googleSignIn: google.configured,
+        // Diagnostic names only, never credential values.
+        googleMissing: google.missing,
         secretConfigured: config.configured,
         required: config.required,
       },
