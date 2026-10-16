@@ -209,8 +209,8 @@ export function AuthPanel({
 
             <p className="mt-6 border-t border-dashed border-[color:rgba(120,98,70,0.22)] pt-4 text-[11px] leading-relaxed text-ink-faint">
               {isSignUp ? 'By creating an account you agree to ' : 'By signing in you agree to '}
-              the <Link href="/docs#terms" className="underline hover:text-ink">terms</Link> and{' '}
-              <Link href="/docs#privacy" className="underline hover:text-ink">privacy notice</Link>.
+              the <Link href="/legal#terms" className="underline hover:text-ink">terms</Link> and{' '}
+              <Link href="/legal#privacy" className="underline hover:text-ink">privacy notice</Link>.
             </p>
           </div>
         )}

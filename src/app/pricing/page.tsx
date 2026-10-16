@@ -106,7 +106,7 @@ const FAQ = [
   },
   {
     q: 'Can I self-host it?',
-    a: 'Yes — it is MIT licensed and runs with zero configuration. Set your own model keys and Google credentials to switch on the live paths; the deployment guide lists every variable and what happens when each is absent.',
+    a: 'Yes — it is MIT licensed and runs with zero configuration. Set your own model keys and Google credentials to switch on the live paths; you manage those integrations in your hosting environment.',
   },
 ]
 

@@ -29,12 +29,10 @@ const GROUPS: { heading: string; links: { href: string; label: string }[] }[] = 
     ],
   },
   {
-    heading: 'Engineering',
+    heading: 'Legal',
     links: [
-      { href: '/docs', label: 'Documentation' },
-      { href: '/docs#api', label: 'API' },
-      { href: '/docs#env', label: 'Environment variables' },
-      { href: '/docs#deploy', label: 'Deploying' },
+      { href: '/legal#terms', label: 'Terms' },
+      { href: '/legal#privacy', label: 'Privacy' },
     ],
   },
 ]
@@ -86,9 +84,7 @@ export function SiteFooter() {
               <span aria-hidden="true">·</span>
               <span>Google Calendar API</span>
               <span aria-hidden="true">·</span>
-              <Link href="/docs#env" className="underline hover:text-ink">
-                self-hostable
-              </Link>
+              <span>self-hostable</span>
             </p>
           </div>
         </div>

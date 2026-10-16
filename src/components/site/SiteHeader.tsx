@@ -20,7 +20,6 @@ const NAV = [
   { href: '/#how-it-works', label: 'How it works' },
   { href: '/#features', label: 'Features' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/docs', label: 'Docs' },
 ]
 
 export function SiteHeader({ tone = 'board' }: { tone?: 'board' | 'sand' }) {

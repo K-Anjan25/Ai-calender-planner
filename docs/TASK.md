@@ -276,3 +276,10 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
   AI responsibilities, limitations, payment integration work and release gates.
 - Pending: database-backed accounts/sync, Razorpay verified payments/entitlements, hosted live LLM
   proof, real Calendar write/rollback acceptance and public-launch operational/security review.
+
+## 2026-10-16 — hide internal docs and refresh favicon
+
+- Done: `/docs` 404; remove docs links and contents from public UI, retain repository files.
+- Done: standalone `/legal` terms/privacy and updated auth/footer links.
+- Done: explicit versioned favicon and Apple touch assets; built-page and HTTP verification.
+- Verified: 157 tests, lint, typecheck and production build.

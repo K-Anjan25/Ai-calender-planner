@@ -24,3 +24,21 @@ it('ships a calendar SVG and a matching PNG-backed ICO rather than the starter f
   assert.equal(ico.readUInt32LE(14), ico.length - 22)
   assert.equal(ico.subarray(22, 30).toString('hex'), '89504e470d0a1a0a')
 })
+
+it('keeps internal docs off the public website and moves legal links to their own page', () => {
+  const docs = readFileSync('src/app/docs/page.tsx', 'utf8')
+  assert.match(docs, /notFound\(\)/)
+  for (const file of ['src/components/site/SiteHeader.tsx', 'src/components/site/SiteFooter.tsx', 'src/components/site/AuthPanel.tsx']) {
+    assert.equal(readFileSync(file, 'utf8').includes('/docs'), false, file)
+  }
+  assert.equal(docs.includes('MEMORY.md'), false)
+  assert.equal(readFileSync('src/app/legal/page.tsx', 'utf8').includes('Privacy notice'), true)
+})
+
+it('explicitly links a versioned PNG favicon and an Apple touch icon', () => {
+  const layout = readFileSync('src/app/layout.tsx', 'utf8')
+  for (const name of ['calendra-icon-v2.png', 'calendra-apple-v2.png']) {
+    assert.equal(layout.includes('/' + name), true)
+    assert.equal(readFileSync('public/' + name).subarray(0, 8).toString('hex'), '89504e470d0a1a0a')
+  }
+})

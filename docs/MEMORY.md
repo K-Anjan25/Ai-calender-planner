@@ -279,3 +279,13 @@ persistence is localStorage. Billing never becomes ready merely because keys exi
 endpoint existed. Removed Stripe activation advice; intended path is Razorpay including UPI,
 not falsely advertised as implemented. See `docs/LAUNCH-READINESS.md` for setup, AI data flow and
 remaining release gates. No supplied credentials were used to test external inference or payments.
+
+### 2026-10-16 — internal docs hidden from the product
+
+User requested hiding Markdown files and contents. Repository docs remain intact; `/docs` now returns
+404 and header/footer no longer expose internal documentation, environment matrices or repository
+Markdown links. Terms/privacy move to `/legal` so sign-in keeps usable legal links. Public repository
+visibility is unchanged: removing website links cannot make GitHub files private.
+Favicon metadata explicitly links versioned PNG assets (64px favicon and 180px Apple touch icon) to
+avoid stale browser caches. Built-server HTTP checks: `/docs` and `/docs/MEMORY.md` 404, `/legal`
+and both icon assets 200; sign-in HTML includes the new icon URL and no docs links. 157 tests pass.
