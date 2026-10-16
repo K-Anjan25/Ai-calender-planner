@@ -84,9 +84,6 @@ export default function Home() {
                 </div>
               </div>
             </PaperSheet>
-            <p className="mt-2 text-center text-[10.5px] font-semibold tracking-[0.12em] text-ink-faint uppercase">
-              Every layer below is a real constraint
-            </p>
           </div>
         </div>
       </section>

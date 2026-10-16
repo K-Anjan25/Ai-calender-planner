@@ -7,7 +7,7 @@ import { readSession, safeNext } from '@/lib/auth/session'
 
 export const metadata: Metadata = {
   title: 'Sign in · Calendra',
-  description: 'Sign in to Calendra to keep your tasks, preferences and plans across devices.',
+  description: 'Sign in to Calendra to connect Google Calendar and plan your week.',
 }
 
 /** `searchParams` is a promise in Next 15; the panel takes plain values so it stays a client island. */

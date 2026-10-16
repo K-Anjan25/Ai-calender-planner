@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { AlertTriangle, ArrowRight, CalendarCheck, ShieldCheck } from 'lucide-react'
-import { CalendraLogo } from '@/components/paper/CalendraMark'
 import { PaperButton, PaperChip, PaperLink } from '@/components/paper/PaperControls'
 import { PaperSheet } from '@/components/paper/PaperSheet'
 import { useSession } from '@/lib/use-session'
@@ -94,14 +93,13 @@ export function AuthPanel({
   return (
     <div className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
       <div className="animate-sheet-in">
-        <CalendraLogo size={30} className="text-teal-deep" />
-        <h1 className="mt-6 text-[32px] leading-[1.1] sm:text-[40px]">
+        <h1 className="text-[32px] leading-[1.1] sm:text-[40px]">
           {isSignUp ? 'Give Calendra your worst week.' : 'Welcome back to a week that fits.'}
         </h1>
         <p className="mt-4 max-w-[52ch] text-[15.5px] leading-relaxed text-ink-soft">
           {isSignUp
-            ? 'Create an account to keep your tasks, preferences and pins across devices — and to write approved plans to your Google Calendar.'
-            : 'Sign in to pick up your tasks, preferences and saved plans where you left them.'}
+            ? 'Create an account to connect Google Calendar and write approved plans. Tasks and preferences are currently saved in this browser, not synced across devices.'
+            : 'Sign in to connect Google Calendar. Your tasks and preferences stay in this browser.'}
         </p>
 
         <ul className="mt-7 space-y-3">

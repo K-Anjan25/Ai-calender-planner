@@ -265,3 +265,14 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 5. Explained to the user where relevant (reason chips / report warnings).
 6. `npm run lint` and `npm run build` pass.
 7. `TASK.md` and, for design/architecture decisions, `MEMORY.md` updated.
+
+## 2026-10-16 — branding and honest launch readiness
+
+- Done: remove auth panel's duplicate wordmark; remove the requested landing caption.
+- Done: calendar-mark SVG and ICO favicon; regression tests.
+- Done: remove misleading Stripe activation instructions; paid readiness remains false until an
+  actual Razorpay integration exists; retain free planner access.
+- Done: correct cross-device storage claims; add `docs/LAUNCH-READINESS.md` with LLM setup,
+  AI responsibilities, limitations, payment integration work and release gates.
+- Pending: database-backed accounts/sync, Razorpay verified payments/entitlements, hosted live LLM
+  proof, real Calendar write/rollback acceptance and public-launch operational/security review.

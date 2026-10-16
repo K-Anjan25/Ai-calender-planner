@@ -1,0 +1,121 @@
+# Calendra: launch readiness and setup
+
+Reviewed 2026-10-16. This is an implementation audit, not a claim of hosted end-to-end verification.
+
+## Is it complete?
+
+No: usable planner MVP, not a finished paid SaaS. A percentage would hide critical missing features.
+
+| Area | Implemented | Remaining proof or work |
+|---|---|---|
+| Landing, auth, pricing, docs UI | Yes | Real-browser acceptance on desktop and phone |
+| Tasks, preferences, scheduling, dragging, reports, ICS | Yes | Wider real-user testing |
+| Google identity | Yes; user confirmed sign-in | Stable domain, production OAuth configuration |
+| Calendar read/write and approval | Code implemented | User must verify connection, dry-run, approved write and rollback with real calendar |
+| LangChain live providers | Implemented with local fallback | Valid provider key/model and successful live request in deployment |
+| Storage | Browser localStorage | Database, account ownership, migrations, backups, cross-device sync |
+| Payments | Not implemented | Razorpay order creation, verification, webhooks, entitlements, refunds |
+| Paid tiers / team features | Pricing descriptions, not finished features | Enforcement, history, collaboration; no functional waitlist storage |
+| Operations | Tests and capability endpoints | Rate limits, abuse/cost caps, monitoring, privacy/deletion workflow, security review |
+
+Signing in does not upload local tasks or make them available on another device.
+
+## AI: what, where, why and how
+
+No credible percentage can be assigned to "how much AI"; it depends on mode and actions.
+Without a provider key, or with DEMO_MODE=true/1, no external LLM is used. The local path uses
+rules, not a trained local language model. A configured key alone is not proof of successful inference.
+
+- `src/lib/agent/providers.ts`: resolves OpenAI, Anthropic, Google or local mode.
+- `src/lib/agent/planner-agent.ts`: LangChain model calls, schema validation, tool loop (up to six
+  tool iterations), fallback; one user action can make several provider requests.
+- `src/lib/agent/prompts.ts`: task extraction, refinement and explanation instructions.
+- `src/lib/agent/tools.ts`: validated parse/build/critique/revise/explain tools.
+- `src/lib/scheduler/`: deterministic feasibility, scoring and actual time placement.
+
+AI reduces manual task entry by extracting titles, effort, deadlines and priorities from text;
+interprets follow-up requests as preference/task/pin changes; chooses tools; and explains results.
+Missing duration estimates are guesses to review, not measurements. The scheduler, not the LLM,
+calculates block timestamps and conflicts. AI does not handle authentication, payment decisions,
+or calendar write approval. Final review remains the user's responsibility.
+
+Flow: free text → model interpretation → schema-validated tasks/changes → deterministic scheduler
+→ critique/report → explanation → user review → explicit approval → Google Calendar write.
+Failures fall back to local rules with a note. Review the result's mode/provider/notes, not only health.
+Task titles, preferences and relevant calendar context can be sent to the selected provider. Do not
+submit sensitive data before reviewing its policies and informing users.
+
+## LLM setup: OpenAI example
+
+Dashboard labels can change; use the named sections if a button moves.
+
+1. Open https://platform.openai.com/ and sign in. Select the intended organization/project.
+2. Open Settings → Billing; add payment details/credit as required. API billing is separate from
+   a ChatGPT subscription. Set available project budgets/alerts; alerts are not necessarily hard caps.
+3. Open Dashboard → API keys → Create new secret key. Select the project, create and copy it once.
+   Do not paste it in chat or commit it.
+4. Vercel → aicalenderplanner → Settings → Environment Variables. Add or edit, save each:
+
+   ```text
+   LLM_PROVIDER=openai
+   OPENAI_API_KEY=(your private API key, entered only in Vercel)
+   LLM_MODEL=gpt-4o-mini
+   DEMO_MODE=false
+   ```
+
+   The model shown is the code's OpenAI default; use a currently available tool-calling model
+   enabled for your account if unavailable. Set the environment scopes used by your deployment.
+   None of these names should start with NEXT_PUBLIC_. Leave existing OAuth variables intact.
+5. Deployments → the intended branch's deployment → ⋯ → Redeploy. When Ready, click Visit.
+6. On that exact host, open `/api/health`. Under `data.agent`, expect `mode: "agent"`,
+   `provider: "openai"`, and the model name. This confirms configuration only.
+7. Open Planner, select agent/auto mode rather than local if offered, enter new task text and
+   generate a plan. Check response mode/provider and notes (browser DevTools → Network → plan/chat
+   response if needed). Confirm a successful request in OpenAI's Usage page. A fallback note means
+   the live call failed even if health reports agent mode.
+8. If it falls back, check provider billing, model access, Vercel runtime logs and API errors. Do not
+   post raw logs containing tokens or user content. Do not repeatedly retry costly requests.
+
+Local development: put the same values in ignored `.env.local`, restart `npm run dev`, use localhost.
+
+Alternatives (choose one, not all):
+- Google AI Studio → API keys → create a key in your project. Use `LLM_PROVIDER=google`,
+  `GOOGLE_API_KEY` and an explicitly selected, currently supported tool-calling `LLM_MODEL`.
+  This is NOT GOOGLE_CLIENT_SECRET: OAuth credentials do not pay for or authenticate Gemini calls.
+- Anthropic Console → API keys → Create Key, configure billing. Use `LLM_PROVIDER=anthropic`,
+  `ANTHROPIC_API_KEY` and an available tool-calling `LLM_MODEL`.
+
+The code's Google/Anthropic defaults may age; explicitly select a model your provider currently offers.
+No live-provider inference was verified in this sandbox: no real provider credentials were supplied.
+
+## India payments: Razorpay with UPI
+
+Razorpay is the intended integration. UPI is a payment method, not a substitute for a verified billing
+backend. This release does not accept payments; adding keys cannot enable checkout. A direct UPI QR
+or browser success callback is not reliable evidence to unlock an account. Merchant availability,
+KYC approval and payment methods must be confirmed with Razorpay; don't assume eligibility.
+
+Account preparation:
+1. Open https://dashboard.razorpay.com/ → create/sign into the merchant account.
+2. Complete the account activation/business/KYC steps shown in the dashboard; submit requested
+   business, bank, identity and website information privately to Razorpay.
+3. Use Test mode first. Settings (or Account & Settings) → API Keys → Generate Test Key.
+   Store test credentials in your own secret manager until the integration is implemented.
+4. Review available UPI methods in the dashboard. Do not promise recurring UPI payments until the
+   account and chosen subscription/mandate product support them.
+
+Engineering still needed before real charges:
+1. Define INR prices and plan entitlements server-side; add account/order/payment tables.
+2. Authenticated server endpoint creates Razorpay orders; browser cannot choose price or user id.
+3. Open Razorpay Checkout with the order id and public key id (never the secret).
+4. Server verifies the checkout signature, matches order/user/currency/amount and confirms payment
+   capture status. Browser success alone never grants access.
+5. Signed webhook endpoint verifies the raw request body, handles captured/failed/refunded events,
+   deduplicates event ids and reconciles entitlement state. Handle retries and out-of-order events.
+6. Test success, cancellation, failure, duplicate callback/webhook, refund, forged signature and
+   wrong amount; add reconciliation and operational alerts.
+7. Complete merchant activation, use Live keys and a production webhook secret, publish terms,
+   privacy/refund/support details, then verify a real payment/refund before enabling paid CTAs.
+
+Do not collect bank details, secrets or KYC documents through the app/chat. Subscription billing and
+one-time UPI payments require different renewal/expiry handling; choose the product before coding.

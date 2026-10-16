@@ -268,3 +268,14 @@ credentials are missing. Earlier statements that a disabled button could *only* 
 variables were incorrect because the hook swallowed fetch failures. Verification: 151 tests,
 lint, and both application/test typechecks pass. Hosted verification remains blocked by Vercel
 Authentication; request the user's new deployment URL and `/api/auth/session` response, never secrets.
+
+### 2026-10-16 — branding, AI disclosure and India billing direction
+
+User requested removal of duplicated Calendra branding on sign-in and the "Every layer" caption,
+a product favicon, candid completion status, India payments and step-by-step LLM setup.
+Removed the duplicate auth-panel logo (site header retains it), removed the caption, generated
+SVG/ICO from the existing calendar mark. Corrected cross-device storage marketing: current task
+persistence is localStorage. Billing never becomes ready merely because keys exist: no checkout
+endpoint existed. Removed Stripe activation advice; intended path is Razorpay including UPI,
+not falsely advertised as implemented. See `docs/LAUNCH-READINESS.md` for setup, AI data flow and
+remaining release gates. No supplied credentials were used to test external inference or payments.

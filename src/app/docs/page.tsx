@@ -93,10 +93,10 @@ export default function DocsPage() {
       state: 'default',
     },
     {
-      name: 'STRIPE_SECRET_KEY + STRIPE_PRICE_PRO / _TEAM',
+      name: 'Razorpay / UPI (planned)',
       required: 'No',
-      effect: 'Switches the pricing page from a waitlist to checkout. Absent: the page says so.',
-      state: billing.configured ? 'set' : 'missing',
+      effect: 'Not integrated. API keys alone do not enable checkout or paid entitlements.',
+      state: billing.configured ? 'available' : 'not implemented',
     },
     {
       name: 'DEMO_MODE',

@@ -287,3 +287,9 @@ write to a real calendar. The app never shows a sign-in button that cannot work 
 ## License
 
 MIT.
+
+### Launch readiness, AI configuration and India payments
+
+See [the launch-readiness guide](docs/LAUNCH-READINESS.md) for implemented versus missing features,
+step-by-step LLM setup and verification, AI responsibilities, and the planned Razorpay/UPI integration.
+This is a planner MVP, not a finished paid SaaS; payment keys alone do not enable purchases.

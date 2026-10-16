@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { ArrowRight, Check, Minus, Sparkles } from 'lucide-react'
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteFooter } from '@/components/site/SiteFooter'
@@ -14,9 +13,7 @@ import { billingConfigured } from '@/lib/billing'
  * step and a Google API call per sync. The free tier is the whole planner, because the planner is the
  * product; what you pay for is volume and team features.
  *
- * **Billing is a separate switch.** With no `STRIPE_SECRET_KEY` configured, this page says so and the
- * paid buttons read "Join the waitlist" instead of pretending to charge a card. A checkout button that
- * does nothing is worse than no checkout button.
+ * Paid plans are not available until Razorpay checkout and verified entitlements are implemented.
  */
 
 export const metadata: Metadata = {
@@ -138,13 +135,9 @@ export default function PricingPage() {
           <div className="mt-6 flex flex-wrap items-center gap-3 rounded-[var(--radius-cut-sm)] border border-dashed border-[color:rgba(120,98,70,0.3)] bg-paper-ivory/70 px-4 py-3">
             <PaperChip tone="kraft">Billing not connected</PaperChip>
             <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink-soft">
-              This deployment has no payment provider configured, so paid plans are a waitlist rather than a checkout.
-              Set <code className="font-mono text-[11.5px] text-ink">STRIPE_SECRET_KEY</code> and{' '}
-              <code className="font-mono text-[11.5px] text-ink">STRIPE_PRICE_PRO</code> to switch checkout on — see{' '}
-              <Link href="/docs#env" className="underline hover:text-ink">
-                the deployment guide
-              </Link>
-              .
+              Paid plans are not available yet. Razorpay checkout with UPI is planned, but payment verification
+              and account upgrades are not implemented. Adding API keys alone will not enable purchases.
+              You can use the free planner now.
             </p>
           </div>
         ) : null}
