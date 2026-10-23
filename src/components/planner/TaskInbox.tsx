@@ -324,7 +324,7 @@ export function TaskInbox() {
           </ul>
         )}
 
-        <footer className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:rgba(120,98,70,0.25)] pt-2.5">
+        <footer className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:rgba(63,46,84,0.25)] pt-2.5">
           <div className="flex gap-1.5">
             <PaperButton
               size="sm"

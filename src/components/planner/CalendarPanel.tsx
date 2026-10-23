@@ -65,7 +65,7 @@ export function CalendarPanel() {
               only — it never reads event details it does not need.
             </p>
             {/* A real anchor: OAuth consent must be a full navigation, not a client route. */}
-            <a href={calendarAuthUrl()} className="paper-fibre inline-flex items-center gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(120,98,70,0.2)] bg-frost px-3.5 py-1.5 text-sm font-semibold text-paper-ivory shadow-[var(--shadow-tile)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[var(--shadow-lift)]">
+            <a href={calendarAuthUrl()} className="paper-fibre inline-flex items-center gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(63,46,84,0.2)] bg-plum px-3.5 py-1.5 text-sm font-semibold text-paper-ivory shadow-[var(--shadow-tile)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[var(--shadow-lift)]">
               <Link2 size={13} aria-hidden="true" />
               Connect Google Calendar
             </a>

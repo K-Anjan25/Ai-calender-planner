@@ -311,3 +311,11 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Added FAQs to menu, verified accessible social labels, and focused contact textarea from paid-tier CTAs.
 - Stacked tablet hero earlier; enlarged preview labels and contained calendar overflow in its own region.
 - Verified native interaction checks, 165 tests, lint/typecheck and key text-pair numeric AA contrast.
+
+## 2026-10-23 — exclusive five-color palette
+
+- Applied the supplied five colors to landing, auth, dashboard, controls, illustrations and icons.
+- Removed old brand hues and grayscale noise, recolored shadows; versioned favicon URLs to v3.
+- Removed section-number labels, retained meaningful schedule/statistics values.
+- Replaced multicolor Google icon with text-only sign-in rather than recoloring Google's trademark.
+- Added source-wide palette and section-label guards; 167 tests and native landing behavior pass.

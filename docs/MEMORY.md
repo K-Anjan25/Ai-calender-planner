@@ -328,3 +328,14 @@ footer are warm light surfaces; ink on tinted cards and ivory on teal-deep butto
 normal-text contrast. Added FAQ navigation, contact focus for Pro/Teams, larger mock-calendar text and
 local scrolling plus earlier tablet stacking. Existing form/links behavior preserved and checked.
 No real-browser pixel/zoom or screen-reader conformance claim is made from these automated checks.
+
+### 2026-10-23 — user replaces palette with five exact swatches
+
+Supersedes original cream/teal palette preference: use only D7DEE6, BBCEA3, B88864, 47698C, 3F2E54.
+Rebased all live src authored hex/RGB colors, shared theme, diorama fills, shadows, logo and favicon.
+Legacy semantic token names remain to avoid breaking planner logic. Purple on grey/green supplies
+AA text contrast; blue/suede are accents (grey on blue is only 4.22:1; purple on suede 3.90:1, so
+neither is used as the normal small-text pair). Removed section indices and multicolor Google glyph
+(text-only button remains). Disabled grayscale noise backgrounds; alpha effects use palette RGBs.
+Native behavior smoke and 167 tests pass. Favicon cache keys v3. Repository standalone archive is
+not the live route; /calendra.html still redirects to the native homepage.

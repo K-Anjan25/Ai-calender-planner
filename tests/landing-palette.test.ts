@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { it } from 'node:test'
 
 const theme = readFileSync('src/app/globals.css', 'utf8')
@@ -28,7 +28,7 @@ function contrast(a: string, b: string) {
   return (values[0] + 0.05) / (values[1] + 0.05)
 }
 
-it('uses the original logo and shared palette, not an independent forest-green brand', () => {
+it('uses the original logo shape and shared palette tokens', () => {
   const source = readFileSync('src/components/landing/Landing.jsx', 'utf8')
   assert.match(
     source,
@@ -63,4 +63,50 @@ it('keeps the key body-text, button and event color pairs above AA normal-text c
       contrast(foreground, background) >= 4.5,
       `${foreground} on ${background} falls below 4.5:1`,
     )
+})
+
+it('restricts all live authored hex/RGB colors to the five supplied swatches', () => {
+  const allowed = new Set(['D7DEE6', 'BBCEA3', 'B88864', '47698C', '3F2E54'])
+  const walk = (directory: string): string[] =>
+    readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const path = `${directory}/${entry.name}`
+      return entry.isDirectory()
+        ? walk(path)
+        : /\.(css|jsx|tsx|ts|svg)$/.test(path)
+          ? [path]
+          : []
+    })
+  for (const path of walk('src')) {
+    const source = readFileSync(path, 'utf8')
+    for (const match of source.matchAll(/#([\da-f]{3,8})\b/gi)) {
+      let color = match[1].toUpperCase()
+      if (color.length === 3 || color.length === 4)
+        color = [...color].map((c) => c + c).join('')
+      assert.ok(
+        allowed.has(color.slice(0, 6)),
+        `${path}: off-palette ${match[0]}`,
+      )
+    }
+    for (const match of source.matchAll(
+      /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g,
+    )) {
+      const color = [match[1], match[2], match[3]]
+        .map((n) => Number(n).toString(16).padStart(2, '0'))
+        .join('')
+        .toUpperCase()
+      assert.ok(allowed.has(color), `${path}: off-palette RGB ${match[0]}`)
+    }
+  }
+  const rootColors = [
+    ...theme.matchAll(/--color-[\w-]+:\s*#([\da-f]{6})/gi),
+  ].map((m) => m[1].toUpperCase())
+  assert.deepEqual(new Set(rootColors), allowed)
+})
+
+it('removes section index labels without deleting real calendar/statistics data', () => {
+  const source = readFileSync('src/components/landing/Landing.jsx', 'utf8')
+  assert.ok(!/0[1-9]\s*\/\s*[A-Z]/.test(source))
+  assert.ok(!source.includes('01 — 05'))
+  assert.ok(source.includes('MAKE SENSE OF THE MESS'))
+  assert.ok(source.includes('KNOW YOUR LIMITS'))
 })

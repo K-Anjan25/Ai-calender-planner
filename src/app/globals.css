@@ -8,52 +8,52 @@
 
 @theme {
   /* --- base paper stock ------------------------------------------------ */
-  --color-paper-cream: #f2ead9;
-  --color-paper-ivory: #fbf7ee;
-  --color-paper-sand: #e8ddc7;
-  --color-paper-kraft: #d6c6a9;
-  --color-paper-edge: #cbb99b;
+  --color-paper-cream: #D7DEE6;
+  --color-paper-ivory: #D7DEE6;
+  --color-paper-sand: #D7DEE6;
+  --color-paper-kraft: #D7DEE6;
+  --color-paper-edge: #47698C;
 
   /* --- ink (warm, never pure black) ------------------------------------ */
-  --color-ink: #3b332a;
-  --color-ink-soft: #6c6052;
-  --color-ink-faint: #9b8d7a;
-  --color-ink-ghost: #c4b7a2;
+  --color-ink: #3F2E54;
+  --color-ink-soft: #3F2E54;
+  --color-ink-faint: #3F2E54;
+  --color-ink-ghost: #3F2E54;
 
   /* --- dyed sheet accents ---------------------------------------------- */
-  --color-rose: #c0707e;
-  --color-rose-deep: #9e4f5d;
-  --color-rose-light: #e6bcc1;
+  --color-rose: #3F2E54;
+  --color-rose-deep: #3F2E54;
+  --color-rose-light: #D7DEE6;
 
-  --color-terracotta: #c67f57;
-  --color-terracotta-deep: #9a5a38;
-  --color-terracotta-light: #e8c8b2;
+  --color-terracotta: #B88864;
+  --color-terracotta-deep: #3F2E54;
+  --color-terracotta-light: #D7DEE6;
 
-  --color-olive: #a79b5e;
-  --color-olive-deep: #7b7140;
-  --color-olive-light: #d6cea4;
+  --color-olive: #BBCEA3;
+  --color-olive-deep: #3F2E54;
+  --color-olive-light: #BBCEA3;
 
-  --color-teal: #5c8e90;
-  --color-teal-deep: #3d6b6e;
-  --color-teal-light: #b0ccca;
+  --color-teal: #3F2E54;
+  --color-teal-deep: #3F2E54;
+  --color-teal-light: #BBCEA3;
 
-  --color-plum: #7a6a9e;
-  --color-plum-deep: #57497a;
-  --color-plum-light: #c7bada;
+  --color-plum: #3F2E54;
+  --color-plum-deep: #3F2E54;
+  --color-plum-light: #D7DEE6;
 
-  --color-frost: #86a7c4;
-  --color-frost-deep: #4e6e90;
-  --color-frost-light: #cbdbe9;
+  --color-frost: #47698C;
+  --color-frost-deep: #3F2E54;
+  --color-frost-light: #D7DEE6;
 
   /* --- light & shadow: warm, soft, never grey -------------------------- */
-  --shadow-mat: 0 1px 0 rgba(255, 255, 255, 0.55), 0 3px 6px -2px rgba(88, 68, 44, 0.18);
-  --shadow-sheet: 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 14px -6px rgba(88, 68, 44, 0.22),
-    0 18px 34px -18px rgba(88, 68, 44, 0.28);
-  --shadow-lift: 0 2px 0 rgba(255, 255, 255, 0.5), 0 14px 28px -10px rgba(88, 68, 44, 0.3),
-    0 34px 60px -30px rgba(88, 68, 44, 0.36);
-  --shadow-cut: inset 0 2px 4px rgba(88, 68, 44, 0.22), inset 0 -1px 0 rgba(255, 255, 255, 0.5);
-  --shadow-press: inset 0 2px 3px rgba(88, 68, 44, 0.28), 0 1px 0 rgba(255, 255, 255, 0.45);
-  --shadow-tile: 0 1px 0 rgba(255, 255, 255, 0.5), 0 4px 8px -3px rgba(88, 68, 44, 0.24);
+  --shadow-mat: 0 1px 0 rgba(215,222,230,0.55), 0 3px 6px -2px rgba(63,46,84,0.18);
+  --shadow-sheet: 0 1px 0 rgba(215,222,230,0.6), 0 6px 14px -6px rgba(63,46,84,0.22),
+    0 18px 34px -18px rgba(63,46,84,0.28);
+  --shadow-lift: 0 2px 0 rgba(215,222,230,0.5), 0 14px 28px -10px rgba(63,46,84,0.3),
+    0 34px 60px -30px rgba(63,46,84,0.36);
+  --shadow-cut: inset 0 2px 4px rgba(63,46,84,0.22), inset 0 -1px 0 rgba(215,222,230,0.5);
+  --shadow-press: inset 0 2px 3px rgba(63,46,84,0.28), 0 1px 0 rgba(215,222,230,0.45);
+  --shadow-tile: 0 1px 0 rgba(215,222,230,0.5), 0 4px 8px -3px rgba(63,46,84,0.24);
 
   /* --- hand-cut radii (asymmetric on purpose) -------------------------- */
   --radius-cut: 14px 17px 13px 18px / 16px 13px 18px 14px;
@@ -213,7 +213,7 @@
      * is made of (MEMORY.md §5b). The noise is greyscale at 5%, so a normal blend darkens the paper
      * by a visually indistinguishable amount and costs one ordinary layer instead.
      */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9 0.015' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23f)'/%3E%3C/svg%3E");
+    background-image: none;
     background-size: 240px 240px;
   }
 
@@ -226,22 +226,22 @@
     pointer-events: none;
     opacity: 0.035;
     /* Unblended for the same reason as `.paper-fibre` — see the note there. */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23t)'/%3E%3C/svg%3E");
+    background-image: none;
   }
 
   /* The lighting of the whole board: soft warm vignette. */
   .paper-board {
     background-color: var(--color-paper-cream);
     background-image:
-      radial-gradient(120% 85% at 50% -10%, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 55%),
-      radial-gradient(125% 100% at 50% 115%, rgba(88, 68, 44, 0.13) 0%, rgba(88, 68, 44, 0) 60%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, rgba(88, 68, 44, 0.05) 100%);
+      radial-gradient(120% 85% at 50% -10%, rgba(215,222,230,0.72) 0%, rgba(215,222,230,0) 55%),
+      radial-gradient(125% 100% at 50% 115%, rgba(63,46,84,0.13) 0%, rgba(63,46,84,0) 60%),
+      linear-gradient(180deg, rgba(215,222,230,0.25) 0%, rgba(63,46,84,0.05) 100%);
   }
 
   /* A raised sheet: cut edge highlight + warm drop shadow. */
   .paper-sheet {
     background-color: var(--color-paper-ivory);
-    border: 1px solid rgba(120, 98, 70, 0.14);
+    border: 1px solid rgba(63,46,84,0.14);
     border-radius: var(--radius-cut);
     box-shadow: var(--shadow-sheet);
     position: relative;
@@ -266,14 +266,14 @@
     background-color: var(--color-paper-sand);
     border-radius: var(--radius-well);
     box-shadow: var(--shadow-cut);
-    border: 1px solid rgba(120, 98, 70, 0.12);
+    border: 1px solid rgba(63,46,84,0.12);
   }
 
   /* Cut edge highlight for small tiles. */
   .paper-tile {
     background-color: var(--color-paper-ivory);
     border-radius: var(--radius-cut-sm);
-    border: 1px solid rgba(120, 98, 70, 0.16);
+    border: 1px solid rgba(63,46,84,0.16);
     box-shadow: var(--shadow-tile);
     position: relative;
     overflow: hidden;
@@ -283,7 +283,7 @@
     position: absolute;
     inset: 0 0 auto 0;
     height: 1px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+    background: linear-gradient(180deg, rgba(215,222,230,0.9), rgba(215,222,230,0));
     pointer-events: none;
   }
 
@@ -297,16 +297,16 @@
     /* Its own paint region: the overlay covers the viewport, so without this any repaint under it
        invites a re-composite of the whole screen. Unblended — see `.paper-fibre`. */
     contain: paint;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-image: none;
   }
 
   /* Scalloped deckle edge used on hero scenery and section cuts. */
   .deckle-top {
-    -webkit-mask-image: radial-gradient(circle at 6px -2px, transparent 6px, black 6.5px);
+    -webkit-mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #3F2E54 6.5px);
     -webkit-mask-size: 14px 12px;
     -webkit-mask-repeat: repeat-x;
     -webkit-mask-position: top left;
-    mask-image: radial-gradient(circle at 6px -2px, transparent 6px, black 6.5px);
+    mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #3F2E54 6.5px);
     mask-size: 14px 12px;
     mask-repeat: repeat-x;
     mask-position: top left;
@@ -314,21 +314,21 @@
 
   /* Perforation dots along a cut line. */
   .paper-perforation {
-    border-top: 1px dashed rgba(120, 98, 70, 0.3);
+    border-top: 1px dashed rgba(63,46,84,0.3);
   }
 
   /* Per-layer depth for SVG diorama scenery — tuned warm, never grey. */
   .layer-shadow-1 {
-    filter: drop-shadow(0 3px 4px rgba(88, 68, 44, 0.16));
+    filter: drop-shadow(0 3px 4px rgba(63,46,84,0.16));
   }
   .layer-shadow-2 {
-    filter: drop-shadow(0 7px 9px rgba(88, 68, 44, 0.2));
+    filter: drop-shadow(0 7px 9px rgba(63,46,84,0.2));
   }
   .layer-shadow-3 {
-    filter: drop-shadow(0 12px 14px rgba(88, 68, 44, 0.24));
+    filter: drop-shadow(0 12px 14px rgba(63,46,84,0.24));
   }
   .layer-shadow-4 {
-    filter: drop-shadow(0 18px 20px rgba(88, 68, 44, 0.28));
+    filter: drop-shadow(0 18px 20px rgba(63,46,84,0.28));
   }
 
   /* Drag handle / lifted sheet. */

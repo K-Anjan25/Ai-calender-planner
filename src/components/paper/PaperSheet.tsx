@@ -40,7 +40,7 @@ export function PaperSheet({
         'paper-fibre paper-tooth relative',
         TONE_CLASS[tone],
         shadow,
-        'border border-[color:rgba(120,98,70,0.14)]',
+        'border border-[color:rgba(63,46,84,0.14)]',
         'rounded-[var(--radius-cut)]',
         mat && 'paper-mat',
         className,

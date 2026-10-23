@@ -366,7 +366,6 @@ function Home() {
           <div className={s.heroVisual} data-depth="0.08">
             <div className={s.visualLabel}>
               <span>THE AI CALENDAR PLANNER</span>
-              <span>01 — 05</span>
             </div>
             <div
               className={s.calendarScroll}
@@ -411,7 +410,7 @@ function Home() {
       <section className={s.section} id="how-it-works">
         <div className={s.split}>
           <Reveal>
-            <div className={s.number}>01 / MAKE SENSE OF THE MESS</div>
+            <div className={s.number}>MAKE SENSE OF THE MESS</div>
             <h2>
               A head full of tasks.
               <br />
@@ -474,7 +473,7 @@ function Home() {
             <small>Illustrative capacity report</small>
           </Reveal>
           <Reveal>
-            <div className={s.number}>02 / KNOW YOUR LIMITS</div>
+            <div className={s.number}>KNOW YOUR LIMITS</div>
             <h2>
               “It doesn’t fit”
               <br />

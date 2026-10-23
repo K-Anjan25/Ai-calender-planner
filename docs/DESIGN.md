@@ -304,3 +304,14 @@ Text on teal-light/event cards uses ink, not muted gray. Primary buttons use ivo
 Key text pairs are numerically tested at 4.5:1 or above; this is not a full accessibility certification.
 Tablet hero columns stack at 1050px; the calendar gets a local horizontal scroll region instead of
 shrinking event labels beyond readability. Reduced-motion preferences remain supported.
+
+## 2026-10-23 — Clay / Home Office palette (supersedes previous palette)
+
+The only five authored base colors in the live UI are Angélique Grey `#D7DEE6`, Spumoni Green
+`#BBCEA3`, Suede `#B88864`, Snake River `#47698C` and Naggaroth Night `#3F2E54`, from the user's
+reference. Existing semantic token names remain for compatibility with planner controls, but all
+resolve to these five colors. Purple/grey and purple/green are the normal-text pairings; blue and
+suede are accents, borders, indicators and illustration colors. Alpha shadows use only these RGB
+bases, not black/white. Removed grayscale texture overlays that generated unrelated base colors.
+Original logo geometry remains; SVG/ICO/PNG icons are recolored and favicon URLs are versioned v3.
+No section-number labels (01/02 or 01–05); real dates, times and meaningful statistics remain.

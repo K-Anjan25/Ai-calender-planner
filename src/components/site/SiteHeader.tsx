@@ -31,7 +31,7 @@ export function SiteHeader({ tone = 'board' }: { tone?: 'board' | 'sand' }) {
     <header
       className={
         tone === 'sand'
-          ? 'relative z-20 border-b border-[color:rgba(120,98,70,0.16)] bg-paper-sand/70'
+          ? 'relative z-20 border-b border-[color:rgba(63,46,84,0.16)] bg-paper-sand/70'
           : 'relative z-20'
       }
     >
@@ -121,7 +121,7 @@ export function SiteHeader({ tone = 'board' }: { tone?: 'board' | 'sand' }) {
       </div>
 
       {open ? (
-        <div id="site-menu" className="border-t border-dashed border-[color:rgba(120,98,70,0.22)] bg-paper-ivory/95 lg:hidden">
+        <div id="site-menu" className="border-t border-dashed border-[color:rgba(63,46,84,0.22)] bg-paper-ivory/95 lg:hidden">
           <nav className="mx-auto grid max-w-[1240px] gap-1 px-4 py-3 sm:px-8" aria-label="Mobile">
             {NAV.map((item) => (
               <Link
@@ -133,7 +133,7 @@ export function SiteHeader({ tone = 'board' }: { tone?: 'board' | 'sand' }) {
                 {item.label}
               </Link>
             ))}
-            <div className="mt-1 grid gap-2 border-t border-dashed border-[color:rgba(120,98,70,0.22)] pt-3">
+            <div className="mt-1 grid gap-2 border-t border-dashed border-[color:rgba(63,46,84,0.22)] pt-3">
               {user ? (
                 <>
                   <p className="px-3 text-[12.5px] text-ink-soft">
