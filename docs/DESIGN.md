@@ -324,3 +324,12 @@ cards, darker sage/grey/terracotta accents. Alpha shadows reuse these RGB values
 token names remain compatibility aliases. Favicon/Apple icon cache keys are v4; original logo
 geometry and the no-section-number preference remain. Source-wide palette and contrast tests guard
 this replacement; the earlier blue/purple palette is no longer active.
+
+## 2026-10-23 — Slate / Amethyst / Mist / Keylime (current palette)
+
+Supersedes all previous palette references: Slate `#4D5C60`, Amethyst `#525266`, Mist `#D1E0DE`,
+Keylime `#EEF4CE` are the only live authored base colors. Mist surfaces, Slate text/primary buttons,
+Keylime tinted cards and Amethyst accents. Shadows/transparency reuse the same four RGB bases.
+Semantic token names remain backward-compatible with the planner. Original calendar logo shape
+retained; icon cache keys v5. Section indices remain absent. Source-wide four-color guard and key
+normal-text contrast tests pass; no full browser accessibility certification is implied.

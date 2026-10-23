@@ -65,8 +65,8 @@ it('keeps the key body-text, button and event color pairs above AA normal-text c
     )
 })
 
-it('restricts all live authored hex/RGB colors to the six supplied swatches', () => {
-  const allowed = new Set(['E6E1D5', '848381', '969A82', 'BBBCA7', '474646', 'AE7960'])
+it('restricts all live authored hex/RGB colors to the four supplied swatches', () => {
+  const allowed = new Set(['4D5C60', '525266', 'D1E0DE', 'EEF4CE'])
   const walk = (directory: string): string[] =>
     readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
       const path = `${directory}/${entry.name}`

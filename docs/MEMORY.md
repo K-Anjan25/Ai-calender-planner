@@ -347,3 +347,10 @@ hex/RGB bases, semantic theme values, diorama fills and icons. Light sage is use
 cards/buttons, dark sage for accents. Original logo shape, no section numbers and existing dashboard
 flows retained. Versioned favicon URLs v4. 167 tests, lint/typecheck and native UI smoke validate
 palette boundaries, key text contrast and behavior; no claim of full pixel/browser accessibility audit.
+
+### 2026-10-23 — four-color reference replaces six-swatch palette
+
+Latest user image specifies 4D5C60 (Slate), 525266 (Amethyst), D1E0DE (Mist), EEF4CE (Keylime).
+Replaced all live src hex/RGB bases and regenerated icons, including older PNG asset URLs; current
+favicon filenames v5. No new logo shape, no section indices, no dashboard/auth behavior changes.
+Updated regression palette whitelist. 167 tests, lint/typecheck and native landing smoke pass.

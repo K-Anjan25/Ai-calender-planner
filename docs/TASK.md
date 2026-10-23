@@ -326,3 +326,9 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Preserved original logo shape and removed section indices; favicon cache keys now v4.
 - Updated source-wide palette guard to exactly the six requested base colors.
 - Verified 167 tests, lint/typecheck; production build and native behavior smoke run before push.
+
+## 2026-10-23 — current four-color reference
+
+- Applied Slate/Amethyst/Mist/Keylime across landing, auth, planner, SVG scenes and icons.
+- Preserved logo geometry and no-section-number requirement; refreshed favicon URLs to v5.
+- Source-wide exact-palette guard, contrast tests, 167 regression tests and native UI smoke pass.
