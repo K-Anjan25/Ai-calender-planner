@@ -8,42 +8,42 @@
 
 @theme {
   /* --- base paper stock ------------------------------------------------ */
-  --color-paper-cream: #F3E3D2;
-  --color-paper-ivory: #F3E3D2;
-  --color-paper-sand: #F3E3D2;
-  --color-paper-kraft: #F3E3D2;
-  --color-paper-edge: #0C4A57;
+  --color-paper-cream: #F3F6FF;
+  --color-paper-ivory: #F3F6FF;
+  --color-paper-sand: #F3F6FF;
+  --color-paper-kraft: #F3F6FF;
+  --color-paper-edge: #3770BF;
 
   /* --- ink (warm, never pure black) ------------------------------------ */
-  --color-ink: #0C4A57;
-  --color-ink-soft: #0C4A57;
-  --color-ink-faint: #0C4A57;
-  --color-ink-ghost: #0C4A57;
+  --color-ink: #3770BF;
+  --color-ink-soft: #3770BF;
+  --color-ink-faint: #3770BF;
+  --color-ink-ghost: #3770BF;
 
   /* --- dyed sheet accents ---------------------------------------------- */
-  --color-rose: #0C4A57;
-  --color-rose-deep: #0C4A57;
-  --color-rose-light: #F3E3D2;
+  --color-rose: #3770BF;
+  --color-rose-deep: #3770BF;
+  --color-rose-light: #F3F6FF;
 
-  --color-terracotta: #FEBF12;
-  --color-terracotta-deep: #0C4A57;
-  --color-terracotta-light: #F3E3D2;
+  --color-terracotta: #CEF26D;
+  --color-terracotta-deep: #3770BF;
+  --color-terracotta-light: #F3F6FF;
 
-  --color-olive: #258C9B;
-  --color-olive-deep: #0C4A57;
-  --color-olive-light: #F3E3D2;
+  --color-olive: #8DC2FF;
+  --color-olive-deep: #3770BF;
+  --color-olive-light: #F3F6FF;
 
-  --color-teal: #0C4A57;
-  --color-teal-deep: #0C4A57;
-  --color-teal-light: #F3E3D2;
+  --color-teal: #3770BF;
+  --color-teal-deep: #3770BF;
+  --color-teal-light: #F3F6FF;
 
-  --color-plum: #0C4A57;
-  --color-plum-deep: #0C4A57;
-  --color-plum-light: #F3E3D2;
+  --color-plum: #3770BF;
+  --color-plum-deep: #3770BF;
+  --color-plum-light: #F3F6FF;
 
-  --color-frost: #258C9B;
-  --color-frost-deep: #0C4A57;
-  --color-frost-light: #F3E3D2;
+  --color-frost: #8DC2FF;
+  --color-frost-deep: #3770BF;
+  --color-frost-light: #F3F6FF;
 
   /* --- light & shadow: warm, soft, never grey -------------------------- */
   --shadow-mat: none;
@@ -293,3 +293,7 @@
 /* Native landing anchors account for the fixed menu; honor reduced motion globally. */
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Sunny Herb / Blue Harbor reaches 3.91:1, suitable for large bold type,
+   not small body labels. Keep all primary attention buttons above that threshold. */
+button[data-accent='terracotta'] { font-size: 19px; font-weight: 700; min-height: 44px; }

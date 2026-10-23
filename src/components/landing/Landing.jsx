@@ -97,6 +97,7 @@ function LinkButton({
   return (
     <Link
       href={href}
+      data-attention={!secondary && href === '/planner' ? true : undefined}
       className={`${s.button} ${secondary ? s.secondary : ''} ${className}`}
       onClick={
         href === '#contact'

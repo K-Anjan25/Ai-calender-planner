@@ -397,3 +397,11 @@ LD_LIBRARY_PATH. One browser per viewport avoids packaged single-process context
 Actual Chromium tests at five widths/DPR2 cover fields, overflow, validation, retained data, success
 reset, newsletter/menu. External fonts blocked to test fallback; delivery responses mocked. This is
 not proof of live delivery or full WCAG certification. Keep CONTACT/NEWSLETTER webhook setup caveat.
+
+### Latest user palette supersedes ocean/gold/sand
+
+Exact bases now F3F6FF Moon Tint canvas, 3770BF Blue Harbor type/structure/ordinary primary buttons,
+8DC2FF Ice Blue secondary cards/active slots, CEF26D Sunny Herb Build my week/capacity warning.
+Blue on Moon 4.59:1; blue on Sunny 3.91:1 so attention labels must be >=19px bold. Ice Blue
+small labels get Moon Tint inset surfaces (blue-on-ice only2.67:1). No fifth/darker color added.
+Contact/newsletter fixes retained. Icon cache v9. Existing browser test covers five widths/DPR2.

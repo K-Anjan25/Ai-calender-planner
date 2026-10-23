@@ -63,7 +63,7 @@ export function SiteFooter() {
             ))}
           </div>
 
-          <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[color:rgba(12,74,87,0.25)] pt-6 text-[11.5px] text-ink-faint">
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[color:rgba(55,112,191,0.25)] pt-6 text-[11.5px] text-ink-faint">
             <p>© {new Date().getFullYear()} Calendra · MIT licensed</p>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>Next.js</span>

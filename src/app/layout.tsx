@@ -13,14 +13,14 @@ export const metadata: Metadata = {
     'Give Calendra your tasks, deadlines and preferences. It builds a realistic week — or tells you exactly what does not fit, and what to trade.',
   applicationName: 'Calendra',
   icons: {
-    icon: [{ url: '/calendra-icon-v8.png', type: 'image/png', sizes: '64x64' }],
-    shortcut: '/calendra-icon-v8.png',
-    apple: [{ url: '/calendra-apple-v8.png', sizes: '180x180', type: 'image/png' }],
+    icon: [{ url: '/calendra-icon-v9.png', type: 'image/png', sizes: '64x64' }],
+    shortcut: '/calendra-icon-v9.png',
+    apple: [{ url: '/calendra-apple-v9.png', sizes: '180x180', type: 'image/png' }],
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F3E3D2',
+  themeColor: '#F3F6FF',
   width: 'device-width',
   initialScale: 1,
 }

@@ -63,6 +63,32 @@ try {
       route.abort(),
     )
     await page.goto(base, { waitUntil: 'networkidle' })
+    const attention = await page
+      .locator('a[data-attention]')
+      .first()
+      .evaluate((el) => {
+        const style = getComputedStyle(el)
+        return {
+          fill: style.backgroundColor,
+          text: style.color,
+          size: parseFloat(style.fontSize),
+          weight: Number(style.fontWeight),
+        }
+      })
+    assert.equal(
+      attention.fill,
+      'rgb(206, 242, 109)',
+      'Build my week must use Sunny Herb',
+    )
+    assert.equal(
+      attention.text,
+      'rgb(55, 112, 191)',
+      'CTA type must use Blue Harbor',
+    )
+    assert.ok(
+      attention.size >= 19 && attention.weight >= 700,
+      'Blue on lime requires large bold type',
+    )
     const form = page.getByRole('form', { name: 'Contact Calendra' })
     await form.scrollIntoViewIfNeeded()
     await page.waitForFunction(

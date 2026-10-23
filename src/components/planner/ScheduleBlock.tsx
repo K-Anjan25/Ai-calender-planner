@@ -141,7 +141,7 @@ export function ScheduleBlock({
           aria-label={`Resize ${block.title}`}
           onPointerDown={onResizePointerDown}
           className="absolute inset-x-1 bottom-0 h-1.5 cursor-ns-resize rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-          style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(12,74,87,.35) 0 3px, transparent 3px 6px)' }}
+          style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(55,112,191,.35) 0 3px, transparent 3px 6px)' }}
         />
       ) : null}
     </button>

@@ -365,3 +365,15 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
   retained values on failure, success reset, newsletter, menu navigation and no form-covering CTA.
 - Delivery responses in browser success/failure tests are mocked, not proof of external delivery.
 - Unit/integration baseline: 169 tests; lint/typecheck and native landing behavior checks pass.
+
+## Latest exclusive palette request — Moon Tint / Sunny Herb / Blue Harbor / Ice Blue
+
+Replaced all previous live base hex/RGB colors with F3F6FF, CEF26D, 3770BF, 8DC2FF.
+Canvas/normal text/secondary cards/main attention roles match the supplied reference.
+Blue-on-lime labels use large bold text; blue-on-ice small labels retain Moon Tint inset fills.
+Updated icons/cache v9 and palette regression assertions. Preserve form repairs and no particles.
+
+Final verification: 169 tests, lint/typecheck, native interaction check and production build passed.
+Real Chromium checks passed at 320/390/768/1024/1440px (DPR2), including computed Sunny Herb CTA fill,
+Blue Harbor text/large bold geometry, form visibility, no page overflow and mocked delivery states.
+Production HTTP landing/signin/signup/planner/icon v9 endpoints returned200. No PR created.

@@ -380,3 +380,15 @@ Email flex row no longer declares width zero. Contact columns use minmax(0,1fr);
 without overflowing. Newsletter has an enclosed input/button row. Floating actions hide while a form
 is visible, avoiding overlays over submit controls/live messages. Validation clears on editing and
 submission errors retain the user's text.
+
+## 2026-10-24 — superseding Moon Tint / Sunny Herb palette
+
+Only current base colors: Moon Tint #F3F6FF (canvas/label surfaces), Blue Harbor #3770BF
+(text, structure, normal primary buttons/footer), Ice Blue #8DC2FF (secondary cards/active slots,
+category outlines, hover accents), Sunny Herb #CEF26D (Build my week/capacity alert).
+Previous ocean/gold/sand palette is superseded. Calendar icons refreshed with v9 cache keys.
+
+Measured Blue Harbor contrast: Moon Tint 4.59:1, Sunny Herb 3.91:1, Ice Blue 2.67:1.
+Therefore Sunny Herb attention text is 19px/700 (large text threshold), not small body text;
+Ice Blue panels use Moon Tint inset text surfaces. No extra dark color introduced.
+Form borders, responsive constraints, error handling and floating-action avoidance are preserved.
