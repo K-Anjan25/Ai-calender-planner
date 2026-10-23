@@ -8,52 +8,52 @@
 
 @theme {
   /* --- base paper stock ------------------------------------------------ */
-  --color-paper-cream: #D7DEE6;
-  --color-paper-ivory: #D7DEE6;
-  --color-paper-sand: #D7DEE6;
-  --color-paper-kraft: #D7DEE6;
-  --color-paper-edge: #47698C;
+  --color-paper-cream: #E6E1D5;
+  --color-paper-ivory: #E6E1D5;
+  --color-paper-sand: #E6E1D5;
+  --color-paper-kraft: #E6E1D5;
+  --color-paper-edge: #848381;
 
   /* --- ink (warm, never pure black) ------------------------------------ */
-  --color-ink: #3F2E54;
-  --color-ink-soft: #3F2E54;
-  --color-ink-faint: #3F2E54;
-  --color-ink-ghost: #3F2E54;
+  --color-ink: #474646;
+  --color-ink-soft: #474646;
+  --color-ink-faint: #474646;
+  --color-ink-ghost: #474646;
 
   /* --- dyed sheet accents ---------------------------------------------- */
-  --color-rose: #3F2E54;
-  --color-rose-deep: #3F2E54;
-  --color-rose-light: #D7DEE6;
+  --color-rose: #474646;
+  --color-rose-deep: #474646;
+  --color-rose-light: #E6E1D5;
 
-  --color-terracotta: #B88864;
-  --color-terracotta-deep: #3F2E54;
-  --color-terracotta-light: #D7DEE6;
+  --color-terracotta: #AE7960;
+  --color-terracotta-deep: #474646;
+  --color-terracotta-light: #E6E1D5;
 
-  --color-olive: #BBCEA3;
-  --color-olive-deep: #3F2E54;
-  --color-olive-light: #BBCEA3;
+  --color-olive: #969A82;
+  --color-olive-deep: #474646;
+  --color-olive-light: #BBBCA7;
 
-  --color-teal: #3F2E54;
-  --color-teal-deep: #3F2E54;
-  --color-teal-light: #BBCEA3;
+  --color-teal: #474646;
+  --color-teal-deep: #474646;
+  --color-teal-light: #BBBCA7;
 
-  --color-plum: #3F2E54;
-  --color-plum-deep: #3F2E54;
-  --color-plum-light: #D7DEE6;
+  --color-plum: #474646;
+  --color-plum-deep: #474646;
+  --color-plum-light: #E6E1D5;
 
-  --color-frost: #47698C;
-  --color-frost-deep: #3F2E54;
-  --color-frost-light: #D7DEE6;
+  --color-frost: #848381;
+  --color-frost-deep: #474646;
+  --color-frost-light: #E6E1D5;
 
   /* --- light & shadow: warm, soft, never grey -------------------------- */
-  --shadow-mat: 0 1px 0 rgba(215,222,230,0.55), 0 3px 6px -2px rgba(63,46,84,0.18);
-  --shadow-sheet: 0 1px 0 rgba(215,222,230,0.6), 0 6px 14px -6px rgba(63,46,84,0.22),
-    0 18px 34px -18px rgba(63,46,84,0.28);
-  --shadow-lift: 0 2px 0 rgba(215,222,230,0.5), 0 14px 28px -10px rgba(63,46,84,0.3),
-    0 34px 60px -30px rgba(63,46,84,0.36);
-  --shadow-cut: inset 0 2px 4px rgba(63,46,84,0.22), inset 0 -1px 0 rgba(215,222,230,0.5);
-  --shadow-press: inset 0 2px 3px rgba(63,46,84,0.28), 0 1px 0 rgba(215,222,230,0.45);
-  --shadow-tile: 0 1px 0 rgba(215,222,230,0.5), 0 4px 8px -3px rgba(63,46,84,0.24);
+  --shadow-mat: 0 1px 0 rgba(230,225,213,0.55), 0 3px 6px -2px rgba(71,70,70,0.18);
+  --shadow-sheet: 0 1px 0 rgba(230,225,213,0.6), 0 6px 14px -6px rgba(71,70,70,0.22),
+    0 18px 34px -18px rgba(71,70,70,0.28);
+  --shadow-lift: 0 2px 0 rgba(230,225,213,0.5), 0 14px 28px -10px rgba(71,70,70,0.3),
+    0 34px 60px -30px rgba(71,70,70,0.36);
+  --shadow-cut: inset 0 2px 4px rgba(71,70,70,0.22), inset 0 -1px 0 rgba(230,225,213,0.5);
+  --shadow-press: inset 0 2px 3px rgba(71,70,70,0.28), 0 1px 0 rgba(230,225,213,0.45);
+  --shadow-tile: 0 1px 0 rgba(230,225,213,0.5), 0 4px 8px -3px rgba(71,70,70,0.24);
 
   /* --- hand-cut radii (asymmetric on purpose) -------------------------- */
   --radius-cut: 14px 17px 13px 18px / 16px 13px 18px 14px;
@@ -233,15 +233,15 @@
   .paper-board {
     background-color: var(--color-paper-cream);
     background-image:
-      radial-gradient(120% 85% at 50% -10%, rgba(215,222,230,0.72) 0%, rgba(215,222,230,0) 55%),
-      radial-gradient(125% 100% at 50% 115%, rgba(63,46,84,0.13) 0%, rgba(63,46,84,0) 60%),
-      linear-gradient(180deg, rgba(215,222,230,0.25) 0%, rgba(63,46,84,0.05) 100%);
+      radial-gradient(120% 85% at 50% -10%, rgba(230,225,213,0.72) 0%, rgba(230,225,213,0) 55%),
+      radial-gradient(125% 100% at 50% 115%, rgba(71,70,70,0.13) 0%, rgba(71,70,70,0) 60%),
+      linear-gradient(180deg, rgba(230,225,213,0.25) 0%, rgba(71,70,70,0.05) 100%);
   }
 
   /* A raised sheet: cut edge highlight + warm drop shadow. */
   .paper-sheet {
     background-color: var(--color-paper-ivory);
-    border: 1px solid rgba(63,46,84,0.14);
+    border: 1px solid rgba(71,70,70,0.14);
     border-radius: var(--radius-cut);
     box-shadow: var(--shadow-sheet);
     position: relative;
@@ -266,14 +266,14 @@
     background-color: var(--color-paper-sand);
     border-radius: var(--radius-well);
     box-shadow: var(--shadow-cut);
-    border: 1px solid rgba(63,46,84,0.12);
+    border: 1px solid rgba(71,70,70,0.12);
   }
 
   /* Cut edge highlight for small tiles. */
   .paper-tile {
     background-color: var(--color-paper-ivory);
     border-radius: var(--radius-cut-sm);
-    border: 1px solid rgba(63,46,84,0.16);
+    border: 1px solid rgba(71,70,70,0.16);
     box-shadow: var(--shadow-tile);
     position: relative;
     overflow: hidden;
@@ -283,7 +283,7 @@
     position: absolute;
     inset: 0 0 auto 0;
     height: 1px;
-    background: linear-gradient(180deg, rgba(215,222,230,0.9), rgba(215,222,230,0));
+    background: linear-gradient(180deg, rgba(230,225,213,0.9), rgba(230,225,213,0));
     pointer-events: none;
   }
 
@@ -302,11 +302,11 @@
 
   /* Scalloped deckle edge used on hero scenery and section cuts. */
   .deckle-top {
-    -webkit-mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #3F2E54 6.5px);
+    -webkit-mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #474646 6.5px);
     -webkit-mask-size: 14px 12px;
     -webkit-mask-repeat: repeat-x;
     -webkit-mask-position: top left;
-    mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #3F2E54 6.5px);
+    mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #474646 6.5px);
     mask-size: 14px 12px;
     mask-repeat: repeat-x;
     mask-position: top left;
@@ -314,21 +314,21 @@
 
   /* Perforation dots along a cut line. */
   .paper-perforation {
-    border-top: 1px dashed rgba(63,46,84,0.3);
+    border-top: 1px dashed rgba(71,70,70,0.3);
   }
 
   /* Per-layer depth for SVG diorama scenery — tuned warm, never grey. */
   .layer-shadow-1 {
-    filter: drop-shadow(0 3px 4px rgba(63,46,84,0.16));
+    filter: drop-shadow(0 3px 4px rgba(71,70,70,0.16));
   }
   .layer-shadow-2 {
-    filter: drop-shadow(0 7px 9px rgba(63,46,84,0.2));
+    filter: drop-shadow(0 7px 9px rgba(71,70,70,0.2));
   }
   .layer-shadow-3 {
-    filter: drop-shadow(0 12px 14px rgba(63,46,84,0.24));
+    filter: drop-shadow(0 12px 14px rgba(71,70,70,0.24));
   }
   .layer-shadow-4 {
-    filter: drop-shadow(0 18px 20px rgba(63,46,84,0.28));
+    filter: drop-shadow(0 18px 20px rgba(71,70,70,0.28));
   }
 
   /* Drag handle / lifted sheet. */

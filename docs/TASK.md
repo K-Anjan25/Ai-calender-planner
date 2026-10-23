@@ -319,3 +319,10 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Removed section-number labels, retained meaningful schedule/statistics values.
 - Replaced multicolor Google icon with text-only sign-in rather than recoloring Google's trademark.
 - Added source-wide palette and section-label guards; 167 tests and native landing behavior pass.
+
+## 2026-10-23 — latest six-color reference
+
+- Replaced previous five swatches across landing/auth/planner/illustrations and icon assets.
+- Preserved original logo shape and removed section indices; favicon cache keys now v4.
+- Updated source-wide palette guard to exactly the six requested base colors.
+- Verified 167 tests, lint/typecheck; production build and native behavior smoke run before push.

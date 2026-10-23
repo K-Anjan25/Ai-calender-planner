@@ -315,3 +315,12 @@ suede are accents, borders, indicators and illustration colors. Alpha shadows us
 bases, not black/white. Removed grayscale texture overlays that generated unrelated base colors.
 Original logo geometry remains; SVG/ICO/PNG icons are recolored and favicon URLs are versioned v3.
 No section-number labels (01/02 or 01–05); real dates, times and meaningful statistics remain.
+
+## 2026-10-23 — six-swatch palette (supersedes the five-swatch reference)
+
+Only these authored base colors are used across the live app: `#E6E1D5`, `#848381`, `#969A82`,
+`#BBBCA7`, `#474646`, `#AE7960`. Cream surfaces, charcoal text/primary actions, pale sage tinted
+cards, darker sage/grey/terracotta accents. Alpha shadows reuse these RGB values. Legacy semantic
+token names remain compatibility aliases. Favicon/Apple icon cache keys are v4; original logo
+geometry and the no-section-number preference remain. Source-wide palette and contrast tests guard
+this replacement; the earlier blue/purple palette is no longer active.

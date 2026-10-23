@@ -339,3 +339,11 @@ neither is used as the normal small-text pair). Removed section indices and mult
 (text-only button remains). Disabled grayscale noise backgrounds; alpha effects use palette RGBs.
 Native behavior smoke and 167 tests pass. Favicon cache keys v3. Repository standalone archive is
 not the live route; /calendra.html still redirects to the native homepage.
+
+### 2026-10-23 — latest palette replaces previous reference
+
+User supplied six exact swatches: E6E1D5, 848381, 969A82, BBBCA7, 474646, AE7960. Replaced all live
+hex/RGB bases, semantic theme values, diorama fills and icons. Light sage is used for text-bearing
+cards/buttons, dark sage for accents. Original logo shape, no section numbers and existing dashboard
+flows retained. Versioned favicon URLs v4. 167 tests, lint/typecheck and native UI smoke validate
+palette boundaries, key text contrast and behavior; no claim of full pixel/browser accessibility audit.

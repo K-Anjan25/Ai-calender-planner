@@ -69,7 +69,7 @@ export default function PlannerWorkspace() {
       {/* backdrop diorama — far layer, heavily muted so text always wins */}
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] overflow-hidden opacity-[0.38]">
         <DioramaScene variant="week" opacity={0.9} />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(215,222,230,0.10)_0%,rgba(215,222,230,0.72)_55%,rgba(215,222,230,1)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(230,225,213,0.10)_0%,rgba(230,225,213,0.72)_55%,rgba(230,225,213,1)_100%)]" />
       </div>
 
       <header className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
