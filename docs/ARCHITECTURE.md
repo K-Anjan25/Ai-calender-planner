@@ -499,3 +499,17 @@ re-render the week.
 | Sessions in a signed cookie, not a table (D-024) | Deployable with no store and no migration; the cost is no server-side revocation — signing out clears the browser, not the token. |
 | Billing is a switch, not an integration (D-025) | The pricing page can never offer a button that cannot charge; the cost is no self-serve upgrade on an unconfigured deployment. |
 | Tailwind v4 CSS-first tokens, no config file | Tokens live in `globals.css` `@theme`; one file to review for design drift. |
+
+## Native immersive landing (2026-10-23)
+
+`src/app/page.tsx` supplies server metadata and renders the client-interactive Landing component.
+Next pre-renders its complete initial markup. `src/components/landing/Landing.jsx` and its CSS Module
+replace the standalone runtime at the production root. No iframe, createRoot, second React bundle or
+hash router is used. Product/pricing/FAQ/contact share one document; the menu uses Next links and
+native section anchors. Styles and tokens are scoped to the marketing root, not the dashboard.
+`/calendra.html` is a permanent compatibility redirect; `/pricing` redirects to `/#plans`.
+
+POST `/api/contact` and `/api/newsletter` delegate to `src/lib/marketing.ts`: origin checks, bounded
+JSON body, schemas, warm-instance throttling, optional HTTPS delivery with timeout and no redirects.
+Failures never emit acceptance or log payloads/credentials. Delivery receivers and a distributed
+anti-abuse layer are deployment configuration, not supplied managed services.

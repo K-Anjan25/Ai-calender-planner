@@ -293,3 +293,24 @@ MIT.
 See [the launch-readiness guide](docs/LAUNCH-READINESS.md) for implemented versus missing features,
 step-by-step LLM setup and verification, AI responsibilities, and the planned Razorpay/UPI integration.
 This is a planner MVP, not a finished paid SaaS; payment keys alone do not enable purchases.
+
+### Live landing and dashboard
+
+The immersive design is now the native Next.js homepage at `/`, with Product, Pricing, FAQ and
+Contact sections on one page. `/calendra.html` permanently redirects to `/`; `/pricing` redirects
+into `/#plans`. Existing `/planner`, `/signin`, `/signup` and Google Calendar flows are unchanged.
+The archived standalone build is not the production entry point; edit `src/components/landing/`
+for the live site. Root content is server-rendered, uses CSS Modules, and shares Next's React runtime.
+
+Main CTAs open `/planner`; `REQUIRE_AUTH=true` keeps the existing authentication gate in force.
+The menu also links to `/signin`. No OAuth redirect URIs change for this landing migration.
+
+Contact/newsletter delivery uses server-only `CONTACT_WEBHOOK_URL` and `NEWSLETTER_WEBHOOK_URL`
+(HTTPS). Optional `MARKETING_WEBHOOK_TOKEN` is sent as a Bearer token to those receivers. Contact
+payload: `{kind:"contact",name,email,message,consent:"on"}`. Newsletter: `{kind:"newsletter",email}`.
+The receiver must validate/persist or queue accepted requests before responding 2xx. Configure consent,
+unsubscribe/double opt-in, retention, and sender/provider security in that service. Keys remain server-side.
+Without a configured receiver, the endpoint returns 503 and the UI reports a submission failure.
+The included limiter is warm-instance best effort; add edge/distributed limits for global abuse protection.
+
+Native landing checks: `node scripts/check-native-landing.mjs`; full regression: `npm test`.

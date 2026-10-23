@@ -293,3 +293,13 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Contact/newsletter validation with explicit submission failure until owner endpoints are configured.
 - Existing planner untouched. Deployment/rebuild and operational caveats in `standalone/calendra/README.md`.
 - Delivered-bundle smoke test covers navigation/menu, form validation/failure, pricing, accordion.
+
+## 2026-10-23 — promote immersive design into the live Next.js app
+
+- Done: native homepage, scoped CSS Modules, Next links and metadata; single scrolling marketing page.
+- Done: Product/Pricing/FAQ/Contact anchors and dashboard/sign-in links; preserve auth and planner.
+- Done: permanent `/calendra.html` compatibility redirect, `/pricing` → `/#plans`.
+- Done: contact/newsletter server handlers, validated payloads and configurable HTTPS delivery.
+- Verified: native-component behavior check, homepage SSR and route HTTP smoke, demo session → planner.
+- Deployment: push branch to Vercel; promoting a Preview to Production still requires the owner's
+  Vercel action, no PR/merge authorized.

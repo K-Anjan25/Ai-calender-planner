@@ -307,3 +307,14 @@ esbuild generator retained; bundled React has no runtime CDN dependency. Forms h
 submission backend: blank endpoints produce real failure, never simulated success. Do not claim
 independent per-page SEO, paid checkout, newsletter delivery or WCAG certification. Setup and caveats
 in `standalone/calendra/README.md`. Reduced motion, native dialog and semantic/error states included.
+
+### 2026-10-23 — new design is the production entry point
+
+User selected `/calendra.html` as the new live landing, requested existing stack integration and
+connection to dashboard, preferring not to distribute pages. Ported JSX/CSS Modules into Next's root
+page, one scrolling document, same React runtime, server-rendered initial markup/SEO, Next links.
+Archived standalone sources remain but no longer drive `/`; old HTML URL redirects to root.
+Dashboard/auth endpoints remain untouched. Added bounded validated form API relay handlers with
+server-only HTTPS configuration; actual delivery and global anti-abuse require deployment services.
+Tests cover provider acceptance/failure, schemas/origin/body budget and native UI. Do not claim a
+Vercel Preview was promoted to Production simply because the branch was pushed. No PR/merge.
