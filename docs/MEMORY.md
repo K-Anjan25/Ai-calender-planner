@@ -373,3 +373,12 @@ but render flat clean surfaces. Removed logo's offset backing shape while preser
 No hero canvas or section indices. Replacement guard verifies absence of old mounts/effects. 163 tests,
 lint/typecheck and native behavior smoke pass; smaller count reflects retirement of six scene tests
 and addition of one removal test. No live payment or external form delivery claims changed.
+
+### 2026-10-24 — acted on supplied UI review
+
+Preserve palette/layout, improve polish. Group header brand+tagline. Fixed-size illustrative calendar
+provides five 112px columns with local scroll (602px box - 40px padding - 2px border), rather than
+fractional columns/transformed rasterization. Removed its fractional parallax effect; event top/height
+round to pixels. Sticky CTA reuses LinkButton and icon, shared corner radius; back-to-top 44px.
+Added tests for structure/geometry/control consistency and every shared badge tone (>=4.5:1).
+167 tests/native smoke pass. Do not represent geometry tests as an actual Retina/zoom or WCAG audit.

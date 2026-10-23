@@ -91,12 +91,13 @@ function LinkButton({
   children,
   href = '/planner',
   secondary = false,
+  className = '',
   ...rest
 }) {
   return (
     <Link
       href={href}
-      className={`${s.button} ${secondary ? s.secondary : ''}`}
+      className={`${s.button} ${secondary ? s.secondary : ''} ${className}`}
       onClick={
         href === '#contact'
           ? () => {
@@ -161,8 +162,8 @@ function Week({ compact = false }) {
             className={`${s.block} ${s[tone]}`}
             style={{
               left: `calc(${col * 20}% + 5px)`,
-              top: `${top}%`,
-              height: `${height}%`,
+              top: `${Math.round(top * 3.2)}px`,
+              height: `${Math.round(height * 3.2)}px`,
               width: 'calc(20% - 10px)',
             }}
           >
@@ -300,7 +301,7 @@ function Home() {
               </span>
             </div>
           </Reveal>
-          <div className={s.heroVisual} data-depth="0.08">
+          <div className={s.heroVisual}>
             <div className={s.visualLabel}>
               <span>THE AI CALENDAR PLANNER</span>
             </div>
@@ -873,16 +874,10 @@ export default function Landing() {
   }, [])
   useEffect(() => {
     let raf = 0
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)')
     function update() {
       const y = window.scrollY
       setScrolled(y > 40)
       setShowTop(y > 700)
-      document.querySelectorAll('[data-depth]').forEach((el) => {
-        el.style.transform = reduced.matches
-          ? 'none'
-          : `translateY(${Math.min(y, 900) * Number(el.dataset.depth)}px)`
-      })
       raf = 0
     }
     function scroll() {
@@ -917,10 +912,12 @@ export default function Landing() {
         Skip to content
       </Link>
       <header className={`${s.header} ${scrolled ? s.headerScrolled : ''}`}>
-        <Link href="#top" aria-label="Calendra home">
-          <Mark />
-        </Link>
-        <span className={s.headerTag}>THE AI CALENDAR PLANNER</span>
+        <div className={s.brandGroup}>
+          <Link href="#top" aria-label="Calendra home">
+            <Mark />
+          </Link>
+          <span className={s.headerTag}>THE AI CALENDAR PLANNER</span>
+        </div>
         <button
           ref={toggle}
           className={s.menuButton}
@@ -973,9 +970,7 @@ export default function Landing() {
       </main>
       <Footer />
       {scrolled && !menu && (
-        <Link className={s.stickyCTA} href="/planner">
-          Build my week <ArrowUpRight size={15} />
-        </Link>
+        <LinkButton className={s.stickyCTA}>Build my week</LinkButton>
       )}
       {showTop && !menu && (
         <button

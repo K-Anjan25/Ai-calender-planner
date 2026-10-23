@@ -346,3 +346,11 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
   retired render tests. Removed cut-edge and layer-stack helpers, material gradients/shadows/texture,
   uneven radii and tilted UI panels. Preserved functional controls and dashboard.
 - Added removal regression coverage. 163 current tests, lint/typechecks and native UI smoke pass.
+
+## 2026-10-24 — review-driven landing polish
+
+- Grouped logo/tagline; retained hamburger-only navigation.
+- Fixed preview geometry (112px columns), local scroll, integer block positions; removed grid parallax.
+- Shared sticky/primary CTA component, icon and radius; 44px back-to-top target.
+- Added header/geometry/control tests and all-eight-badge contrast check.
+- Verified 167 tests and native interaction smoke; real-browser Retina/zoom visual review remains external.

@@ -111,7 +111,6 @@ it('removes section index labels without deleting real calendar/statistics data'
   assert.ok(source.includes('KNOW YOUR LIMITS'))
 })
 
-
 it('does not mount or animate a hero particle canvas', () => {
   const source = readFileSync('src/components/landing/Landing.jsx', 'utf8')
   assert.ok(!source.includes('function Atmosphere'))
@@ -134,4 +133,22 @@ it('removes scenery, texture overlays and cut-edge decorations from the live app
   assert.ok(!theme.includes('fractalNoise'))
   assert.ok(!css.includes('rotateY('))
   assert.ok(!css.includes('rotateZ('))
+})
+
+it('keeps every shared badge tone at AA normal-text contrast', () => {
+  const controls = readFileSync(
+    'src/components/paper/PaperControls.tsx',
+    'utf8',
+  )
+  const tones = controls
+    .split('const CHIP_TONE:')[1]
+    .split('export function')[0]
+  const pairs = [...tones.matchAll(/bg-([\w-]+) text-([\w-]+)/g)]
+  assert.equal(pairs.length, 8)
+  for (const [, background, foreground] of pairs) {
+    assert.ok(
+      contrast(foreground, background) >= 4.5,
+      `${foreground} badge on ${background} is low contrast`,
+    )
+  }
 })

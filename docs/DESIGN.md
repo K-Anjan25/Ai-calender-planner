@@ -354,3 +354,14 @@ unmounted all scenery and grain, removed cut-edge/stacked-layer helpers, neutral
 replaced asymmetric radii with ordinary rounded corners, removed tilted UI panels. Hero particles stay
 absent. Existing internal primitive/token names are compatibility identifiers, not rendered descriptions
 or material effects. No section numbering. Retired scenery tests are replaced with visual-removal guards.
+
+## 2026-10-24 — spacing, preview geometry and action consistency
+
+Logo/tagline share one header group; only the hamburger is positioned at the opposite edge.
+The preview uses a 602px border-box with 20px insets and 1px borders: five exact 112px columns.
+It scrolls inside a focusable region on small/tablet screens instead of scaling labels. Removed
+fractional parallax translation from this grid; preview event positions round to CSS pixels.
+Primary/floating CTAs share LinkButton and icon sizing; CTA/back-to-top corner radius uses the
+shared control token. Back-to-top has a 44px target. Reduced motion and native anchor behavior remain.
+Eight shared badge color pairs are numerically checked at >=4.5:1; actual Retina/zoom appearance
+still requires real-browser visual acceptance, not a claim derived from jsdom.
