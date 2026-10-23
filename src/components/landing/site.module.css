@@ -314,7 +314,7 @@
   width: 850px;
   height: 850px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 95, 115, 0.13);
+  border: 1px solid rgba(12, 74, 87, 0.13);
   top: 0;
   right: -220px;
   z-index: -1;
@@ -348,7 +348,7 @@
   right: 10px;
   bottom: -12px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 249, 244, 0.25);
+  border: 1px solid rgba(243, 227, 210, 0.25);
   z-index: -1;
 }
 .floatingNote {
@@ -910,10 +910,10 @@
   content: '';
   width: 140%;
   height: 60px;
-  background: rgba(255, 249, 244, 0.56);
+  background: rgba(243, 227, 210, 0.56);
   position: absolute;
   transform: none;
-  border: 8px solid rgba(255, 249, 244, 0.53);
+  border: 8px solid rgba(243, 227, 210, 0.53);
 }
 .map > svg,
 .map > b,
@@ -946,7 +946,7 @@
 .field textarea {
   width: 100%;
   background: transparent;
-  border: 1px solid var(--color-paper-sand);
+  border: 2px solid var(--color-ink);
   padding: 13px 12px;
   color: inherit;
   border-radius: 3px;
@@ -965,8 +965,9 @@
   min-width: 0;
 }
 .inputRow input {
-  flex: 1;
-  width: 0;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
 }
 .error {
   display: block;
@@ -1117,7 +1118,7 @@
 .footerBottom {
   max-width: 1240px;
   margin: 50px auto 0;
-  border-top: 1px solid rgba(0, 95, 115, 0.4);
+  border-top: 1px solid rgba(12, 74, 87, 0.4);
   padding: 25px 0 90px;
   display: flex;
   justify-content: space-between;
@@ -1183,7 +1184,7 @@
   box-shadow: none;
 }
 .menuDialog::backdrop {
-  background: rgba(0, 95, 115, 0.45);
+  background: rgba(12, 74, 87, 0.45);
   backdrop-filter: blur(6px);
 }
 .menuPanel {
@@ -1859,15 +1860,15 @@
     to bottom,
     transparent 0,
     transparent 63px,
-    rgba(0, 95, 115, 0.18) 63px,
-    rgba(0, 95, 115, 0.18) 64px
+    rgba(12, 74, 87, 0.18) 63px,
+    rgba(12, 74, 87, 0.18) 64px
   );
 }
 .gridCol {
-  border-color: rgba(0, 95, 115, 0.18);
+  border-color: rgba(12, 74, 87, 0.18);
 }
 .gridCol:last-of-type {
-  border-right-color: rgba(0, 95, 115, 0.18);
+  border-right-color: rgba(12, 74, 87, 0.18);
 }
 .heroVisual {
   will-change: auto;
@@ -1904,5 +1905,164 @@
 @media (prefers-reduced-motion: reduce) {
   .button.stickyCTA:hover {
     transform: translateX(-50%);
+  }
+}
+
+/* Latest palette: cream canvas, deep-petrol type, ocean accents and golden actions. */
+.app .button,
+.app .stickyCTA {
+  background: var(--color-terracotta);
+  color: var(--color-ink);
+  border-color: var(--color-ink);
+}
+.app .button:hover {
+  background: var(--color-ink);
+  color: var(--color-paper-cream);
+}
+.app .secondary {
+  background: var(--color-paper-cream);
+  color: var(--color-ink);
+  border: 2px solid var(--color-frost);
+}
+.app .secondary:hover {
+  background: var(--color-paper-cream);
+  color: var(--color-ink);
+  border-color: var(--color-ink);
+}
+.app .endCTA .button {
+  color: var(--color-ink);
+}
+.app .endCTA .button:hover {
+  color: var(--color-paper-cream);
+}
+.featured {
+  border: 2px solid var(--color-frost);
+  border-top-width: 6px;
+}
+.pill span,
+.noteIcon {
+  background: var(--color-frost);
+}
+.noteIcon {
+  color: var(--color-paper-cream);
+}
+.capacity > p {
+  background: var(--color-terracotta);
+  color: var(--color-ink);
+  padding: 12px;
+  border-radius: var(--radius-cut-sm);
+  font-weight: 600;
+}
+.capacityBar {
+  background: var(--color-terracotta);
+}
+.sage,
+.clay,
+.cream {
+  border-left-color: var(--color-frost);
+}
+/* Field outlines must differ from their surface. Same-color borders made the old
+   fields disappear; transparent fills and zero-width email flex items compounded it. */
+.contactGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.contactGrid > *,
+.field,
+.inputRow {
+  min-width: 0;
+  max-width: 100%;
+}
+.field input,
+.field textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  background: var(--color-paper-cream);
+  border: 2px solid var(--color-ink);
+  color: var(--color-ink);
+  border-radius: var(--radius-cut-sm);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.field textarea {
+  min-height: 160px;
+}
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--color-ink);
+  opacity: 1;
+}
+.field input[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
+  border-style: dashed;
+}
+.checkbox {
+  align-items: flex-start;
+}
+.checkbox input {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.app input:focus-visible,
+.app textarea:focus-visible {
+  outline-color: var(--color-ink);
+}
+.newsletterForm .inputRow {
+  border: 2px solid var(--color-paper-cream);
+  border-radius: var(--radius-cut-sm);
+  overflow: hidden;
+  background: var(--color-paper-cream);
+}
+.newsletterForm input {
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  color: var(--color-ink);
+}
+.newsletterForm button {
+  min-width: 48px;
+  min-height: 48px;
+  background: var(--color-terracotta);
+  color: var(--color-ink);
+}
+.footer {
+  background: var(--color-ink);
+  color: var(--color-paper-cream);
+}
+.footer .brand,
+.footer p,
+.footer label,
+.footerLinks h3,
+.app .footer a,
+.footerBottom {
+  color: var(--color-paper-cream);
+}
+.footer .field input::placeholder {
+  color: var(--color-ink);
+}
+.footer .newsletterForm .error {
+  color: var(--color-paper-cream);
+}
+.footerBottom {
+  border-top-color: var(--color-frost);
+}
+.footer .tinyMap {
+  background: var(--color-frost);
+  color: var(--color-terracotta);
+}
+.footer a:focus-visible,
+.footer button:focus-visible,
+.footer input:focus-visible {
+  outline-color: var(--color-terracotta);
+}
+.map b,
+.map > span {
+  background: var(--color-paper-cream);
+  padding: 3px 5px;
+}
+@media (max-width: 760px) {
+  .contactGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

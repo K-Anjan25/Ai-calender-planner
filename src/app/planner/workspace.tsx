@@ -106,7 +106,7 @@ export default function PlannerWorkspace() {
             <Layers3 size={12} aria-hidden="true" />
             Local
           </PaperButton>
-          <PaperButton size="sm" tone="teal" disabled={status === 'planning'} onClick={() => void buildWeek()}>
+          <PaperButton size="sm" tone="terracotta" disabled={status === 'planning'} onClick={() => void buildWeek()}>
             <RefreshCw size={12} className={clsx(status === 'planning' && 'animate-spin')} aria-hidden="true" />
             {proposal ? 'Re-plan' : 'Build my week'}
           </PaperButton>

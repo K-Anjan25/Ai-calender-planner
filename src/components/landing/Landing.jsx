@@ -610,6 +610,18 @@ function Form({ newsletter = false }) {
       ref={ref}
       onSubmit={submit}
       noValidate
+      aria-busy={busy}
+      onInput={(event) => {
+        const name = event.target.name
+        if (name)
+          setErrors((previous) => {
+            if (!previous[name]) return previous
+            const next = { ...previous }
+            delete next[name]
+            return next
+          })
+        setStatus('')
+      }}
       className={newsletter ? s.newsletterForm : s.contactForm}
       aria-label={newsletter ? 'Newsletter subscription' : 'Contact Calendra'}
     >
@@ -620,6 +632,7 @@ function Form({ newsletter = false }) {
             id={`${id}-name`}
             name="name"
             autoComplete="name"
+            placeholder="Your full name"
             maxLength={120}
             required
             aria-invalid={!!errors.name}
@@ -642,7 +655,7 @@ function Form({ newsletter = false }) {
             type="email"
             name="email"
             autoComplete="email"
-            placeholder={newsletter ? 'you@somewhere.good' : undefined}
+            placeholder={newsletter ? 'you@somewhere.good' : 'you@example.com'}
             required
             maxLength={254}
             aria-invalid={!!errors.email}
@@ -667,6 +680,7 @@ function Form({ newsletter = false }) {
             <textarea
               id="contact-message"
               name="message"
+              placeholder="How can we help with your planning?"
               rows={5}
               maxLength={4000}
               required
@@ -691,7 +705,9 @@ function Form({ newsletter = false }) {
                 errors.consent ? 'contact-consent-error' : undefined
               }
             />
-            I agree to the <Link href="/legal#privacy">privacy notice</Link>.
+            <span>
+              I agree to the <Link href="/legal#privacy">privacy notice</Link>.
+            </span>
           </label>
           {errors.consent && (
             <span id="contact-consent-error" className={s.error}>
@@ -847,6 +863,7 @@ function Footer() {
   )
 }
 export default function Landing() {
+  const [formInView, setFormInView] = useState(false)
   const [menu, setMenu] = useState(false),
     [scrolled, setScrolled] = useState(false),
     [showTop, setShowTop] = useState(false)
@@ -902,6 +919,23 @@ export default function Landing() {
       document.body.style.overflow = ''
     }
   }, [menu])
+  // Floating actions must never cover a form's fields, submit control or live status.
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) return
+    const visibleForms = new Set()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visibleForms.add(entry.target)
+          else visibleForms.delete(entry.target)
+        }
+        setFormInView(visibleForms.size > 0)
+      },
+      { rootMargin: '0px 0px 64px 0px' },
+    )
+    document.querySelectorAll('form').forEach((form) => observer.observe(form))
+    return () => observer.disconnect()
+  }, [])
   function close() {
     setMenu(false)
     toggle.current?.focus()
@@ -969,10 +1003,12 @@ export default function Landing() {
         <Home />
       </main>
       <Footer />
-      {scrolled && !menu && (
-        <LinkButton className={s.stickyCTA}>Build my week</LinkButton>
+      {scrolled && !menu && !formInView && (
+        <LinkButton className={s.stickyCTA} data-sticky-cta>
+          Build my week
+        </LinkButton>
       )}
-      {showTop && !menu && (
+      {showTop && !menu && !formInView && (
         <button
           className={s.backTop}
           aria-label="Back to top"

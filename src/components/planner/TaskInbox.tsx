@@ -74,7 +74,7 @@ export function TaskInbox() {
           onChange={(event) => setBrief(event.target.value)}
         />
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <PaperButton tone="teal" onClick={() => void buildWeek(brief)} disabled={busy}>
+          <PaperButton tone="terracotta" onClick={() => void buildWeek(brief)} disabled={busy}>
             <Wand2 size={14} aria-hidden="true" />
             {busy ? 'Planning…' : 'Build my week'}
           </PaperButton>
@@ -324,7 +324,7 @@ export function TaskInbox() {
           </ul>
         )}
 
-        <footer className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:rgba(0,95,115,0.25)] pt-2.5">
+        <footer className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:rgba(12,74,87,0.25)] pt-2.5">
           <div className="flex gap-1.5">
             <PaperButton
               size="sm"

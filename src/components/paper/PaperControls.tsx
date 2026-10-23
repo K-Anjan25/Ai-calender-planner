@@ -11,14 +11,14 @@ import { clsx } from 'clsx'
 export type AccentTone = 'teal' | 'rose' | 'terracotta' | 'olive' | 'plum' | 'frost' | 'kraft' | 'ivory'
 
 const ACCENT_SOLID: Record<AccentTone, string> = {
-  teal: 'bg-teal text-paper-ivory border-[color:rgba(0,95,115,0.2)]',
-  rose: 'bg-rose text-paper-ivory border-[color:rgba(0,95,115,0.2)]',
-  terracotta: 'bg-terracotta-light text-ink border-[color:rgba(0,95,115,0.2)]',
-  olive: 'bg-olive-light text-ink border-[color:rgba(0,95,115,0.2)]',
-  plum: 'bg-plum text-paper-ivory border-[color:rgba(0,95,115,0.2)]',
-  frost: 'bg-frost-light text-ink border-[color:rgba(0,95,115,0.2)]',
-  kraft: 'bg-paper-kraft text-ink border-[color:rgba(0,95,115,0.22)]',
-  ivory: 'bg-paper-ivory text-ink border-[color:rgba(0,95,115,0.18)]',
+  teal: 'bg-teal text-paper-ivory border-[color:rgba(12,74,87,0.2)]',
+  rose: 'bg-rose text-paper-ivory border-[color:rgba(12,74,87,0.2)]',
+  terracotta: 'bg-terracotta text-ink border-[color:rgba(12,74,87,0.2)]',
+  olive: 'bg-olive-light text-ink border-[color:rgba(12,74,87,0.2)]',
+  plum: 'bg-plum text-paper-ivory border-[color:rgba(12,74,87,0.2)]',
+  frost: 'bg-frost-light text-ink border-[color:rgba(12,74,87,0.2)]',
+  kraft: 'bg-paper-kraft text-ink border-[color:rgba(12,74,87,0.22)]',
+  ivory: 'bg-paper-ivory text-ink border-[color:rgba(12,74,87,0.18)]',
 }
 
 const CHIP_TONE: Record<AccentTone, string> = {
@@ -65,7 +65,7 @@ export function PaperButton({
         )
       : variant === 'press'
         ? clsx(
-            'shadow-[var(--shadow-press)] border-[color:rgba(0,95,115,0.18)]',
+            'shadow-[var(--shadow-press)] border-[color:rgba(12,74,87,0.18)]',
             active ? ACCENT_SOLID[tone] : 'bg-paper-sand text-ink-soft hover:bg-paper-kraft',
           )
         : clsx(
@@ -149,7 +149,7 @@ export function PaperChip({
     <span
       title={title}
       className={clsx(
-        'paper-fibre inline-flex items-center gap-1 rounded-[var(--radius-cut-xs)] border border-[color:rgba(0,95,115,0.12)] px-1.5 py-[3px] text-[11px] font-bold leading-none tracking-[0.01em]',
+        'paper-fibre inline-flex items-center gap-1 rounded-[var(--radius-cut-xs)] border border-[color:rgba(12,74,87,0.12)] px-1.5 py-[3px] text-[11px] font-bold leading-none tracking-[0.01em]',
         CHIP_TONE[tone],
         className,
       )}
@@ -266,7 +266,7 @@ export function PaperToggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={clsx(
-        'paper-fibre relative h-[22px] w-[42px] shrink-0 rounded-full border border-[color:rgba(0,95,115,0.2)] transition-colors duration-200',
+        'paper-fibre relative h-[22px] w-[42px] shrink-0 rounded-full border border-[color:rgba(12,74,87,0.2)] transition-colors duration-200',
         checked ? ACCENT_SOLID[tone] : 'bg-paper-kraft',
         checked ? 'shadow-[var(--shadow-press)]' : 'shadow-[var(--shadow-tile)]',
         disabled && 'opacity-45',

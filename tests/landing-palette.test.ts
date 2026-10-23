@@ -66,7 +66,7 @@ it('keeps the key body-text, button and event color pairs above AA normal-text c
 })
 
 it('restricts all live authored hex/RGB colors to the four supplied swatches', () => {
-  const allowed = new Set(['005F73', '0A9396', 'EE9B00', 'FFF9F4'])
+  const allowed = new Set(['258C9B', 'FEBF12', 'F3E3D2', '0C4A57'])
   const walk = (directory: string): string[] =>
     readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
       const path = `${directory}/${entry.name}`
@@ -151,4 +151,16 @@ it('keeps every shared badge tone at AA normal-text contrast', () => {
       `${foreground} badge on ${background} is low contrast`,
     )
   }
+})
+
+it('uses accessible dark text on the golden primary actions and warning surface', () => {
+  assert.ok(contrast('ink', 'terracotta') >= 4.5)
+  assert.match(
+    css,
+    /\.app \.button,\s*\.app \.stickyCTA\s*\{[^}]*background:\s*var\(--color-terracotta\)/s,
+  )
+  assert.match(
+    css,
+    /\.capacity > p\s*\{[^}]*background:\s*var\(--color-terracotta\)/s,
+  )
 })

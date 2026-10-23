@@ -354,3 +354,14 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Shared sticky/primary CTA component, icon and radius; 44px back-to-top target.
 - Added header/geometry/control tests and all-eight-badge contrast check.
 - Verified 167 tests and native interaction smoke; real-browser Retina/zoom visual review remains external.
+
+## 2026-10-24 — requested palette roles and contact-form repairs
+
+- Applied all four specified colors; gold main CTAs/warnings, dark footer, ocean accents, sand surfaces.
+- Fixed invisible outlines, email flex width, responsive form columns, placeholders/focus, validation
+  cleanup and consent-text wrapping. Floating actions hide while forms are visible.
+- Added Playwright/packaged Chromium browser test (`npm run test:browser`) against a running site.
+  Checks 320/390/768/1024/1440px at DPR2: visible fields, no horizontal page overflow, validation,
+  retained values on failure, success reset, newsletter, menu navigation and no form-covering CTA.
+- Delivery responses in browser success/failure tests are mocked, not proof of external delivery.
+- Unit/integration baseline: 169 tests; lint/typecheck and native landing behavior checks pass.

@@ -13,7 +13,7 @@ export function CalendraMark({ size = 28, className }: { size?: number; classNam
       {/* calendar outline */}
       <path
         d="M4.5 5.5h17.2c1.3 0 2.3 1 2.3 2.3v15.4c0 1.3-1 2.3-2.3 2.3H6.8c-1.3 0-2.3-1-2.3-2.3V5.5Z"
-        fill="var(--paper-ivory, #FFF9F4)"
+        fill="var(--paper-ivory, #F3E3D2)"
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinejoin="round"

@@ -22,11 +22,20 @@ it('preserves integer calendar columns with local scroll instead of scaling the 
 })
 
 it('uses the shared primary CTA for the floating action and a consistent control radius', () => {
-  assert.match(source, /<LinkButton className=\{s\.stickyCTA\}>/)
+  assert.match(source, /<LinkButton className=\{s\.stickyCTA\}[^>]*>/)
   assert.match(
     css,
     /\.button,\s*\.stickyCTA,\s*\.backTop\s*\{\s*border-radius:\s*var\(--radius-cut-sm\)/s,
   )
   assert.match(css, /\.backTop\s*\{\s*width:\s*44px;\s*height:\s*44px;/s)
   assert.match(css, /prefers-reduced-motion:\s*reduce/)
+})
+
+it('gives contact and newsletter inputs explicit visible geometry and contrast', () => {
+  assert.match(css, /border:\s*2px solid var\(--color-ink\)/)
+  assert.match(css, /min-height:\s*48px/)
+  assert.match(css, /font-size:\s*16px/)
+  assert.match(css, /\.inputRow input\s*\{[^}]*width:\s*100%/s)
+  assert.match(source, /aria-busy=\{busy\}/)
+  assert.match(source, /!formInView/)
 })

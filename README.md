@@ -314,3 +314,15 @@ Without a configured receiver, the endpoint returns 503 and the UI reports a sub
 The included limiter is warm-instance best effort; add edge/distributed limits for global abuse protection.
 
 Native landing checks: `node scripts/check-native-landing.mjs`; full regression: `npm test`.
+
+### Real browser landing/form checks
+
+With the built app running (`npm run build`, then `npm start`), run `npm run test:browser`.
+Optional `SITE_URL` selects another host; default is `http://localhost:3000`. The test uses dev-only
+Playwright Core and packaged Chromium, extracting minimal Linux browser libraries automatically.
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an installed Chromium instead. Screenshots are
+written outside Git to `/tmp/calendra-browser-check` (`BROWSER_ARTIFACTS` overrides this).
+
+It checks five viewport widths at DPR2 for actual form geometry, overflow, input validation,
+submission feedback/reset, newsletter and menu behavior. Remote fonts are blocked to exercise
+fallbacks; acceptance/failure delivery responses are mocked. This does not verify a live webhook.

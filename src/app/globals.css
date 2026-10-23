@@ -8,42 +8,42 @@
 
 @theme {
   /* --- base paper stock ------------------------------------------------ */
-  --color-paper-cream: #FFF9F4;
-  --color-paper-ivory: #FFF9F4;
-  --color-paper-sand: #FFF9F4;
-  --color-paper-kraft: #FFF9F4;
-  --color-paper-edge: #005F73;
+  --color-paper-cream: #F3E3D2;
+  --color-paper-ivory: #F3E3D2;
+  --color-paper-sand: #F3E3D2;
+  --color-paper-kraft: #F3E3D2;
+  --color-paper-edge: #0C4A57;
 
   /* --- ink (warm, never pure black) ------------------------------------ */
-  --color-ink: #005F73;
-  --color-ink-soft: #005F73;
-  --color-ink-faint: #005F73;
-  --color-ink-ghost: #005F73;
+  --color-ink: #0C4A57;
+  --color-ink-soft: #0C4A57;
+  --color-ink-faint: #0C4A57;
+  --color-ink-ghost: #0C4A57;
 
   /* --- dyed sheet accents ---------------------------------------------- */
-  --color-rose: #005F73;
-  --color-rose-deep: #005F73;
-  --color-rose-light: #FFF9F4;
+  --color-rose: #0C4A57;
+  --color-rose-deep: #0C4A57;
+  --color-rose-light: #F3E3D2;
 
-  --color-terracotta: #EE9B00;
-  --color-terracotta-deep: #005F73;
-  --color-terracotta-light: #FFF9F4;
+  --color-terracotta: #FEBF12;
+  --color-terracotta-deep: #0C4A57;
+  --color-terracotta-light: #F3E3D2;
 
-  --color-olive: #0A9396;
-  --color-olive-deep: #005F73;
-  --color-olive-light: #FFF9F4;
+  --color-olive: #258C9B;
+  --color-olive-deep: #0C4A57;
+  --color-olive-light: #F3E3D2;
 
-  --color-teal: #005F73;
-  --color-teal-deep: #005F73;
-  --color-teal-light: #FFF9F4;
+  --color-teal: #0C4A57;
+  --color-teal-deep: #0C4A57;
+  --color-teal-light: #F3E3D2;
 
-  --color-plum: #005F73;
-  --color-plum-deep: #005F73;
-  --color-plum-light: #FFF9F4;
+  --color-plum: #0C4A57;
+  --color-plum-deep: #0C4A57;
+  --color-plum-light: #F3E3D2;
 
-  --color-frost: #0A9396;
-  --color-frost-deep: #005F73;
-  --color-frost-light: #FFF9F4;
+  --color-frost: #258C9B;
+  --color-frost-deep: #0C4A57;
+  --color-frost-light: #F3E3D2;
 
   /* --- light & shadow: warm, soft, never grey -------------------------- */
   --shadow-mat: none;

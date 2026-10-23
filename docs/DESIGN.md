@@ -365,3 +365,18 @@ Primary/floating CTAs share LinkButton and icon sizing; CTA/back-to-top corner r
 shared control token. Back-to-top has a 44px target. Reduced motion and native anchor behavior remain.
 Eight shared badge color pairs are numerically checked at >=4.5:1; actual Retina/zoom appearance
 still requires real-browser visual acceptance, not a claim derived from jsdom.
+
+## 2026-10-24 — current palette roles and form visibility
+
+Current exclusive bases: Bright Ocean Teal `#258C9B`, Golden Yellow `#FEBF12`, Soft Sand `#F3E3D2`,
+Deep Petrol `#0C4A57`. Supersedes all earlier palette references. Sand canvas, Petrol body text/borders
+and footer, Ocean accents/active outlines, Golden primary actions (landing and dashboard) and capacity
+warnings. Normal text on Golden is Petrol; Ocean is not paired with low-contrast small text.
+Icons/favicons keep calendar geometry with refreshed v8 cache keys.
+
+Contact inputs previously had Sand borders on Sand surfaces, making them effectively invisible. Use
+2px Petrol outlines, explicit 48px minimum heights, 16px text, visible placeholders and focus rings.
+Email flex row no longer declares width zero. Contact columns use minmax(0,1fr); children can shrink
+without overflowing. Newsletter has an enclosed input/button row. Floating actions hide while a form
+is visible, avoiding overlays over submit controls/live messages. Validation clears on editing and
+submission errors retain the user's text.

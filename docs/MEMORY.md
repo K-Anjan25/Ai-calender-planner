@@ -382,3 +382,18 @@ fractional columns/transformed rasterization. Removed its fractional parallax ef
 round to pixels. Sticky CTA reuses LinkButton and icon, shared corner radius; back-to-top 44px.
 Added tests for structure/geometry/control consistency and every shared badge tone (>=4.5:1).
 167 tests/native smoke pass. Do not represent geometry tests as an actual Retina/zoom or WCAG audit.
+
+### 2026-10-24 — latest palette roles, real form defect and real browser checks
+
+User palette: 258C9B, FEBF12, F3E3D2, 0C4A57 with explicit roles. Updated all live bases/icons (v8),
+gold landing/dashboard main CTAs and capacity warning, Ocean accent borders, dark Petrol footer.
+Missing inputs were same-color borders/background; email also used width:0 flex sizing. Fixed visible
+2px dark outlines, min-height48, font16, explicit fills, flex/grid constraints, placeholders/focus,
+error cleanup/aria-busy and consent wrapping. Hide floating actions around visible forms.
+
+Browser limitation overcome: installed dev-only playwright-core and @sparticuz/chromium. Linux NSS/
+NSPR libs are inside the package's al2023 archive; test script extracts them into /tmp and sets browser
+LD_LIBRARY_PATH. One browser per viewport avoids packaged single-process context-close crash.
+Actual Chromium tests at five widths/DPR2 cover fields, overflow, validation, retained data, success
+reset, newsletter/menu. External fonts blocked to test fallback; delivery responses mocked. This is
+not proof of live delivery or full WCAG certification. Keep CONTACT/NEWSLETTER webhook setup caveat.
