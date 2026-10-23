@@ -341,3 +341,16 @@ Only live authored base colors: Driftwood Beige `#F0ECDA`, Harbor Blue `#134C65`
 text and actions; Seafoam is a decorative accent, not small text on Beige. Alpha shadows reuse these
 RGB bases. Original logo geometry remains; favicon cache keys v6. Removed the hero particle canvas
 and its animation loop entirely. Section numbering remains absent.
+
+## 2026-10-24 — current palette and clean UI direction
+
+Supersedes all earlier color/material directions. Exact base colors: Sky Blue `#005F73`, Teal Ocean
+`#0A9396`, Summer Sun `#EE9B00`, White Cloud `#FFF9F4`. White/Sky are the normal-text pair (6.97:1);
+Teal/Summer are decorative accents rather than low-contrast normal-text surfaces. Alpha effects use
+only these bases. Original calendar identity remains, without its offset backing sheet; icon keys v7.
+
+Retired the paper/diorama presentation: deleted scenery generator/renderer and scene build scripts,
+unmounted all scenery and grain, removed cut-edge/stacked-layer helpers, neutralized material shadows,
+replaced asymmetric radii with ordinary rounded corners, removed tilted UI panels. Hero particles stay
+absent. Existing internal primitive/token names are compatibility identifiers, not rendered descriptions
+or material effects. No section numbering. Retired scenery tests are replaced with visual-removal guards.

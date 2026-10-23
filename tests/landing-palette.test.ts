@@ -66,7 +66,7 @@ it('keeps the key body-text, button and event color pairs above AA normal-text c
 })
 
 it('restricts all live authored hex/RGB colors to the four supplied swatches', () => {
-  const allowed = new Set(['F0ECDA', '134C65', '487F86', '152740'])
+  const allowed = new Set(['005F73', '0A9396', 'EE9B00', 'FFF9F4'])
   const walk = (directory: string): string[] =>
     readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
       const path = `${directory}/${entry.name}`
@@ -117,4 +117,21 @@ it('does not mount or animate a hero particle canvas', () => {
   assert.ok(!source.includes('function Atmosphere'))
   assert.ok(!source.includes('<canvas'))
   assert.ok(!source.includes('particleColor'))
+})
+
+it('removes scenery, texture overlays and cut-edge decorations from the live application', () => {
+  const layout = readFileSync('src/app/layout.tsx', 'utf8')
+  const footer = readFileSync('src/components/site/SiteFooter.tsx', 'utf8')
+  const workspace = readFileSync('src/app/planner/workspace.tsx', 'utf8')
+  for (const source of [layout, footer, workspace]) {
+    assert.ok(!source.includes('DioramaScene'))
+    assert.ok(!source.includes('<Grain'))
+    assert.ok(!source.includes('<CutEdge'))
+  }
+  assert.ok(!theme.includes('.paper-grain'))
+  assert.ok(!theme.includes('.paper-mat::before'))
+  assert.ok(!theme.includes('.deckle-top'))
+  assert.ok(!theme.includes('fractalNoise'))
+  assert.ok(!css.includes('rotateY('))
+  assert.ok(!css.includes('rotateZ('))
 })

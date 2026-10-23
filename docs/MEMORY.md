@@ -362,3 +362,14 @@ source color bases, shared tokens, scenes and icons. Deleted Atmosphere canvas/c
 and unused CSS, not just hidden it. Preserved calendar visual, original mark geometry, dashboard
 flows and no-section-number preference. Versioned icon URLs v6; source-wide palette guard and
 no-particle regression test pass. 168 tests, lint/typecheck and native interaction smoke are green.
+
+### 2026-10-24 — latest palette and explicit removal of material styling
+
+User supplied 005F73, 0A9396, EE9B00, FFF9F4 and explicitly revoked the old paper/diorama direction.
+All live colors/icons updated; favicon URLs v7. Remove that style, not just marketing words: no
+scenery, grain, scallops, mat layers, tilted cards, irregular radii or material shadows. Deleted dead
+scene renderer/generator and associated scripts/tests; functional primitives retain compatibility names
+but render flat clean surfaces. Removed logo's offset backing shape while preserving calendar identity.
+No hero canvas or section indices. Replacement guard verifies absence of old mounts/effects. 163 tests,
+lint/typecheck and native behavior smoke pass; smaller count reflects retirement of six scene tests
+and addition of one removal test. No live payment or external form delivery claims changed.

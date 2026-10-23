@@ -7,7 +7,6 @@ import { CalendarRange, Filter, Layers3, ListChecks, Settings2, Sparkles, Refres
 import { usePlanner } from '@/lib/store/planner-store'
 import { PaperButton, PaperChip, PaperTabs } from '@/components/paper/PaperControls'
 import { PaperSheet } from '@/components/paper/PaperSheet'
-import { DioramaScene } from '@/components/paper/DioramaScene'
 import { WeekGrid } from '@/components/planner/WeekGrid'
 import { TaskInbox } from '@/components/planner/TaskInbox'
 import { PreferencePanel } from '@/components/planner/PreferencePanel'
@@ -21,9 +20,8 @@ import { useSession } from '@/lib/use-session'
 /**
  * The planner workspace (FR-J1).
  *
- * Three columns of paper on one board: inputs on the left, the week in the middle, and the report on
- * the right. Below 1280px the rails become tabs, because a diorama you have to scroll sideways to
- * read is not a diorama.
+ * Three application columns: inputs on the left, the week in the middle, and the report on
+ * the right. Below 1280px the rails become tabs to keep controls readable.
  */
 
 export default function PlannerWorkspace() {
@@ -66,12 +64,6 @@ export default function PlannerWorkspace() {
 
   return (
     <main className="relative min-h-screen pb-10">
-      {/* backdrop diorama — far layer, heavily muted so text always wins */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] overflow-hidden opacity-[0.38]">
-        <DioramaScene variant="week" opacity={0.9} />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(240,236,218,0.10)_0%,rgba(240,236,218,0.72)_55%,rgba(240,236,218,1)_100%)]" />
-      </div>
-
       <header className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <div className="flex items-center gap-2.5">
           <Link href="/" aria-label="Calendra home">

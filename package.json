@@ -13,7 +13,6 @@
     "test:perf": "node scripts/run-tests.mjs tests/perf.test.ts",
     "agent:check": "tsx scripts/agent-check.ts",
     "smoke": "tsx scripts/smoke.ts",
-    "scene": "tsx scripts/scene-svg.ts && node scripts/render-scene.mjs",
     "test:ui": "node scripts/run-tests.mjs tests/ui.test.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json"
   },

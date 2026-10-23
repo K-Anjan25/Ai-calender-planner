@@ -131,7 +131,7 @@
 }
 .headerScrolled {
   background: var(--color-paper-ivory);
-  box-shadow: 0 1px 0 var(--line);
+  box-shadow: none;
   backdrop-filter: blur(12px);
 }
 .brand {
@@ -155,7 +155,7 @@
   border: 1px solid var(--color-paper-edge);
   border-radius: 9px 9px 4px 4px;
   color: var(--color-paper-kraft);
-  transform: rotate(-5deg);
+  transform: none;
 }
 .headerTag {
   font-size: 10px;
@@ -314,17 +314,15 @@
   width: 850px;
   height: 850px;
   border-radius: 50%;
-  border: 1px solid rgba(21,39,64,0.13);
+  border: 1px solid rgba(0,95,115,0.13);
   top: 0;
   right: -220px;
   z-index: -1;
   box-shadow:
-    0 0 0 60px rgba(21,39,64,0.03),
-    0 0 0 120px rgba(21,39,64,0.02);
+    none;
 }
 .heroVisual {
   position: relative;
-  perspective: 1500px;
   padding-bottom: 40px;
   will-change: transform;
 }
@@ -337,12 +335,12 @@
   margin: 0 14px 16px;
 }
 .heroVisual .week {
-  transform: rotateY(-9deg) rotateX(5deg) rotateZ(-3deg);
-  box-shadow: 10px 30px 80px rgba(19,76,101,0.33);
+  transform: none;
+  box-shadow: none;
   transition: transform 0.8s var(--ease);
 }
 .heroVisual:hover .week {
-  transform: rotateY(-2deg) rotateX(1deg) rotateZ(-1deg);
+  transform: none;
 }
 .smallOrbit {
   position: absolute;
@@ -351,7 +349,7 @@
   right: 10px;
   bottom: -12px;
   border-radius: 50%;
-  border: 1px solid rgba(240,236,218,0.25);
+  border: 1px solid rgba(255,249,244,0.25);
   z-index: -1;
 }
 .floatingNote {
@@ -365,8 +363,8 @@
   background: var(--color-paper-cream);
   padding: 18px 25px;
   border-radius: 5px;
-  box-shadow: 0 12px 30px rgba(19,76,101,0.2);
-  transform: rotate(-3deg);
+  box-shadow: none;
+  transform: none;
 }
 .floatingNote b {
   display: block;
@@ -545,8 +543,8 @@
   padding: 36px;
   border: 1px solid var(--color-paper-sand);
   border-radius: 7px;
-  transform: rotate(2deg);
-  box-shadow: 12px 12px 0 var(--color-paper-cream);
+  transform: none;
+  box-shadow: none;
 }
 .intake blockquote {
   font-family: var(--serif);
@@ -594,9 +592,9 @@
   padding: 35px;
   background: var(--color-paper-ivory);
   border-radius: 7px;
-  box-shadow: 0 12px 30px rgba(19,76,101,0.04);
+  box-shadow: none;
   border: 1px solid var(--color-paper-sand);
-  transform: rotate(-2deg);
+  transform: none;
 }
 .capacityTop {
   display: flex;
@@ -913,10 +911,10 @@
   content: '';
   width: 140%;
   height: 60px;
-  background: rgba(240,236,218,0.56);
+  background: rgba(255,249,244,0.56);
   position: absolute;
-  transform: rotate(-30deg);
-  border: 8px solid rgba(240,236,218,0.53);
+  transform: none;
+  border: 8px solid rgba(255,249,244,0.53);
 }
 .map > svg,
 .map > b,
@@ -1120,7 +1118,7 @@
 .footerBottom {
   max-width: 1240px;
   margin: 50px auto 0;
-  border-top: 1px solid rgba(19,76,101,0.4);
+  border-top: 1px solid rgba(0,95,115,0.4);
   padding: 25px 0 90px;
   display: flex;
   justify-content: space-between;
@@ -1145,7 +1143,7 @@
   color: var(--color-ink);
   border: 1px solid var(--color-paper-edge);
   border-radius: 30px;
-  box-shadow: 0 4px 25px rgba(19,76,101,0.19);
+  box-shadow: none;
   font-size: 12px;
   font-weight: 600;
   padding: 14px 23px;
@@ -1183,10 +1181,10 @@
   background: var(--color-paper-ivory);
   color: var(--ink);
   padding: 0;
-  box-shadow: -30px 0 80px rgba(19,76,101,0.27);
+  box-shadow: none;
 }
 .menuDialog::backdrop {
-  background: rgba(19,76,101,0.45);
+  background: rgba(0,95,115,0.45);
   backdrop-filter: blur(6px);
 }
 .menuPanel {
@@ -1291,7 +1289,7 @@
     font-size: 65px;
   }
   .heroVisual .week {
-    transform: rotate(-3deg);
+    transform: none;
   }
   .week {
     padding: 17px 12px 0;
@@ -1391,10 +1389,10 @@
     will-change: auto;
   }
   .heroVisual .week {
-    transform: rotate(-2deg);
+    transform: none;
   }
   .heroVisual:hover .week {
-    transform: rotate(-2deg);
+    transform: none;
   }
   .floatingNote {
     left: 0;

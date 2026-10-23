@@ -2,64 +2,62 @@
 
 /* ==================================================================
    CALENDRA — Design tokens (DESIGN.md §3–§7)
-   Single source of truth for the cut-paper diorama language.
+   Shared application colors, surfaces and motion.
    No component may hardcode a hex value (RULES.md L8).
    ================================================================== */
 
 @theme {
   /* --- base paper stock ------------------------------------------------ */
-  --color-paper-cream: #F0ECDA;
-  --color-paper-ivory: #F0ECDA;
-  --color-paper-sand: #F0ECDA;
-  --color-paper-kraft: #F0ECDA;
-  --color-paper-edge: #134C65;
+  --color-paper-cream: #FFF9F4;
+  --color-paper-ivory: #FFF9F4;
+  --color-paper-sand: #FFF9F4;
+  --color-paper-kraft: #FFF9F4;
+  --color-paper-edge: #005F73;
 
   /* --- ink (warm, never pure black) ------------------------------------ */
-  --color-ink: #134C65;
-  --color-ink-soft: #134C65;
-  --color-ink-faint: #134C65;
-  --color-ink-ghost: #134C65;
+  --color-ink: #005F73;
+  --color-ink-soft: #005F73;
+  --color-ink-faint: #005F73;
+  --color-ink-ghost: #005F73;
 
   /* --- dyed sheet accents ---------------------------------------------- */
-  --color-rose: #152740;
-  --color-rose-deep: #134C65;
-  --color-rose-light: #F0ECDA;
+  --color-rose: #005F73;
+  --color-rose-deep: #005F73;
+  --color-rose-light: #FFF9F4;
 
-  --color-terracotta: #152740;
-  --color-terracotta-deep: #134C65;
-  --color-terracotta-light: #F0ECDA;
+  --color-terracotta: #EE9B00;
+  --color-terracotta-deep: #005F73;
+  --color-terracotta-light: #FFF9F4;
 
-  --color-olive: #487F86;
-  --color-olive-deep: #134C65;
-  --color-olive-light: #F0ECDA;
+  --color-olive: #0A9396;
+  --color-olive-deep: #005F73;
+  --color-olive-light: #FFF9F4;
 
-  --color-teal: #134C65;
-  --color-teal-deep: #134C65;
-  --color-teal-light: #F0ECDA;
+  --color-teal: #005F73;
+  --color-teal-deep: #005F73;
+  --color-teal-light: #FFF9F4;
 
-  --color-plum: #152740;
-  --color-plum-deep: #152740;
-  --color-plum-light: #F0ECDA;
+  --color-plum: #005F73;
+  --color-plum-deep: #005F73;
+  --color-plum-light: #FFF9F4;
 
-  --color-frost: #487F86;
-  --color-frost-deep: #134C65;
-  --color-frost-light: #F0ECDA;
+  --color-frost: #0A9396;
+  --color-frost-deep: #005F73;
+  --color-frost-light: #FFF9F4;
 
   /* --- light & shadow: warm, soft, never grey -------------------------- */
-  --shadow-mat: 0 1px 0 rgba(240,236,218,0.55), 0 3px 6px -2px rgba(19,76,101,0.18);
-  --shadow-sheet: 0 1px 0 rgba(240,236,218,0.6), 0 6px 14px -6px rgba(19,76,101,0.22),
-    0 18px 34px -18px rgba(19,76,101,0.28);
-  --shadow-lift: 0 2px 0 rgba(240,236,218,0.5), 0 14px 28px -10px rgba(19,76,101,0.3),
-    0 34px 60px -30px rgba(19,76,101,0.36);
-  --shadow-cut: inset 0 2px 4px rgba(19,76,101,0.22), inset 0 -1px 0 rgba(240,236,218,0.5);
-  --shadow-press: inset 0 2px 3px rgba(19,76,101,0.28), 0 1px 0 rgba(240,236,218,0.45);
-  --shadow-tile: 0 1px 0 rgba(240,236,218,0.5), 0 4px 8px -3px rgba(19,76,101,0.24);
+  --shadow-mat: none;
+  --shadow-sheet: none;
+  --shadow-lift: none;
+  --shadow-cut: none;
+  --shadow-press: none;
+  --shadow-tile: none;
 
   /* --- hand-cut radii (asymmetric on purpose) -------------------------- */
-  --radius-cut: 14px 17px 13px 18px / 16px 13px 18px 14px;
-  --radius-cut-sm: 9px 11px 8px 12px / 10px 9px 12px 8px;
-  --radius-cut-xs: 6px 7px 5px 8px / 7px 6px 8px 5px;
-  --radius-well: 12px 14px 11px 15px / 13px 11px 15px 12px;
+  --radius-cut: 14px;
+  --radius-cut-sm: 10px;
+  --radius-cut-xs: 6px;
+  --radius-well: 12px;
 
   /* --- typography ------------------------------------------------------ */
   --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, ui-serif, serif;
@@ -193,155 +191,18 @@
     min-width: 0;
   }
 
-  /* Laid-paper fibre: directional grain, multiplied over any surface. */
-  .paper-fibre {
-    position: relative;
-  }
-  .paper-fibre::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    opacity: 0.05;
-    /*
-     * Deliberately *not* `mix-blend-mode: multiply`, though that is the truer paper model. A blended
-     * layer cannot be composited on its own: the browser must blend it against everything beneath it,
-     * so every repaint underneath forces a re-blend of this layer — and this class sits on every
-     * chip and button on screen (plus the full-viewport grain). During a drag that is a
-     * full-viewport composite per frame, which is exactly what an Interaction-to-Next-Paint warning
-     * is made of (MEMORY.md §5b). The noise is greyscale at 5%, so a normal blend darkens the paper
-     * by a visually indistinguishable amount and costs one ordinary layer instead.
-     */
-    background-image: none;
-    background-size: 240px 240px;
-  }
-
-  /* Matte tooth of card stock. */
-  .paper-tooth::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    opacity: 0.035;
-    /* Unblended for the same reason as `.paper-fibre` — see the note there. */
-    background-image: none;
-  }
-
-  /* The lighting of the whole board: soft warm vignette. */
-  .paper-board {
-    background-color: var(--color-paper-cream);
-    background-image:
-      radial-gradient(120% 85% at 50% -10%, rgba(240,236,218,0.72) 0%, rgba(240,236,218,0) 55%),
-      radial-gradient(125% 100% at 50% 115%, rgba(19,76,101,0.13) 0%, rgba(19,76,101,0) 60%),
-      linear-gradient(180deg, rgba(240,236,218,0.25) 0%, rgba(19,76,101,0.05) 100%);
-  }
-
-  /* A raised sheet: cut edge highlight + warm drop shadow. */
-  .paper-sheet {
+  /* Compatibility selectors for shared controls; rendered as clean, flat surfaces. */
+  .paper-fibre { position: relative; }
+  .paper-board { background-color: var(--color-paper-cream); }
+  .paper-sheet, .paper-well, .paper-tile {
     background-color: var(--color-paper-ivory);
-    border: 1px solid rgba(19,76,101,0.14);
-    border-radius: var(--radius-cut);
-    box-shadow: var(--shadow-sheet);
-    position: relative;
+    border: 1px solid var(--color-paper-edge);
+    border-radius: 12px;
   }
+  .paper-perforation { border-top: 1px solid var(--color-paper-edge); }
+  .paper-lifted { z-index: 5; }
+  .paper-pressed { transform: translateY(1px); }
 
-  /* The mat peeking out beneath a sheet — this is what creates depth. */
-  .paper-mat::before {
-    content: '';
-    position: absolute;
-    left: 6px;
-    right: 6px;
-    top: 7px;
-    bottom: -7px;
-    border-radius: var(--radius-cut);
-    background: var(--color-paper-sand);
-    box-shadow: var(--shadow-mat);
-    z-index: -1;
-  }
-
-  /* A recess: cut into the board rather than laid on top of it. */
-  .paper-well {
-    background-color: var(--color-paper-sand);
-    border-radius: var(--radius-well);
-    box-shadow: var(--shadow-cut);
-    border: 1px solid rgba(19,76,101,0.12);
-  }
-
-  /* Cut edge highlight for small tiles. */
-  .paper-tile {
-    background-color: var(--color-paper-ivory);
-    border-radius: var(--radius-cut-sm);
-    border: 1px solid rgba(19,76,101,0.16);
-    box-shadow: var(--shadow-tile);
-    position: relative;
-    overflow: hidden;
-  }
-  .paper-tile::after {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(180deg, rgba(240,236,218,0.9), rgba(240,236,218,0));
-    pointer-events: none;
-  }
-
-  /* Fixed studio grain over everything. */
-  .paper-grain {
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-    pointer-events: none;
-    opacity: 0.055;
-    /* Its own paint region: the overlay covers the viewport, so without this any repaint under it
-       invites a re-composite of the whole screen. Unblended — see `.paper-fibre`. */
-    contain: paint;
-    background-image: none;
-  }
-
-  /* Scalloped deckle edge used on hero scenery and section cuts. */
-  .deckle-top {
-    -webkit-mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #134C65 6.5px);
-    -webkit-mask-size: 14px 12px;
-    -webkit-mask-repeat: repeat-x;
-    -webkit-mask-position: top left;
-    mask-image: radial-gradient(circle at 6px -2px, transparent 6px, #134C65 6.5px);
-    mask-size: 14px 12px;
-    mask-repeat: repeat-x;
-    mask-position: top left;
-  }
-
-  /* Perforation dots along a cut line. */
-  .paper-perforation {
-    border-top: 1px dashed rgba(19,76,101,0.3);
-  }
-
-  /* Per-layer depth for SVG diorama scenery — tuned warm, never grey. */
-  .layer-shadow-1 {
-    filter: drop-shadow(0 3px 4px rgba(19,76,101,0.16));
-  }
-  .layer-shadow-2 {
-    filter: drop-shadow(0 7px 9px rgba(19,76,101,0.2));
-  }
-  .layer-shadow-3 {
-    filter: drop-shadow(0 12px 14px rgba(19,76,101,0.24));
-  }
-  .layer-shadow-4 {
-    filter: drop-shadow(0 18px 20px rgba(19,76,101,0.28));
-  }
-
-  /* Drag handle / lifted sheet. */
-  .paper-lifted {
-    transform: translateY(-1px) rotate(-0.6deg);
-    box-shadow: var(--shadow-lift);
-    z-index: 5;
-  }
-
-  .paper-pressed {
-    transform: translateY(1px);
-    box-shadow: var(--shadow-press);
-  }
 }
 
 /* ==================================================================
@@ -372,13 +233,13 @@
 
 @keyframes tile-settle {
   0% {
-    transform: translateY(-3px) rotate(-0.8deg);
+    transform: translateY(-3px);
   }
   60% {
-    transform: translateY(1px) rotate(0.15deg);
+    transform: translateY(1px);
   }
   100% {
-    transform: translateY(0) rotate(0deg);
+    transform: translateY(0);
   }
 }
 

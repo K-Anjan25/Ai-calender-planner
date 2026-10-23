@@ -91,7 +91,7 @@ export function AuthPanel({
         </div>
       </div>
 
-      <PaperSheet mat className="p-6 sm:p-7">
+      <PaperSheet className="p-6 sm:p-7">
         {user ? (
           <div>
             <PaperChip tone="olive">Already signed in</PaperChip>
@@ -117,7 +117,7 @@ export function AuthPanel({
             </p>
 
             {errorMessage ? (
-              <p className="mt-4 flex items-start gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(21,39,64,0.35)] bg-rose-light/60 px-3 py-2.5 text-[12px] leading-relaxed text-ink">
+              <p className="mt-4 flex items-start gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(0,95,115,0.35)] bg-rose-light/60 px-3 py-2.5 text-[12px] leading-relaxed text-ink">
                 <AlertTriangle size={14} className="mt-px shrink-0 text-rose-deep" aria-hidden="true" />
                 <span>
                   {errorMessage}
@@ -154,9 +154,9 @@ export function AuthPanel({
               ) : null}
 
               <div className="flex items-center gap-3 py-1" aria-hidden="true">
-                <span className="h-px flex-1 bg-[color:rgba(19,76,101,0.2)]" />
+                <span className="h-px flex-1 bg-[color:rgba(0,95,115,0.2)]" />
                 <span className="text-[10.5px] font-bold tracking-[0.08em] text-ink-faint uppercase">or</span>
-                <span className="h-px flex-1 bg-[color:rgba(19,76,101,0.2)]" />
+                <span className="h-px flex-1 bg-[color:rgba(0,95,115,0.2)]" />
               </div>
 
               <PaperButton variant="flat" className="w-full" disabled={busy} onClick={() => void enterDemo()}>
@@ -166,7 +166,7 @@ export function AuthPanel({
 
             </div>
 
-            <p className="mt-6 border-t border-dashed border-[color:rgba(19,76,101,0.22)] pt-4 text-[11px] leading-relaxed text-ink-faint">
+            <p className="mt-6 border-t border-dashed border-[color:rgba(0,95,115,0.22)] pt-4 text-[11px] leading-relaxed text-ink-faint">
               {isSignUp ? 'By creating an account you agree to ' : 'By signing in you agree to '}
               the <Link href="/legal#terms" className="underline hover:text-ink">terms</Link> and{' '}
               <Link href="/legal#privacy" className="underline hover:text-ink">privacy notice</Link>.

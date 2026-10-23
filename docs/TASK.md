@@ -338,3 +338,11 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Applied Driftwood Beige, Harbor Blue, Seafoam Steel, Midnight Tide exclusively as live base colors.
 - Removed hero canvas particle component, animation loop and unused CSS; retained calendar preview.
 - Updated icon assets/cache keys v6 and palette/no-particle tests. 168 tests and native smoke pass.
+
+## 2026-10-24 — new four-color reference; retire diorama presentation
+
+- Applied 005F73 / 0A9396 / EE9B00 / FFF9F4 across live routes and refreshed icons (v7).
+- Removed scenery mounts in planner/footer, grain mount, scenery source/generation scripts and their
+  retired render tests. Removed cut-edge and layer-stack helpers, material gradients/shadows/texture,
+  uneven radii and tilted UI panels. Preserved functional controls and dashboard.
+- Added removal regression coverage. 163 current tests, lint/typechecks and native UI smoke pass.
