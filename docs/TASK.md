@@ -283,3 +283,13 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Done: standalone `/legal` terms/privacy and updated auth/footer links.
 - Done: explicit versioned favicon and Apple touch assets; built-page and HTTP verification.
 - Verified: 157 tests, lint, typecheck and production build.
+
+## Immersive single-file Calendra site
+
+- Built `public/calendra.html`: four hash-routed React views, self-contained production bundle,
+  CSS Modules, Google Fonts fallback, Lucide UI icons and inline brand social icons.
+- Canvas particles, layered calendar, parallax, reveal/counter motion, reduced-motion support,
+  native-dialog hamburger navigation, pricing/FAQs, back-to-top/sticky CTA and fat footer/map.
+- Contact/newsletter validation with explicit submission failure until owner endpoints are configured.
+- Existing planner untouched. Deployment/rebuild and operational caveats in `standalone/calendra/README.md`.
+- Delivered-bundle smoke test covers navigation/menu, form validation/failure, pricing, accordion.

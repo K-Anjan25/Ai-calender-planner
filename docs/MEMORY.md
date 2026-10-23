@@ -298,3 +298,12 @@ concise Demo badge, simplified unavailable sign-in errors and removed payment im
 Keep essential safety/privacy/error messages and do not imply unavailable purchases work.
 Operator diagnostics remain in API responses and repository docs, not public marketing copy.
 Verified 158 tests pass, lint and both typechecks clean.
+
+### Immersive single-file redesign
+
+Latest request specifies 3–5 pages and a single HTML with React/CSS Modules. Reconciled as four
+hash-routed views in `public/calendra.html`, preserving existing Next.js planner. Editable JSX/CSS and
+esbuild generator retained; bundled React has no runtime CDN dependency. Forms have no supplied
+submission backend: blank endpoints produce real failure, never simulated success. Do not claim
+independent per-page SEO, paid checkout, newsletter delivery or WCAG certification. Setup and caveats
+in `standalone/calendra/README.md`. Reduced motion, native dialog and semantic/error states included.
