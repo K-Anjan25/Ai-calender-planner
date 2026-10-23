@@ -293,3 +293,14 @@ Numbers always specific. Consequences always stated. No hype, no emoji in system
 - [ ] Skeleton (paper cut-out) shown during planning, not a bare spinner.
 - [ ] Empty states are diorama scenes with a single clear action.
 - [ ] Keyboard-reachable, visible focus, labelled for screen readers.
+
+## 2026-10-23 — immersive layout, original brand
+
+The native landing keeps the immersive composition, but brand identity is shared with the original
+planner: `CalendraLogo` / `CalendraMark`, cream/ivory/sand backgrounds, warm ink, teal, olive and
+terracotta accents. CSS Module aliases reference the global `--color-*` tokens rather than defining
+another forest-green palette. Header, drawer and footer use the exact shared logo component.
+Text on teal-light/event cards uses ink, not muted gray. Primary buttons use ivory on teal-deep.
+Key text pairs are numerically tested at 4.5:1 or above; this is not a full accessibility certification.
+Tablet hero columns stack at 1050px; the calendar gets a local horizontal scroll region instead of
+shrinking event labels beyond readability. Reduced-motion preferences remain supported.

@@ -318,3 +318,13 @@ Dashboard/auth endpoints remain untouched. Added bounded validated form API rela
 server-only HTTPS configuration; actual delivery and global anti-abuse require deployment services.
 Tests cover provider acceptance/failure, schemas/origin/body budget and native UI. Do not claim a
 Vercel Preview was promoted to Production simply because the branch was pushed. No PR/merge.
+
+### 2026-10-23 — preserve original brand on the immersive landing
+
+User explicitly requested previous original logo and palette, and supplied a design/function review.
+Keep the new native landing layout but reuse `CalendraLogo` and original global theme tokens, not
+independent forest-green branding. Calendar favicon already matches the original mark. Header/drawer/
+footer are warm light surfaces; ink on tinted cards and ivory on teal-deep buttons meet measured AA
+normal-text contrast. Added FAQ navigation, contact focus for Pro/Teams, larger mock-calendar text and
+local scrolling plus earlier tablet stacking. Existing form/links behavior preserved and checked.
+No real-browser pixel/zoom or screen-reader conformance claim is made from these automated checks.

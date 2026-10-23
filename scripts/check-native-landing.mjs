@@ -53,6 +53,29 @@ const wait = () => new Promise((resolve) => setTimeout(resolve, 80))
 const { document, Event } = dom.window
 await wait()
 assert.equal(document.querySelectorAll('h1').length, 1)
+assert.equal(
+  document.querySelectorAll('svg[aria-label="Calendra"]').length,
+  3,
+  'Header, drawer and footer must share the original calendar mark',
+)
+assert.ok(
+  document.querySelector('nav a[href="#questions"]'),
+  'Menu must include FAQs',
+)
+for (const label of ['Discuss Pro', 'Talk to us']) {
+  const link = [...document.querySelectorAll('a')].find((a) =>
+    a.textContent.includes(label),
+  )
+  assert.equal(link?.getAttribute('href'), '#contact')
+}
+for (const link of document.querySelectorAll('a[target="_blank"]')) {
+  assert.ok(
+    link.getAttribute('aria-label'),
+    'External icon links must have accessible names',
+  )
+  assert.match(link.href, /^https:\/\//)
+}
+
 for (const id of ['product', 'plans', 'questions', 'contact'])
   assert.ok(document.getElementById(id))
 assert.equal(

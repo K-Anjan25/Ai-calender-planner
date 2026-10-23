@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import s from './site.module.css'
+import { CalendraLogo } from '@/components/paper/CalendraMark'
 
 /* Same-origin App Router handlers own validation, delivery configuration and credentials.
    Only an accepted server response can produce a success message. */
@@ -29,6 +30,7 @@ const NAV = [
   { label: 'Home', href: '#top' },
   { label: 'Product', href: '#product' },
   { label: 'Pricing', href: '#plans' },
+  { label: 'FAQs', href: '#questions' },
   { label: 'Contact', href: '#contact' },
 ]
 
@@ -81,15 +83,9 @@ function Linkedin() {
     </svg>
   )
 }
-function Mark({ small = false }) {
-  return (
-    <span className={s.brand}>
-      <span className={s.mark}>
-        <CalendarDays size={small ? 20 : 23} strokeWidth={1.6} />
-      </span>
-      Calendra
-    </span>
-  )
+// Use the same original mark and wordmark as the dashboard, auth pages and favicon.
+function Mark() {
+  return <CalendraLogo size={32} className={s.brand} />
 }
 function LinkButton({
   children,
@@ -101,6 +97,20 @@ function LinkButton({
     <Link
       href={href}
       className={`${s.button} ${secondary ? s.secondary : ''}`}
+      onClick={
+        href === '#contact'
+          ? () => {
+              // Leave scrolling to Next's anchor handling, then put keyboard focus in the form.
+              setTimeout(
+                () =>
+                  document
+                    .getElementById('contact-message')
+                    ?.focus({ preventScroll: true }),
+                0,
+              )
+            }
+          : undefined
+      }
       {...rest}
     >
       {children}
@@ -121,13 +131,15 @@ function Atmosphere() {
     let frame = 0,
       w = 0,
       h = 0,
-      visible = true
+      visible = true,
+      particleColor = ''
     const points = Array.from({ length: 48 }, (_, i) => ({
       x: ((i * 73) % 997) / 997,
       y: ((i * 137) % 991) / 991,
       r: i % 3 === 0 ? 1.8 : 0.8,
     }))
     function resize() {
+      particleColor = getComputedStyle(canvas).color
       w = canvas.clientWidth
       h = canvas.clientHeight
       const d = Math.min(devicePixelRatio || 1, 2)
@@ -137,11 +149,11 @@ function Atmosphere() {
     }
     function draw(t = 0) {
       ctx.clearRect(0, 0, w, h)
+      ctx.fillStyle = particleColor
       for (const p of points) {
         const y = (p.y * h + (mq.matches ? 0 : t * 0.003 * p.r)) % h
         ctx.beginPath()
         ctx.arc(p.x * w, y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(172,191,154,.34)'
         ctx.fill()
       }
       if (!mq.matches && visible) frame = requestAnimationFrame(draw)
@@ -356,7 +368,14 @@ function Home() {
               <span>THE AI CALENDAR PLANNER</span>
               <span>01 — 05</span>
             </div>
-            <Week />
+            <div
+              className={s.calendarScroll}
+              role="region"
+              aria-label="Illustrative weekly calendar"
+              tabIndex={0}
+            >
+              <Week />
+            </div>
             <div className={s.floatingNote}>
               <span className={s.noteIcon}>
                 <Check size={16} />

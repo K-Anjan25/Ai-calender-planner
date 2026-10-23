@@ -303,3 +303,11 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Verified: native-component behavior check, homepage SSR and route HTTP smoke, demo session → planner.
 - Deployment: push branch to Vercel; promoting a Preview to Production still requires the owner's
   Vercel action, no PR/merge authorized.
+
+## 2026-10-23 — original logo/palette and review follow-up
+
+- Restored shared original logo in landing header, drawer and footer; retained matching favicon.
+- Rebased landing colors on the original global cream/teal/olive/terracotta design tokens.
+- Added FAQs to menu, verified accessible social labels, and focused contact textarea from paid-tier CTAs.
+- Stacked tablet hero earlier; enlarged preview labels and contained calendar overflow in its own region.
+- Verified native interaction checks, 165 tests, lint/typecheck and key text-pair numeric AA contrast.
