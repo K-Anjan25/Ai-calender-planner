@@ -333,3 +333,11 @@ Keylime tinted cards and Amethyst accents. Shadows/transparency reuse the same f
 Semantic token names remain backward-compatible with the planner. Original calendar logo shape
 retained; icon cache keys v5. Section indices remain absent. Source-wide four-color guard and key
 normal-text contrast tests pass; no full browser accessibility certification is implied.
+
+## 2026-10-24 — coastal four-color palette (current)
+
+Only live authored base colors: Driftwood Beige `#F0ECDA`, Harbor Blue `#134C65`, Seafoam Steel
+`#487F86`, Midnight Tide `#152740`. Supersedes previous swatches. Beige surfaces and Harbor/Midnight
+text and actions; Seafoam is a decorative accent, not small text on Beige. Alpha shadows reuse these
+RGB bases. Original logo geometry remains; favicon cache keys v6. Removed the hero particle canvas
+and its animation loop entirely. Section numbering remains absent.

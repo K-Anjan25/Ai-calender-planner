@@ -66,7 +66,7 @@ it('keeps the key body-text, button and event color pairs above AA normal-text c
 })
 
 it('restricts all live authored hex/RGB colors to the four supplied swatches', () => {
-  const allowed = new Set(['4D5C60', '525266', 'D1E0DE', 'EEF4CE'])
+  const allowed = new Set(['F0ECDA', '134C65', '487F86', '152740'])
   const walk = (directory: string): string[] =>
     readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
       const path = `${directory}/${entry.name}`
@@ -109,4 +109,12 @@ it('removes section index labels without deleting real calendar/statistics data'
   assert.ok(!source.includes('01 — 05'))
   assert.ok(source.includes('MAKE SENSE OF THE MESS'))
   assert.ok(source.includes('KNOW YOUR LIMITS'))
+})
+
+
+it('does not mount or animate a hero particle canvas', () => {
+  const source = readFileSync('src/components/landing/Landing.jsx', 'utf8')
+  assert.ok(!source.includes('function Atmosphere'))
+  assert.ok(!source.includes('<canvas'))
+  assert.ok(!source.includes('particleColor'))
 })

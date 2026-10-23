@@ -262,14 +262,6 @@
   position: relative;
   isolation: isolate;
 }
-.atmosphere {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: -1;
-}
 .heroInner {
   max-width: 1400px;
   margin: auto;
@@ -322,13 +314,13 @@
   width: 850px;
   height: 850px;
   border-radius: 50%;
-  border: 1px solid rgba(82,82,102,0.13);
+  border: 1px solid rgba(21,39,64,0.13);
   top: 0;
   right: -220px;
   z-index: -1;
   box-shadow:
-    0 0 0 60px rgba(82,82,102,0.03),
-    0 0 0 120px rgba(82,82,102,0.02);
+    0 0 0 60px rgba(21,39,64,0.03),
+    0 0 0 120px rgba(21,39,64,0.02);
 }
 .heroVisual {
   position: relative;
@@ -346,7 +338,7 @@
 }
 .heroVisual .week {
   transform: rotateY(-9deg) rotateX(5deg) rotateZ(-3deg);
-  box-shadow: 10px 30px 80px rgba(77,92,96,0.33);
+  box-shadow: 10px 30px 80px rgba(19,76,101,0.33);
   transition: transform 0.8s var(--ease);
 }
 .heroVisual:hover .week {
@@ -359,7 +351,7 @@
   right: 10px;
   bottom: -12px;
   border-radius: 50%;
-  border: 1px solid rgba(238,244,206,0.25);
+  border: 1px solid rgba(240,236,218,0.25);
   z-index: -1;
 }
 .floatingNote {
@@ -373,7 +365,7 @@
   background: var(--color-paper-cream);
   padding: 18px 25px;
   border-radius: 5px;
-  box-shadow: 0 12px 30px rgba(77,92,96,0.2);
+  box-shadow: 0 12px 30px rgba(19,76,101,0.2);
   transform: rotate(-3deg);
 }
 .floatingNote b {
@@ -602,7 +594,7 @@
   padding: 35px;
   background: var(--color-paper-ivory);
   border-radius: 7px;
-  box-shadow: 0 12px 30px rgba(77,92,96,0.04);
+  box-shadow: 0 12px 30px rgba(19,76,101,0.04);
   border: 1px solid var(--color-paper-sand);
   transform: rotate(-2deg);
 }
@@ -921,10 +913,10 @@
   content: '';
   width: 140%;
   height: 60px;
-  background: rgba(238,244,206,0.56);
+  background: rgba(240,236,218,0.56);
   position: absolute;
   transform: rotate(-30deg);
-  border: 8px solid rgba(238,244,206,0.53);
+  border: 8px solid rgba(240,236,218,0.53);
 }
 .map > svg,
 .map > b,
@@ -1128,7 +1120,7 @@
 .footerBottom {
   max-width: 1240px;
   margin: 50px auto 0;
-  border-top: 1px solid rgba(77,92,96,0.4);
+  border-top: 1px solid rgba(19,76,101,0.4);
   padding: 25px 0 90px;
   display: flex;
   justify-content: space-between;
@@ -1153,7 +1145,7 @@
   color: var(--color-ink);
   border: 1px solid var(--color-paper-edge);
   border-radius: 30px;
-  box-shadow: 0 4px 25px rgba(77,92,96,0.19);
+  box-shadow: 0 4px 25px rgba(19,76,101,0.19);
   font-size: 12px;
   font-weight: 600;
   padding: 14px 23px;
@@ -1191,10 +1183,10 @@
   background: var(--color-paper-ivory);
   color: var(--ink);
   padding: 0;
-  box-shadow: -30px 0 80px rgba(77,92,96,0.27);
+  box-shadow: -30px 0 80px rgba(19,76,101,0.27);
 }
 .menuDialog::backdrop {
-  background: rgba(77,92,96,0.45);
+  background: rgba(19,76,101,0.45);
   backdrop-filter: blur(6px);
 }
 .menuPanel {
@@ -1712,9 +1704,6 @@
 /* Original brand colors, one shared token source with the dashboard. */
 .brand {
   color: var(--color-teal-deep);
-}
-.atmosphere {
-  color: var(--color-teal);
 }
 .calendarScroll {
   overflow-x: auto;

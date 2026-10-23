@@ -332,3 +332,9 @@ week grid. Each item below was reproduced, root-caused, fixed, and covered.
 - Applied Slate/Amethyst/Mist/Keylime across landing, auth, planner, SVG scenes and icons.
 - Preserved logo geometry and no-section-number requirement; refreshed favicon URLs to v5.
 - Source-wide exact-palette guard, contrast tests, 167 regression tests and native UI smoke pass.
+
+## 2026-10-24 — coastal palette and particle removal
+
+- Applied Driftwood Beige, Harbor Blue, Seafoam Steel, Midnight Tide exclusively as live base colors.
+- Removed hero canvas particle component, animation loop and unused CSS; retained calendar preview.
+- Updated icon assets/cache keys v6 and palette/no-particle tests. 168 tests and native smoke pass.

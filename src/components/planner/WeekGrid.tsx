@@ -556,7 +556,7 @@ const DayColumn = memo(function DayColumn({
       data-day-date={day.date}
       data-window-start={day.windowStart}
       className={clsx(
-        'relative min-w-0 flex-1 rounded-[var(--radius-cut-xs)] border border-[color:rgba(77,92,96,0.10)]',
+        'relative min-w-0 flex-1 rounded-[var(--radius-cut-xs)] border border-[color:rgba(19,76,101,0.10)]',
         off ? 'bg-paper-sand/40' : 'bg-paper-ivory/85',
       )}
       onPointerDown={(event) => {
@@ -568,7 +568,7 @@ const DayColumn = memo(function DayColumn({
         <span
           key={mark.minute}
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 border-t border-[color:rgba(77,92,96,0.10)]"
+          className="pointer-events-none absolute inset-x-0 border-t border-[color:rgba(19,76,101,0.10)]"
           style={{ top: minuteToY(mark.minute, day) }}
         />
       ))}
@@ -649,7 +649,7 @@ function ProtectedBands({ day }: { day: DayMeta }) {
           className={clsx(
             // `overflow-hidden`: a 15-minute band is 11px tall and its label is 13px. Without this the
             // text spills over the neighbouring slot instead of being clipped to its own window.
-            'pointer-events-none absolute inset-x-0 overflow-hidden border-y border-dashed border-[color:rgba(77,92,96,0.18)]',
+            'pointer-events-none absolute inset-x-0 overflow-hidden border-y border-dashed border-[color:rgba(19,76,101,0.18)]',
             band.tone,
           )}
           style={{ top: ((band.start - day.windowStart) / 60) * HOUR_HEIGHT, height: Math.max(8, ((band.end - band.start) / 60) * HOUR_HEIGHT) }}

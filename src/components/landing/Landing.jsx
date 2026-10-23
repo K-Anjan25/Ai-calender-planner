@@ -119,68 +119,6 @@ function LinkButton({
   )
 }
 
-/* All motion is progressive enhancement. Reduced-motion users receive a static,
-   complete page. Canvas is decorative, capped at 48 particles and DPR 2. */
-function Atmosphere() {
-  const ref = useRef(null)
-  useEffect(() => {
-    const canvas = ref.current,
-      ctx = canvas.getContext('2d')
-    if (!ctx) return
-    const mq = matchMedia('(prefers-reduced-motion: reduce)')
-    let frame = 0,
-      w = 0,
-      h = 0,
-      visible = true,
-      particleColor = ''
-    const points = Array.from({ length: 48 }, (_, i) => ({
-      x: ((i * 73) % 997) / 997,
-      y: ((i * 137) % 991) / 991,
-      r: i % 3 === 0 ? 1.8 : 0.8,
-    }))
-    function resize() {
-      particleColor = getComputedStyle(canvas).color
-      w = canvas.clientWidth
-      h = canvas.clientHeight
-      const d = Math.min(devicePixelRatio || 1, 2)
-      canvas.width = w * d
-      canvas.height = h * d
-      ctx.setTransform(d, 0, 0, d, 0, 0)
-    }
-    function draw(t = 0) {
-      ctx.clearRect(0, 0, w, h)
-      ctx.fillStyle = particleColor
-      for (const p of points) {
-        const y = (p.y * h + (mq.matches ? 0 : t * 0.003 * p.r)) % h
-        ctx.beginPath()
-        ctx.arc(p.x * w, y, p.r, 0, Math.PI * 2)
-        ctx.fill()
-      }
-      if (!mq.matches && visible) frame = requestAnimationFrame(draw)
-    }
-    function restart() {
-      cancelAnimationFrame(frame)
-      draw()
-    }
-    function visibility() {
-      visible = !document.hidden
-      if (visible) restart()
-      else cancelAnimationFrame(frame)
-    }
-    resize()
-    draw()
-    window.addEventListener('resize', resize)
-    document.addEventListener('visibilitychange', visibility)
-    mq.addEventListener('change', restart)
-    return () => {
-      cancelAnimationFrame(frame)
-      window.removeEventListener('resize', resize)
-      document.removeEventListener('visibilitychange', visibility)
-      mq.removeEventListener('change', restart)
-    }
-  }, [])
-  return <canvas ref={ref} className={s.atmosphere} aria-hidden="true" />
-}
 function Week({ compact = false }) {
   const blocks = [
     ['Deep work', '09:00 – 10:30', 0, 17, 31, 'sage'],
@@ -332,7 +270,6 @@ function Home() {
   return (
     <>
       <section className={s.hero}>
-        <Atmosphere />
         <div className={s.orbit} aria-hidden="true" />
         <div className={s.heroInner}>
           <Reveal>

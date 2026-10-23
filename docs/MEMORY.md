@@ -354,3 +354,11 @@ Latest user image specifies 4D5C60 (Slate), 525266 (Amethyst), D1E0DE (Mist), EE
 Replaced all live src hex/RGB bases and regenerated icons, including older PNG asset URLs; current
 favicon filenames v5. No new logo shape, no section indices, no dashboard/auth behavior changes.
 Updated regression palette whitelist. 167 tests, lint/typecheck and native landing smoke pass.
+
+### 2026-10-24 — coastal palette and no hero particles
+
+User supplied F0ECDA, 134C65, 487F86, 152740 and requested hero particle removal. Updated all live
+source color bases, shared tokens, scenes and icons. Deleted Atmosphere canvas/component/animation
+and unused CSS, not just hidden it. Preserved calendar visual, original mark geometry, dashboard
+flows and no-section-number preference. Versioned icon URLs v6; source-wide palette guard and
+no-particle regression test pass. 168 tests, lint/typecheck and native interaction smoke are green.
