@@ -15,34 +15,34 @@
   --color-paper-edge: #3770BF;
 
   /* --- ink (warm, never pure black) ------------------------------------ */
-  --color-ink: #3770BF;
-  --color-ink-soft: #3770BF;
-  --color-ink-faint: #3770BF;
-  --color-ink-ghost: #3770BF;
+  --color-ink: #102C50;
+  --color-ink-soft: #102C50;
+  --color-ink-faint: #102C50;
+  --color-ink-ghost: #102C50;
 
   /* --- dyed sheet accents ---------------------------------------------- */
   --color-rose: #3770BF;
-  --color-rose-deep: #3770BF;
+  --color-rose-deep: #102C50;
   --color-rose-light: #F3F6FF;
 
   --color-terracotta: #CEF26D;
-  --color-terracotta-deep: #3770BF;
+  --color-terracotta-deep: #102C50;
   --color-terracotta-light: #F3F6FF;
 
   --color-olive: #8DC2FF;
-  --color-olive-deep: #3770BF;
+  --color-olive-deep: #102C50;
   --color-olive-light: #F3F6FF;
 
   --color-teal: #3770BF;
-  --color-teal-deep: #3770BF;
+  --color-teal-deep: #102C50;
   --color-teal-light: #F3F6FF;
 
   --color-plum: #3770BF;
-  --color-plum-deep: #3770BF;
+  --color-plum-deep: #102C50;
   --color-plum-light: #F3F6FF;
 
   --color-frost: #8DC2FF;
-  --color-frost-deep: #3770BF;
+  --color-frost-deep: #102C50;
   --color-frost-light: #F3F6FF;
 
   /* --- light & shadow: warm, soft, never grey -------------------------- */
@@ -297,3 +297,6 @@ html { scroll-behavior: smooth; }
 /* Sunny Herb / Blue Harbor reaches 3.91:1, suitable for large bold type,
    not small body labels. Keep all primary attention buttons above that threshold. */
 button[data-accent='terracotta'] { font-size: 19px; font-weight: 700; min-height: 44px; }
+
+/* Approved fifth swatch: dark blue text for AAA contrast on the brand surfaces. */
+html { scroll-padding-top: 110px; }

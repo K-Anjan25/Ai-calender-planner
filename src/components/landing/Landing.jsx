@@ -250,6 +250,7 @@ function FAQs() {
             <div key={q} className={s.faqItem}>
               <h3>
                 <button
+                  id={`question-${i}`}
                   aria-expanded={open === i}
                   aria-controls={`answer-${i}`}
                   onClick={() => setOpen(open === i ? null : i)}
@@ -262,7 +263,12 @@ function FAQs() {
                   )}
                 </button>
               </h3>
-              <div id={`answer-${i}`} hidden={open !== i}>
+              <div
+                id={`answer-${i}`}
+                role="region"
+                aria-labelledby={`question-${i}`}
+                hidden={open !== i}
+              >
                 <p>{a}</p>
               </div>
             </div>
@@ -868,10 +874,8 @@ function Footer() {
   )
 }
 export default function Landing() {
-  const [interactiveInView, setInteractiveInView] = useState(true)
   const [menu, setMenu] = useState(false),
-    [scrolled, setScrolled] = useState(false),
-    [showTop, setShowTop] = useState(false)
+    [scrolled, setScrolled] = useState(false)
   const toggle = useRef(null),
     dialog = useRef(null),
     main = useRef(null)
@@ -899,7 +903,6 @@ export default function Landing() {
     function update() {
       const y = window.scrollY
       setScrolled(y > 40)
-      setShowTop(y > 700)
       raf = 0
     }
     function scroll() {
@@ -924,51 +927,64 @@ export default function Landing() {
       document.body.style.overflow = ''
     }
   }, [menu])
-  // Suppress floating actions around interactive sections instead of layering over their content.
-  useEffect(() => {
-    if (!('IntersectionObserver' in window)) return
-    const visibleSections = new Set()
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) visibleSections.add(entry.target)
-          else visibleSections.delete(entry.target)
-        }
-        setInteractiveInView(visibleSections.size > 0)
-      },
-      { rootMargin: '0px 0px 64px 0px' },
+  function followAnchor(event) {
+    const link = event.target.closest?.('a[href^="#"]')
+    if (
+      !link ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
     )
-    document
-      .querySelectorAll('form, #questions, #plans')
-      .forEach((section) => observer.observe(section))
-    return () => observer.disconnect()
-  }, [])
+      return
+    const hash = link.getAttribute('href')
+    const target = document.getElementById(hash.slice(1))
+    if (!target) return
+    event.preventDefault()
+    // Run after drawer close/focus restoration, without letting Next reset scroll behavior.
+    setTimeout(() => {
+      target.scrollIntoView({
+        block: 'start',
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+      })
+      if (!target.hasAttribute('tabindex'))
+        target.setAttribute('tabindex', '-1')
+      target.focus({ preventScroll: true })
+      if (window.location.hash !== hash)
+        window.history.pushState(null, '', hash)
+    }, 0)
+  }
   function close() {
     setMenu(false)
     toggle.current?.focus()
   }
   return (
-    <div className={s.app} id="top">
+    <div className={s.app} id="top" onClickCapture={followAnchor}>
       <Link className={s.skip} href="#main-content">
         Skip to content
       </Link>
       <header className={`${s.header} ${scrolled ? s.headerScrolled : ''}`}>
-        <div className={s.brandGroup}>
-          <Link href="#top" aria-label="Calendra home">
-            <Mark />
-          </Link>
-          <span className={s.headerTag}>THE AI CALENDAR PLANNER</span>
+        <div className={s.headerInner}>
+          <div className={s.brandGroup}>
+            <Link href="#top" aria-label="Calendra home">
+              <Mark />
+            </Link>
+            <span className={s.headerTag}>THE AI CALENDAR PLANNER</span>
+          </div>
+          <button
+            ref={toggle}
+            className={s.menuButton}
+            onClick={() => setMenu(true)}
+            aria-expanded={menu}
+            aria-controls="navigation-dialog"
+          >
+            <span>MENU</span>
+            <Menu size={22} />
+          </button>
         </div>
-        <button
-          ref={toggle}
-          className={s.menuButton}
-          onClick={() => setMenu(true)}
-          aria-expanded={menu}
-          aria-controls="navigation-dialog"
-        >
-          <span>MENU</span>
-          <Menu size={22} />
-        </button>
       </header>
       <dialog
         id="navigation-dialog"
@@ -1009,13 +1025,10 @@ export default function Landing() {
       <main id="main-content" ref={main} tabIndex={-1}>
         <Home />
       </main>
-      <Footer />
-      {scrolled && !menu && !interactiveInView && (
-        <LinkButton className={s.stickyCTA} data-sticky-cta>
+      <nav className={s.actionBar} aria-label="Planner actions">
+        <LinkButton className={s.stickyCTA} data-bottom-cta>
           Build my week
         </LinkButton>
-      )}
-      {showTop && !menu && !interactiveInView && (
         <button
           className={s.backTop}
           aria-label="Back to top"
@@ -1028,9 +1041,10 @@ export default function Landing() {
             })
           }
         >
-          <ArrowUp size={18} />
+          <ArrowUp size={18} aria-hidden="true" />
         </button>
-      )}
+      </nav>
+      <Footer />
     </div>
   )
 }

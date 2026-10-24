@@ -2143,3 +2143,121 @@
   height: 18px;
   justify-self: end;
 }
+
+/* A dedicated in-flow action bar cannot overlap any preceding/following content. */
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 32px 6% max(32px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-paper-edge);
+  background: var(--color-paper-cream);
+}
+.actionBar .stickyCTA,
+.actionBar .backTop {
+  position: static;
+  inset: auto;
+  transform: none;
+  margin: 0;
+  max-width: 100%;
+}
+.actionBar .button.stickyCTA:hover {
+  transform: none;
+}
+/* Anchor the identity and menu together, even on very wide screens. */
+.header,
+.headerScrolled {
+  padding: 12px 4%;
+  background: var(--color-paper-cream);
+}
+.headerInner {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 20px;
+  border: 1px solid var(--color-paper-edge);
+  border-radius: var(--radius-cut-sm);
+  background: var(--color-paper-cream);
+}
+.section {
+  padding-block: clamp(64px, 7vw, 96px);
+  scroll-margin-top: 110px;
+}
+.faqItem button {
+  padding: 22px 16px;
+  font-size: 16px;
+}
+.faqItem p {
+  padding: 0 52px 24px 16px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.75;
+}
+.plan > p,
+.plan li {
+  font-size: 16px;
+  line-height: 1.65;
+}
+.footerLinks a,
+.footerBottom a,
+.socials a {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding-block: 10px;
+}
+.app .button,
+.app .secondary {
+  min-height: 44px;
+  border-radius: var(--radius-cut-sm);
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+.app .button:not([data-attention]):not(.secondary) {
+  background: var(--color-teal);
+  color: var(--color-paper-cream);
+  font-size: 19px;
+  font-weight: 700;
+}
+.app .button:not([data-attention]):not(.secondary):hover {
+  background: var(--color-ink);
+}
+@media (max-width: 480px) {
+  .headerInner {
+    padding: 10px 12px;
+    gap: 12px;
+  }
+  .faqItem button {
+    padding: 20px 12px;
+  }
+  .faqItem p {
+    padding: 0 12px 24px;
+  }
+}
+.footer a {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.footer a:hover {
+  color: var(--color-paper-cream);
+  text-decoration: underline;
+}
+.footerLinks a {
+  margin: 4px 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app .button {
+    transition: none;
+  }
+}

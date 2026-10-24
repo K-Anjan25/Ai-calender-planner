@@ -65,8 +65,8 @@ it('keeps the key body-text, button and event color pairs above AA normal-text c
     )
 })
 
-it('restricts all live authored hex/RGB colors to the four supplied swatches', () => {
-  const allowed = new Set(['F3F6FF', 'CEF26D', '3770BF', '8DC2FF'])
+it('restricts all live authored hex/RGB colors to the four brand swatches plus the approved AAA text swatch', () => {
+  const allowed = new Set(['F3F6FF', 'CEF26D', '3770BF', '8DC2FF', '102C50'])
   const walk = (directory: string): string[] =>
     readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
       const path = `${directory}/${entry.name}`
@@ -153,7 +153,7 @@ it('keeps every shared badge tone at AA normal-text contrast', () => {
   }
 })
 
-it('uses large bold Blue Harbor text on Sunny Herb actions and capacity alerts', () => {
+it('uses the approved dark text on Sunny Herb actions and capacity alerts', () => {
   assert.ok(contrast('ink', 'terracotta') >= 3)
   assert.match(css, /font-size:\s*19px/)
   assert.match(css, /font-weight:\s*700/)
@@ -165,4 +165,15 @@ it('uses large bold Blue Harbor text on Sunny Herb actions and capacity alerts',
     css,
     /\.capacity > p\s*\{[^}]*background:\s*var\(--color-terracotta\)/s,
   )
+})
+
+it('reaches AAA normal-text contrast on the canvas and pastel surfaces', () => {
+  const ratio = (background: string) => {
+    const values = [luminance(token('ink')), luminance(background)].sort(
+      (a, b) => b - a,
+    )
+    return (values[0] + 0.05) / (values[1] + 0.05)
+  }
+  for (const surface of ['#F3F6FF', '#CEF26D', '#8DC2FF'])
+    assert.ok(ratio(surface) >= 7)
 })

@@ -400,3 +400,18 @@ advance margin), rather than adding blur/z-index over readable text. Default sup
 IntersectionObserver is unavailable. FAQ buttons now use minmax(0,1fr)/20px grid tracks: an explicit
 wrapping question span and a fixed-size decorative icon. Pricing/FAQ padding scales56–88px and
 anchor offsets account for the sticky header. No palette or typography-family change.
+
+## 2026-10-24 — permanent non-overlapping actions and approved AAA text
+
+User explicitly approved adding a darker text color after the four-color/AAA conflict was explained.
+Fifth swatch #102C50 is used for ink/deep text tokens. Brand surfaces stay Moon Tint, Sunny Herb,
+Blue Harbor and Ice Blue. Contrast of dark ink: Moon Tint12.97:1, Ice Blue7.54:1, Sunny Herb11.04:1.
+Normal Blue Harbor-filled marketing buttons use Moon Tint19px/700 labels (AAA large-text4.59:1).
+These are color-pair guarantees, not a complete site-wide WCAG AAA certification.
+
+Floating promotional CTA/back-to-top are replaced by a static in-flow action bar between main and
+footer. No scroll-dependent hiding and no possible section collision; bar has its own layout area
+and safe-area bottom inset. Header identity/menu share a max1120px bordered Moon Tint container.
+FAQ answer padding is12–16px horizontal/24px bottom, text16px; question icons keep dedicated tracks.
+Footer links44px minimum width/height; section padding64–96px. Internal anchors use explicit smooth
+scroll plus destination focus, with automatic motion for reduced-motion users and usable hash URLs.

@@ -82,13 +82,34 @@ try {
     )
     assert.equal(
       attention.text,
-      'rgb(55, 112, 191)',
-      'CTA type must use Blue Harbor',
+      'rgb(16, 44, 80)',
+      'CTA type must use approved AAA dark blue',
     )
     assert.ok(
       attention.size >= 19 && attention.weight >= 700,
       'Blue on lime requires large bold type',
     )
+    await page.evaluate(() => {
+      const original = Element.prototype.scrollIntoView
+      Element.prototype.scrollIntoView = function (options) {
+        window.__anchorBehavior = options?.behavior
+        return original.call(this, options)
+      }
+    })
+    await page.locator('main a[href="#product"]').first().click()
+    await page.waitForFunction(() => location.hash === '#product')
+    assert.equal(
+      await page.evaluate(() => window.__anchorBehavior),
+      'auto',
+      'Reduced motion must disable smooth scrolling',
+    )
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.evaluate(() => {
+      window.__anchorBehavior = null
+    })
+    await page.locator('main a[href="#product"]').first().click()
+    await page.waitForFunction(() => window.__anchorBehavior === 'smooth')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     // Scroll the final question near the old floating-CTA collision zone.
     const faq = page.locator('#questions')
     const questions = faq.getByRole('button')
@@ -118,6 +139,23 @@ try {
       const expanded = await question.getAttribute('aria-expanded')
       await question.click()
       assert.notEqual(await question.getAttribute('aria-expanded'), expanded)
+      if (expanded === 'false') {
+        const answer = page.locator(
+          `#${await question.getAttribute('aria-controls')} p`,
+        )
+        const padding = await answer.evaluate((el) => {
+          const style = getComputedStyle(el)
+          return [
+            parseFloat(style.paddingLeft),
+            parseFloat(style.paddingBottom),
+          ]
+        })
+        assert.ok(
+          padding[0] >= 12 && padding[1] >= 24,
+          `${width}: expanded answer crowds its borders`,
+        )
+      }
+
       // Keyboard users must be able to reverse the toggle as well.
       await question.press('Enter')
       assert.equal(await question.getAttribute('aria-expanded'), expanded)
@@ -129,6 +167,32 @@ try {
     await page.waitForFunction(
       () => !document.querySelector('[data-sticky-cta]'),
     )
+    const rail = page.getByRole('navigation', { name: 'Planner actions' })
+    assert.equal(
+      await rail
+        .locator('[data-bottom-cta]')
+        .evaluate((el) => getComputedStyle(el).position),
+      'static',
+    )
+    const railPlacement = await rail.evaluate((el) => ({
+      top: el.getBoundingClientRect().top,
+      previousBottom: el.previousElementSibling.getBoundingClientRect().bottom,
+      bottom: el.getBoundingClientRect().bottom,
+      nextTop: el.nextElementSibling.getBoundingClientRect().top,
+    }))
+    assert.ok(
+      railPlacement.top >= railPlacement.previousBottom &&
+        railPlacement.nextTop >= railPlacement.bottom,
+      'Action bar must reserve its own space between main content and footer',
+    )
+    const footerLinks = page.locator('footer a')
+    for (const link of await footerLinks.all()) {
+      const box = await link.boundingBox()
+      assert.ok(
+        box && box.height >= 44 && box.width >= 44,
+        `${width}: footer link tap target too small`,
+      )
+    }
     const form = page.getByRole('form', { name: 'Contact Calendra' })
     await form.scrollIntoViewIfNeeded()
     await page.waitForFunction(

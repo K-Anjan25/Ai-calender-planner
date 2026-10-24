@@ -415,3 +415,19 @@ icon; wraps normal/overflow-wrap:anywhere. Pricing/FAQs clamp56/7vw/88px vertica
 170 tests + lint/typecheck/native smoke/build passed. Browser suite now tests every FAQ for geometry,
 click/Enter toggles and absent sticky CTA, and pricing suppression at five widths/DPR2. Screenshot
 review confirms Google Calendar question wraps to two lines on390px without icon collision.
+
+### Current design: in-flow actions and approved fifth text swatch
+
+User chose 'Allow darker text for AAA' via clarification. Add #102C50 ink/deep semantic text;
+retained four brand surfaces. Measured dark-on-Moon12.97, dark-on-Ice7.54, dark-on-Sunny11.04.
+Normal marketing buttons Blue Harbor/Moon19px bold gives AAA large4.59. No whole-site certification.
+
+Permanent overlap fix: remove conditional floating CTA and suppression observer; always render
+static nav.actionBar between main and Footer, containing shared Build my week and back-to-top.
+No fixed promotional actions anywhere. HeaderInner max1120px bordered container; FAQ answer
+padding12–16px/24px bottom; footer44px targets; primary section padding64–96px. Root capture handler
+follows hash links smoothly after drawer closes, focuses destination without jumping, pushes hash,
+uses auto for reduced motion. Existing html smooth CSS retained. Native jsdom has scrollIntoView shim.
+172 tests + lint/typecheck/native smoke/build passed. Browser suite tests static bar position AND
+separate main/bar/footer bounds, every footer link44x44, expanded FAQ padding, both normal/reduced
+scroll behavior at five widths/DPR2 alongside existing palette/form/menu cases.

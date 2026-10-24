@@ -385,3 +385,15 @@ text wraps separately from the fixed18px plus/minus; no clipping or icon shrink.
 responsive padding for pricing/FAQs. Verified170 tests, lint/typecheck, native interactions and
 production build. Real Chromium DPR2 checks all FAQ rows at320/390/768/1024/1440px for label/icon
 clearance, no CTA overlay, click and Enter toggling, plus existing form/menu/palette checks.
+
+## Repeated CTA/header/FAQ feedback — permanent layout solution
+
+- Replaced overlay CTA with static action bar; back-to-top is also in flow. No content can slide
+  underneath either control. Removed intersection-based suppression and unused scroll state.
+- Bounded header container, shared button states/radii, consistent section64–96px vertical spacing.
+- FAQ text16px, fixed icon column, expanded answer padding and labelled regions; footer links44x44.
+- Explicit same-page smooth anchors with destination focus, hash updates and reduced-motion handling.
+- User approved fifth dark text color#102C50 for AAA contrast (12.97/7.54/11.04:1 on Moon/Ice/Sunny).
+-172 tests, lint/typecheck/native smoke and production build passed. Chromium tests at five widths/
+  DPR2 passed geometry/no overlaps, footer target sizing, FAQ padding/click/keyboard and both motion
+  preferences. Form submission states remain mocked, not proof of live webhook delivery.

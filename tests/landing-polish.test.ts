@@ -37,13 +37,25 @@ it('gives contact and newsletter inputs explicit visible geometry and contrast',
   assert.match(css, /font-size:\s*16px/)
   assert.match(css, /\.inputRow input\s*\{[^}]*width:\s*100%/s)
   assert.match(source, /aria-busy=\{busy\}/)
-  assert.match(source, /!interactiveInView/)
 })
 
 it('protects FAQs and pricing from floating controls and gives question text its own wrap track', () => {
-  assert.match(source, /querySelectorAll\('form, #questions, #plans'\)/)
+  assert.match(source, /data-bottom-cta/)
+  assert.ok(!source.includes('data-sticky-cta'))
   assert.match(source, /className=\{s\.faqQuestion\}/)
   assert.match(css, /grid-template-columns:\s*minmax\(0,\s*1fr\) 20px/)
   assert.match(css, /\.faqQuestion\s*\{[^}]*overflow-wrap:\s*anywhere/s)
-  assert.match(css, /padding-block:\s*clamp\(56px,\s*7vw,\s*88px\)/)
+  assert.match(css, /padding-block:\s*clamp\(64px,\s*7vw,\s*96px\)/)
+})
+
+it('keeps the bottom action bar in flow and anchors the header inside a bounded surface', () => {
+  assert.match(source, /className=\{s\.actionBar\}/)
+  assert.match(
+    css,
+    /\.actionBar \.stickyCTA,\s*\.actionBar \.backTop\s*\{[^}]*position:\s*static/s,
+  )
+  assert.match(css, /\.headerInner\s*\{[^}]*max-width:\s*1120px/s)
+  assert.match(source, /onClickCapture=\{followAnchor\}/)
+  assert.match(source, /target\.scrollIntoView/)
+  assert.match(css, /\.footer a\s*\{[^}]*min-height:\s*44px/s)
 })

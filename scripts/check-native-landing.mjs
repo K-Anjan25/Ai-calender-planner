@@ -35,6 +35,7 @@ const dom = new JSDOM('<div id="root"></div>', {
       unobserve() {}
     }
     w.scrollTo = () => {}
+    w.HTMLElement.prototype.scrollIntoView = () => {}
     w.HTMLCanvasElement.prototype.getContext = () => null
     w.HTMLDialogElement.prototype.showModal = function () {
       this.setAttribute('open', '')
