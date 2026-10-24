@@ -401,8 +401,8 @@ try {
     assert.ok(await footerMap.isVisible(), `${width}: footer map is missing`)
     assert.ok(await footerMap.evaluate(el => {
       const box = el.getBoundingClientRect()
-      return box.height >= 200 && box.width <= el.parentElement.clientWidth + 1
-    }), `${width}: footer map is clipped`)
+      return box.height >= 88 && box.height <= 112 && box.width <= el.parentElement.clientWidth + 1
+    }), `${width}: footer map does not match compact locator size`)
 
     await form.scrollIntoViewIfNeeded()
     await page.waitForFunction(

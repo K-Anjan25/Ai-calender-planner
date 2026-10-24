@@ -2534,17 +2534,14 @@
   }
 }
 
-/* Real footer map: keep the full provider frame and attribution visible on every viewport. */
+/* Keep the original compact locator dimensions; show the real map inside the full frame. */
 .footer .footerLocation {
-  display: block;
   min-width: 0;
 }
 .footer .tinyMap {
   display: block;
-  width: 100%;
-  height: 220px;
-  margin: 0 0 18px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .tinyMap iframe {
   display: block;

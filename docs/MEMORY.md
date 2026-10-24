@@ -531,3 +531,11 @@ map is now visible at every viewport, full column width and 220px tall. Contact 
 Verified lint/typecheck, 182 tests, production build and seven-width DPR2 browser tests, including
 footer-map visibility/dimensions. External map delivery is stubbed; real Google tile delivery is not
 verified in the network-restricted sandbox. No PR.
+
+## Compact footer map — 2026-10-24
+
+Restored the footer locator’s original compact dimensions (110px desktop height; existing 160px
+and 150×90px responsive widths/sizes), keeping the real Google map rather than the old pin-only
+placeholder. Removed the new full-width/220px expansion and restored responsive location layout.
+Map remains visible on mobile. Contact map unchanged. Lint, 182 tests, production build and all
+seven browser widths passed, including compact map geometry; provider responses remain stubbed.

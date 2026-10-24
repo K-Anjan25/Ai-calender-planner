@@ -82,10 +82,11 @@ it('embeds a real Hyderabad map and keeps direct map links available', () => {
 })
 
 
-it('replaces the footer pin placeholder with a map without cropping attribution', () => {
+it('keeps a real footer map at the original compact locator size', () => {
   assert.match(source, /title="Map of Hyderabad in the footer"/)
   assert.equal((source.match(/output=embed/g) ?? []).length, 2)
   assert.ok(!source.includes('openstreetmap.org'))
   assert.match(css, /\.tinyMap iframe\s*\{[^}]*height:\s*100%/s)
-  assert.match(css, /\.footer \.tinyMap\s*\{\s*display:\s*block;\s*width:\s*100%;\s*height:\s*220px/s)
+  assert.match(css, /\.tinyMap\s*\{\s*height:\s*110px/s)
+  assert.doesNotMatch(css, /\.footer \.tinyMap\s*\{[^}]*height:\s*220px/s)
 })
