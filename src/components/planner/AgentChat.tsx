@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { Send, Sparkles, ChevronDown, Terminal } from 'lucide-react'
-import { usePlanner } from '@/lib/store/planner-store'
+import { plannerLocked, usePlanner } from '@/lib/store/planner-store'
 import { PaperButton, PaperInput } from '@/components/paper/PaperControls'
 import { PaperSheet } from '@/components/paper/PaperSheet'
 
@@ -25,6 +25,7 @@ const SUGGESTIONS = [
 
 export function AgentChat() {
   const { chat, chatBusy, sendMessage, capability, mode, setMode, status } = usePlanner()
+  const locked = usePlanner(plannerLocked)
   const [message, setMessage] = useState('')
   const [showTrace, setShowTrace] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
@@ -35,7 +36,7 @@ export function AgentChat() {
 
   const send = (text: string) => {
     const trimmed = text.trim()
-    if (!trimmed || chatBusy) return
+    if (!trimmed || locked) return
     setMessage('')
     void sendMessage(trimmed)
   }
@@ -62,10 +63,10 @@ export function AgentChat() {
       </header>
 
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        <PaperButton size="sm" variant="press" active={mode === 'auto'} onClick={() => setMode('auto')}>
+        <PaperButton size="sm" variant="press" disabled={locked} active={mode === 'auto'} onClick={() => setMode('auto')}>
           {capability?.agent.mode === 'agent' ? capability.agent.provider : 'auto'}
         </PaperButton>
-        <PaperButton size="sm" variant="press" active={mode === 'local'} onClick={() => setMode('local')}>
+        <PaperButton size="sm" variant="press" disabled={locked} active={mode === 'local'} onClick={() => setMode('local')}>
           Local engine
         </PaperButton>
         <span className="text-[11px] text-ink-faint">
@@ -89,6 +90,7 @@ export function AgentChat() {
                   <button
                     key={suggestion}
                     type="button"
+                    disabled={locked}
                     onClick={() => send(suggestion)}
                     className="paper-tile px-2 py-1 text-[11px] font-semibold text-ink-soft transition-transform duration-150 hover:-translate-y-px"
                   >
@@ -144,13 +146,13 @@ export function AgentChat() {
           onChange={(event) => setMessage(event.target.value)}
           placeholder="“Push the deck to Tuesday morning.”"
           aria-label="Message the planner agent"
-          disabled={chatBusy}
+          disabled={locked}
         />
         <PaperButton
           type="submit"
           tone="teal"
           size="sm"
-          disabled={chatBusy || message.trim().length === 0}
+          disabled={locked || message.trim().length === 0}
           aria-label="Send"
         >
           <Send size={13} aria-hidden="true" />

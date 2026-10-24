@@ -12,7 +12,7 @@ import {
   type Weekday,
 } from '@/lib/types'
 import { fmtClock, fmtDuration, weekendHours, workingHoursFor } from '@/lib/scheduler/slots'
-import { usePlanner } from '@/lib/store/planner-store'
+import { hasDraftChanges, plannerLocked, usePlanner } from '@/lib/store/planner-store'
 import { ScheduleBlock, BusyBlock } from '@/components/planner/ScheduleBlock'
 import { PaperWell } from '@/components/paper/PaperSheet'
 
@@ -95,6 +95,9 @@ export function WeekGrid({
     return base.map((day) => ({ ...day, windowStart: start, windowEnd: end }))
   }, [workingHours, weekendMode, weekStartsOn, resolvedStart, blocks, busy])
   const { selectedBlockId, selectBlock, pinBlock, status, filters } = usePlanner()
+  const locked = usePlanner(plannerLocked)
+  const stale = usePlanner(hasDraftChanges)
+  const focusAfterMove = useRef<string | null>(null)
   const dragRef = useRef<DragDescriptor | null>(null)
   const [ghost, setGhostState] = useState<Ghost | null>(null)
   /**
@@ -171,11 +174,21 @@ export function WeekGrid({
       const geometry = geometryRef.current
       if (!drag || !geometry) return
       const dayIndex = Math.max(0, Math.min(6, Math.floor((event.clientX - geometry.left) / geometry.dayWidth)))
-      const target = days[dayIndex]
+      const target = drag.mode === 'resize' ? days.find((day) => day.date === drag.originDate) : days[dayIndex]
       if (!target) return
+      if (Math.abs(event.clientX - drag.startX) > 3 || Math.abs(event.clientY - drag.startY) > 3) drag.moved = true
+      if (
+        event.clientX < geometry.left ||
+        event.clientX > geometry.left + geometry.dayWidth * 7 ||
+        event.clientY < geometry.top ||
+        event.clientY > geometry.top + ((target.windowEnd - target.windowStart) / 60) * HOUR_HEIGHT
+      ) {
+        setGhost(null)
+        return
+      }
 
       const minuteRaw = target.windowStart + ((event.clientY - geometry.top) / HOUR_HEIGHT) * 60
-      const span = target.windowEnd - target.windowStart
+      const span = target.windowEnd - drag.originStart
 
       // Two gestures, two rules. A *move* follows the cursor, offset by wherever the tile was
       // grabbed. A *resize* keeps the start where it was and only moves the base — deriving the
@@ -203,7 +216,15 @@ export function WeekGrid({
     geometryRef.current = null
     setDraggingId(null)
     setGhost(null)
-    if (!drag || !current || !drag.moved) return
+    if (!drag) return
+    if (!drag.moved) {
+      setTimeout(() => document.getElementById('planner-block-details')?.focus(), 0)
+      return
+    }
+    if (!current) {
+      usePlanner.setState({ actionMessage: 'Move cancelled outside the calendar. The draft is unchanged.' })
+      return
+    }
 
     const day = days.find((d) => d.date === current.date)
     if (!day) return
@@ -213,12 +234,19 @@ export function WeekGrid({
       current.minutes === drag.originMinutes
     )
       return
+    focusAfterMove.current = drag.blockId
     void pinBlock(drag.blockId, current.date, current.startMin, current.minutes)
   }, [days, onPointerMove, pinBlock, setGhost])
 
   const beginDrag = useCallback(
     (event: React.PointerEvent<HTMLElement>, block: PlacedBlock, mode: 'move' | 'resize') => {
-      if (block.kind !== 'task') return
+      if (
+        block.kind !== 'task' ||
+        plannerLocked(usePlanner.getState()) ||
+        hasDraftChanges(usePlanner.getState()) ||
+        event.button !== 0
+      )
+        return
       event.preventDefault()
       event.stopPropagation()
       const day = days.find((d) => d.date === block.date)
@@ -234,6 +262,8 @@ export function WeekGrid({
         dayWidth: strip.clientWidth / 7,
       }
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+      selectBlock(block.id)
+      ;(event.currentTarget.closest('[data-block-id]') as HTMLElement | null)?.focus()
       // An offset *within the block*, in minutes. Adding `day.windowStart` here makes the drop land
       // at the start of the day instead of under the cursor, because the move handler subtracts this
       // from an absolute minute.
@@ -260,8 +290,46 @@ export function WeekGrid({
       window.addEventListener('pointermove', onPointerMove)
       window.addEventListener('pointerup', endDrag)
     },
-    [days, endDrag, onPointerMove, setGhost],
+    [days, endDrag, onPointerMove, setGhost, selectBlock],
   )
+
+  useEffect(() => {
+    const cancel = () => {
+      if (!dragRef.current) return
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', endDrag)
+      dragRef.current = null
+      geometryRef.current = null
+      setDraggingId(null)
+      setGhost(null)
+      usePlanner.setState({ actionMessage: 'Move or resize cancelled. The draft is unchanged.' })
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') cancel()
+    }
+    window.addEventListener('keydown', escape)
+    window.addEventListener('pointercancel', cancel)
+    window.addEventListener('blur', cancel)
+    return () => {
+      window.removeEventListener('keydown', escape)
+      window.removeEventListener('pointercancel', cancel)
+      window.removeEventListener('blur', cancel)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', endDrag)
+      dragRef.current = null
+      geometryRef.current = null
+    }
+  }, [endDrag, onPointerMove, setGhost])
+
+  useEffect(() => {
+    if (status === 'planning' || !focusAfterMove.current) return
+    const id = selectedBlockId ?? focusAfterMove.current
+    const node = [...(columnsRef.current?.querySelectorAll<HTMLButtonElement>('[data-block-id]') ?? [])].find(
+      (node) => node.dataset.blockId === id,
+    )
+    node?.focus({ preventScroll: true })
+    focusAfterMove.current = null
+  }, [status, selectedBlockId])
 
   /**
    * Keyboard parity (RULES.md §10): arrows nudge by a slot, shift+arrows jump an hour,
@@ -303,6 +371,7 @@ export function WeekGrid({
       } else if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault()
         selectBlock(block.id)
+        setTimeout(() => document.getElementById('planner-block-details')?.focus(), 0)
         return
       } else if (event.key === 'Escape') {
         selectBlock(null)
@@ -312,9 +381,16 @@ export function WeekGrid({
       }
 
       event.preventDefault()
+      if (plannerLocked(usePlanner.getState()) || hasDraftChanges(usePlanner.getState())) return
       const target = days.find((d) => d.date === nextDate) ?? day
+      if (event.altKey) nextMinutes = Math.min(nextMinutes, target.windowEnd - block.startMin)
       const clampedStart = Math.max(target.windowStart, Math.min(target.windowEnd - nextMinutes, nextStart))
       const clampedMinutes = Math.min(nextMinutes, target.windowEnd - clampedStart)
+      if (nextDate === block.date && clampedStart === block.startMin && clampedMinutes === block.minutes) {
+        usePlanner.setState({ actionMessage: 'This block is already at the edge of the displayed week.' })
+        return
+      }
+      focusAfterMove.current = block.id
       void pinBlock(block.id, nextDate, clampedStart, clampedMinutes)
     },
     [days, pinBlock, selectBlock],
@@ -333,7 +409,18 @@ export function WeekGrid({
   if (!resolvedStart || days.length === 0) return <WeekGridSkeleton label={weekLabel} />
 
   return (
-    <div className="relative">
+    <div className="relative" aria-busy={locked}>
+      {stale && (
+        <p role="status" className="mb-2 text-sm text-ink">
+          This schedule is out of date. Re-plan before moving or resizing blocks.
+        </p>
+      )}
+      {visible.filter((block) => block.kind === 'task').length === 0 &&
+        blocks.some((block) => block.kind === 'task') && (
+          <p role="status" className="mb-2 text-sm text-ink">
+            No tasks match your filters. Clear filters to see the full week.
+          </p>
+        )}
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
         <div className="flex items-baseline gap-2">
           <h2 className="text-[19px] leading-none">Your week</h2>
@@ -364,7 +451,7 @@ export function WeekGrid({
       </div>
 
       <PaperWell className="p-2 sm:p-3">
-        {status === 'planning' ? (
+        {locked ? (
           <div
             className="pointer-events-none absolute inset-0 z-30 rounded-[var(--radius-well)] bg-paper-cream/45"
             aria-hidden="true"
@@ -446,6 +533,7 @@ export function WeekGrid({
                        memoised column skips them entirely while a drag is in flight. */
                     ghost={ghost && ghost.date === day.date ? ghost : null}
                     draggingId={draggingId}
+                    editable={!locked && !stale}
                     selectedBlockId={selectedBlockId}
                     minuteToY={minuteToY}
                     onSelect={selectBlock}
@@ -594,6 +682,7 @@ const DayColumn = memo(function DayColumn({
   meetings,
   ghost,
   draggingId,
+  editable,
   selectedBlockId,
   minuteToY,
   onSelect,
@@ -610,6 +699,7 @@ const DayColumn = memo(function DayColumn({
     minutes: number
   } | null
   draggingId: string | null
+  editable: boolean
   selectedBlockId: string | null
   minuteToY(minute: number, day: DayMeta): number
   onSelect(id: string | null): void
@@ -726,6 +816,7 @@ const DayColumn = memo(function DayColumn({
               minutes,
             }}
             compact={compact}
+            editable={editable}
             selected={selectedBlockId === block.id}
             dragging={draggingId === block.id}
             style={{
@@ -777,29 +868,34 @@ function ProtectedBands({ day }: { day: DayMeta }) {
   }
   return (
     <>
-      {bands.map((band, bandIndex) => (
-        <div
-          // Index included: two windows can legitimately share a label and a start time ("Busy"
-          // at 15:00 on two rows of the list), and a duplicate key drops one of them silently.
-          key={`${bandIndex}_${band.label}_${band.start}`}
-          aria-hidden="true"
-          className={clsx(
-            // `overflow-hidden`: a 15-minute band is 11px tall and its label is 13px. Without this the
-            // text spills over the neighbouring slot instead of being clipped to its own window.
-            'pointer-events-none absolute inset-x-0 overflow-hidden border-y border-dashed border-[color:rgba(55,112,191,0.18)]',
-            band.tone,
-          )}
-          style={{
-            top: ((band.start - day.windowStart) / 60) * HOUR_HEIGHT,
-            height: Math.max(8, ((band.end - band.start) / 60) * HOUR_HEIGHT),
-          }}
-        >
-          <span className="mt-0.5 ml-1 flex min-w-0 items-center gap-1 text-[9px] font-bold uppercase tracking-[0.06em] whitespace-nowrap text-ink-faint">
-            <span className="shrink-0">{band.icon}</span>
-            <span className="min-w-0 truncate">{band.label}</span>
-          </span>
-        </div>
-      ))}
+      {bands
+        .filter((band) => band.end > day.windowStart && band.start < day.windowEnd)
+        .map((band, bandIndex) => (
+          <div
+            // Index included: two windows can legitimately share a label and a start time ("Busy"
+            // at 15:00 on two rows of the list), and a duplicate key drops one of them silently.
+            key={`${bandIndex}_${band.label}_${band.start}`}
+            aria-hidden="true"
+            className={clsx(
+              // `overflow-hidden`: a 15-minute band is 11px tall and its label is 13px. Without this the
+              // text spills over the neighbouring slot instead of being clipped to its own window.
+              'pointer-events-none absolute inset-x-0 overflow-hidden border-y border-dashed border-[color:rgba(55,112,191,0.18)]',
+              band.tone,
+            )}
+            style={{
+              top: ((Math.max(band.start, day.windowStart) - day.windowStart) / 60) * HOUR_HEIGHT,
+              height: Math.max(
+                8,
+                ((Math.min(band.end, day.windowEnd) - Math.max(band.start, day.windowStart)) / 60) * HOUR_HEIGHT,
+              ),
+            }}
+          >
+            <span className="mt-0.5 ml-1 flex min-w-0 items-center gap-1 text-[9px] font-bold uppercase tracking-[0.06em] whitespace-nowrap text-ink-faint">
+              <span className="shrink-0">{band.icon}</span>
+              <span className="min-w-0 truncate">{band.label}</span>
+            </span>
+          </div>
+        ))}
     </>
   )
 }

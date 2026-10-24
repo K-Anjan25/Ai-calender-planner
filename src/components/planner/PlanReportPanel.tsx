@@ -1,12 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { clsx } from 'clsx'
 import { AlertTriangle, Check, Info, ShieldAlert, Wand2, X, Gauge } from 'lucide-react'
-import type { PlanReport, TradeoffOption } from '@/lib/types'
+import type { PlanReport, TradeoffOption, PlacedBlock } from '@/lib/types'
 import { WEEKDAY_SHORT } from '@/lib/types'
-import { fmtDuration } from '@/lib/scheduler/slots'
-import { usePlanner } from '@/lib/store/planner-store'
-import { PaperButton, PaperChip } from '@/components/paper/PaperControls'
+import { addDaysISO, fmtMinutes, fmtDuration } from '@/lib/scheduler/slots'
+import { hasDraftChanges, plannerLocked, usePlanner } from '@/lib/store/planner-store'
+import { PaperButton, PaperChip, PaperInput, PaperLabel } from '@/components/paper/PaperControls'
 import { PaperSheet, PaperWell } from '@/components/paper/PaperSheet'
 import { SplitTaskPreview } from '@/components/planner/SplitTaskPreview'
 import { PaperSkeleton } from '@/components/planner/AgentChat'
@@ -324,12 +325,32 @@ function TradeoffPanel({
 
 function SelectedBlockCard({ onSelect }: { onSelect(id: string | null): void }) {
   const { proposal, selectedBlockId, pins, unpinTask } = usePlanner()
+  const locked = usePlanner(plannerLocked)
+  const stale = usePlanner(hasDraftChanges)
   const block = proposal?.blocks.find((item) => item.id === selectedBlockId)
   if (!block) return null
   const isPinned = block.pinned || pins.some((pin) => pin.taskId === block.taskId)
 
+  const close = () => {
+    const tile = [...document.querySelectorAll<HTMLButtonElement>('[data-block-id]')].find(
+      (node) => node.dataset.blockId === block.id,
+    )
+    tile?.focus()
+    onSelect(null)
+  }
   return (
-    <PaperSheet className="p-4">
+    <PaperSheet
+      id="planner-block-details"
+      tabIndex={-1}
+      aria-label="Selected block details"
+      className="p-4"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          close()
+        }
+      }}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="break-words text-[15px]">{block.title}</h3>
@@ -344,7 +365,7 @@ function SelectedBlockCard({ onSelect }: { onSelect(id: string | null): void }) 
           type="button"
           aria-label="Close block details"
           className="min-h-11 min-w-11 grid place-items-center text-ink-faint hover:text-ink"
-          onClick={() => onSelect(null)}
+          onClick={close}
         >
           <X size={14} aria-hidden="true" />
         </button>
@@ -371,18 +392,122 @@ function SelectedBlockCard({ onSelect }: { onSelect(id: string | null): void }) 
         ))}
       </ul>
 
+      {block.kind === 'task' && proposal && (
+        <BlockPositionEditor
+          key={`${block.id}-${block.startMin}-${block.minutes}`}
+          block={block}
+          weekStart={proposal.weekStart}
+        />
+      )}
       <div className="mt-3 flex flex-wrap gap-1.5">
         <PaperWell className="hidden" />
         {isPinned ? (
-          <PaperButton size="sm" variant="flat" onClick={() => void unpinTask(block.taskId)}>
+          <PaperButton size="sm" variant="flat" disabled={locked || stale} onClick={() => void unpinTask(block.taskId)}>
             Unpin and re-plan
           </PaperButton>
         ) : (
           <span className="text-[11px] text-ink-faint">
-            Drag the block, or focus it and use the arrow keys, to pin it somewhere yourself.
+            Drag the block, or use Ctrl/Command + arrows to move it. Plain arrows inspect neighbouring blocks.
           </span>
         )}
       </div>
     </PaperSheet>
+  )
+}
+
+/** Explicit controls provide a touch/keyboard alternative to dragging tiny calendar tiles. */
+function BlockPositionEditor({ block, weekStart }: { block: PlacedBlock; weekStart: string }) {
+  const locked = usePlanner(plannerLocked)
+  const stale = usePlanner(hasDraftChanges)
+  const pinBlock = usePlanner((state) => state.pinBlock)
+  const [date, setDate] = useState(block.date)
+  const [time, setTime] = useState(fmtMinutes(block.startMin))
+  const [duration, setDuration] = useState(String(block.minutes))
+  const [error, setError] = useState('')
+  const endOfWeek = addDaysISO(weekStart, 6)
+  const [hour, minute] = time.split(':').map(Number)
+  const start = hour * 60 + minute
+  const minutes = Number(duration)
+  const unchanged = date === block.date && start === block.startMin && minutes === block.minutes
+  return (
+    <form
+      className="mt-3"
+      onSubmit={async (event) => {
+        event.preventDefault()
+        if (locked || stale || unchanged) return
+        if (
+          date < weekStart ||
+          date > endOfWeek ||
+          !Number.isFinite(start) ||
+          start % 15 !== 0 ||
+          !Number.isInteger(minutes) ||
+          minutes < 15 ||
+          minutes > 720 ||
+          minutes % 15 !== 0 ||
+          start + minutes > 1440
+        ) {
+          setError('Choose a date in this week and a time and duration in 15-minute steps.')
+          return
+        }
+        setError('')
+        await pinBlock(block.id, date, start, minutes)
+      }}
+    >
+      <fieldset disabled={locked || stale} className="min-w-0 space-y-2 disabled:opacity-60">
+        <legend className="text-sm font-semibold">Move or resize this block</legend>
+        <div>
+          <PaperLabel htmlFor="block-edit-date">Date</PaperLabel>
+          <PaperInput
+            id="block-edit-date"
+            className="min-h-11 min-w-0 w-full"
+            type="date"
+            required
+            min={weekStart}
+            max={endOfWeek}
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+          />
+        </div>
+        <div className="grid min-w-0 grid-cols-2 gap-2">
+          <div className="min-w-0">
+            <PaperLabel htmlFor="block-edit-time">Start time</PaperLabel>
+            <PaperInput
+              id="block-edit-time"
+              className="min-h-11 min-w-0 w-full"
+              type="time"
+              required
+              step={900}
+              value={time}
+              onChange={(event) => setTime(event.target.value)}
+            />
+          </div>
+          <div className="min-w-0">
+            <PaperLabel htmlFor="block-edit-duration">Minutes</PaperLabel>
+            <PaperInput
+              id="block-edit-duration"
+              className="min-h-11 min-w-0 w-full"
+              type="number"
+              required
+              min={15}
+              max={720}
+              step={15}
+              value={duration}
+              onChange={(event) => setDuration(event.target.value)}
+            />
+          </div>
+        </div>
+        {error && (
+          <p role="alert" className="text-sm">
+            {error}
+          </p>
+        )}
+        <PaperButton type="submit" disabled={locked || stale || unchanged}>
+          Apply move or resize
+        </PaperButton>
+        <p className="text-xs text-ink-soft">
+          The engine checks this change before applying it. Other draft work may move; nothing is published.
+        </p>
+      </fieldset>
+    </form>
   )
 }

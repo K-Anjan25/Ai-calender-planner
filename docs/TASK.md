@@ -460,3 +460,15 @@ clearance, no CTA overlay, click and Enter toggling, plus existing form/menu/pal
   unchanged tasks before apply, stale-edit rejection and explicit apply; selected dry run returns one.
 - Build required NODE_OPTIONS=--max-old-space-size=4096 after the default Node heap was exhausted.
   Local verification only: no real provider inference, OAuth approval/write or Vercel promotion claim.
+
+## Calendar UI action/state reliability pass — 2026-10-24
+
+- [x] Pending/success/error/retry paths for draft planning, move/resize, unpin and dry run.
+- [x] Late-response and duplicate-operation guards; cancel planning without overwriting new drafts.
+- [x] Stale-input warning and publish/export/move gates; consistent confirmed schedule on failure.
+- [x] Drag cancellation/cleanup; same-day resize; accessible explicit block editor and focus return.
+- [x] Pin protected-time validation; empty-filter/backlog and corrupt-storage recovery.
+- [x] Selection-aware export/preflight; confirmation before undo; touch-safe core controls.
+- [x] 198 tests, lint/typecheck, smoke/build; browser planner checks at390/768/1280 and landing at seven widths.
+- [ ] Real Google-account read/write/undo acceptance; physical-device and assistive-technology review.
+- [ ] Live LLM-provider integration verification next; RAG only after a concrete retrieval requirement.

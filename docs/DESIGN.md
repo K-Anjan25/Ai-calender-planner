@@ -486,3 +486,15 @@ unplaced minutes, then explicit Use preview. No draft mutation on preview, no ex
 no claim of a fit when there are no placements. Stale previews cannot overwrite an edited draft.
 All day columns share a time axis that includes actual blocks/meetings, so shoulder-hour placements
 cannot escape into the header. Overflow candidates also subtract protected blackouts and lunch.
+
+## Calendar action feedback — 2026-10-24
+
+The grid is the last server-confirmed draft, never an optimistic invalid calendar. New inputs show a
+persistent out-of-date warning until replanned; editing controls communicate pending locks. Move and
+resize have a visible checking state and a rejection/error that preserves the previous schedule.
+Escape/pointercancel/blur/outside release cancels gestures. Selected details include explicit date,
+start time and duration editing, with 44px controls; Enter/tap focuses details, Escape/close returns
+to the tile. Arrow inspection keeps focus on the canvas. Main buttons/tabs/remove targets are44px.
+Publishing selection is shared by dry-run/export/approval; changing selection retires old feedback.
+Undo reveals a confirmation with keyboard focus before any deletion request. Current local browser
+checks are not a guarantee of complete accessibility or live-provider readiness.

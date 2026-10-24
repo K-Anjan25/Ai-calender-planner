@@ -517,3 +517,18 @@ it('never uses protected shoulder hours to fake a fit for an unsplittable task',
   assert.equal(blocks.reduce((sum, block) => sum + block.minutes, 0), 30)
   assert.ok(blocks.every(block => block.startMin >= 540 && block.endMin <= 600))
 })
+
+it('rejects pins into lunch, blackouts, outside hours and other pinned blocks', () => {
+  const tasks = demoTasks(WEEK_START).slice(0, 2)
+  const prefs = defaultPreferences()
+  prefs.blackouts = [{ id: 'protected', weekday: 'mon', start: 660, end: 720, label: 'Protected' }]
+  prefs.lunch = { start: 750, end: 810, minutes: 60 }
+  for (const startMin of [480, 660, 750]) {
+    const result = plan(tasks, prefs, [], [{ taskId: tasks[0].id, date: WEEK_START, startMin, minutes: 30 }])
+    assert.ok(result.report.droppedPins.includes(tasks[0].id), `accepted protected ${startMin}`)
+    assert.equal(result.pins.length, 0)
+  }
+  const result = plan(tasks, prefs, [], tasks.map(task => ({ taskId: task.id, date: WEEK_START, startMin: 540, minutes: 30 })))
+  assert.equal(result.pins.length, 1)
+  assert.ok(result.report.droppedPins.includes(tasks[1].id))
+})

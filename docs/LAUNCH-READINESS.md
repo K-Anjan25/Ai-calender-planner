@@ -119,3 +119,43 @@ Engineering still needed before real charges:
 
 Do not collect bank details, secrets or KYC documents through the app/chat. Subscription billing and
 one-time UPI payments require different renewal/expiry handling; choose the product before coding.
+
+## Calendar action/state audit — 2026-10-24
+
+This is a focused reliability pass, not a declaration that the entire application is production-ready.
+No LLM provider integration or RAG was added in this pass.
+
+| Action | State handling and recovery now verified |
+|---|---|
+| Build / re-plan / chat | One draft-changing operation at a time; clear pending feedback; duplicate submission guards; late results cannot overwrite edits; explicit Cancel planning discards the pending result |
+| Move / resize | Last confirmed schedule stays visible until server acceptance; rejection/network failure preserves original blocks and pins; retry works; successful moves reconcile server pins and selection |
+| Drag cancellation | Escape, pointer cancellation, window blur and outside-grid drops do not commit; listeners cleaned up when grid unmounts |
+| Resize gesture | Remains on the original day; extending at the end of the time axis does not move the block's start |
+| Keyboard / touch alternative | Selected details expose date/start/duration controls and Apply move or resize; Enter/tap reveals focused details; Escape/close returns focus to the block |
+| Edit tasks / rules | Existing calendar is explicitly marked out of date; moving/export/publish blocked until re-plan; controls locked during pending operations; removed task cannot silently publish from the old snapshot |
+| Unpin | Failed request retains the old pin; success updates both store and proposal pin collections |
+| Protected time | Server also rejects user pins into lunch, blackouts, before/after working hours and overlapping pinned blocks |
+| Selection / filtering | Closing details does not reopen on returned focus; collapsing report clears selection; empty filter results explain how to recover |
+| Dry run / export | Chosen task IDs used consistently; empty selection disabled; changing selection clears old preflight feedback; export has timeout handling and excludes unselected meetings |
+| Publish / undo | Duplicate operation guards; error feedback announced and retry remains available; undo requires an additional confirmation; pending write cannot be cancelled as if it were merely draft planning |
+| Empty / saved state | Intentional empty backlog survives reload; malformed saved tasks/preferences/session data cannot break hydration; empty state routes to task intake |
+
+Evidence: lint, typecheck, 198 tests across 49 suites, scheduler smoke and production build passed.
+Chromium landing regressions pass at seven widths (320–1440px DPR2). Planner interactions run at
+390/768/1280px, covering tabs/focus, publishing navigation, drag cancellation, injected network
+failure/retry, deletion → stale warning → re-plan, editor input geometry and page/tile containment.
+Screenshots and logs are local artifacts, not evidence of a hosted deployment promotion.
+
+### Still requires acceptance / further product work
+
+- Real Google OAuth, meeting import, approved writes, partial provider failures and rollback with a
+  test account. Automated local tests do not establish live Google behaviour.
+- Actual live-model inference, credentials/quota handling and provider usage evidence. Hugging Face
+  support and RAG remain absent, deliberately outside this UI pass.
+- Physical touch-device/assistive-technology testing, zoom and broader browser coverage; the current
+  checks use Chromium and jsdom, not a WCAG certification or an exhaustive UI bug guarantee.
+- Server-backed user storage, cross-device sync and durable publication/undo history. Browser
+  persistence is still local; undo targets the current proposal, not an account-wide plan history.
+- Cancel planning invalidates the client result; it does not guarantee an already-running server
+  or model-provider request has stopped or avoided charges. Calendar writes are not exposed to this
+  cancellation action. Inputs edited during a pending request are retained, not silently merged.

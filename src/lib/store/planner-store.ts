@@ -2,6 +2,8 @@
 
 import { create } from 'zustand'
 import {
+  taskSchema,
+  preferencesSchema,
   type AgentStep,
   type BusyEvent,
   type Pin,
@@ -42,6 +44,7 @@ type State = {
   pins: Pin[]
   proposal: PlanProposal | null
   status: PlannerStatus
+  actionMessage: string | null
   error: ApiError | null
   notes: string[]
   trace: AgentStep[]
@@ -70,6 +73,7 @@ type Actions = {
   setBusy(busy: BusyEvent[]): void
   selectBlock(id: string | null): void
   setFilters(patch: Partial<State['filters']>): void
+  cancelPlanning(): void
   buildWeek(freeText?: string): Promise<void>
   sendMessage(message: string): Promise<void>
   pinBlock(blockId: string, date: string, startMin: number, minutes?: number): Promise<void>
@@ -79,10 +83,12 @@ type Actions = {
   refreshCapability(): Promise<void>
   dryRun(blockIds?: string[]): Promise<void>
   acceptPreview(data: PlanResponse['data'], source: string, taskId: string): boolean
-  exportIcs(): Promise<void>
+  exportIcs(blockIds?: string[]): Promise<void>
   approveAndSync(blockIds: string[]): Promise<void>
   rollback(): Promise<void>
 }
+
+let planRequestId = 0
 
 const STORAGE_KEY = 'calendra.session.v1'
 
@@ -150,6 +156,26 @@ export function plannerSnapshotKey(
   return JSON.stringify([state.tasks, state.preferences, state.busy, state.pins, state.mode, state.proposal])
 }
 
+/** The visible schedule is a snapshot; edited inputs must be replanned before moving/publishing. */
+export function hasDraftChanges(state: Pick<State, 'proposal' | 'tasks' | 'preferences' | 'busy' | 'pins'>): boolean {
+  const p = state.proposal
+  return Boolean(
+    p &&
+      JSON.stringify([state.tasks, state.preferences, state.busy, state.pins]) !==
+        JSON.stringify([p.tasks, p.preferences, p.busy, p.pins]),
+  )
+}
+
+export function plannerLocked(state: Pick<State, 'status' | 'chatBusy' | 'syncState'>): boolean {
+  return state.status === 'planning' || state.chatBusy || state.syncState.status === 'syncing'
+}
+
+const changedDuringRequest: ApiError = {
+  code: 'INPUTS_CHANGED',
+  message:
+    'Your inputs changed while planning. Your edits and previous schedule were kept. Re-plan to include the latest changes.',
+}
+
 export const usePlanner = create<State & Actions>((set, get) => ({
   tasks: [],
   preferences: defaultPreferences(),
@@ -157,6 +183,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   pins: [],
   proposal: null,
   status: 'idle',
+  actionMessage: null,
   error: null,
   notes: [],
   trace: [],
@@ -176,17 +203,25 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     let restored: Partial<State> = {}
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY)
-      if (raw) restored = JSON.parse(raw) as Partial<State>
+      if (raw) {
+        const saved: unknown = JSON.parse(raw)
+        if (saved && typeof saved === 'object' && !Array.isArray(saved)) restored = saved as Partial<State>
+      }
     } catch {
       restored = {}
     }
-    const demoSet = restored.demoSet ?? 'realistic'
-    const hasTasks = Array.isArray(restored.tasks) && restored.tasks.length > 0
+    const demoSet = restored.demoSet === 'overloaded' ? 'overloaded' : 'realistic'
+    const savedTasks =
+      Array.isArray(restored.tasks) && restored.tasks.length <= 120
+        ? restored.tasks.map((task) => taskSchema.safeParse(task))
+        : null
+    const validTasks = savedTasks?.every((task) => task.success) ?? false
+    const savedPreferences = preferencesSchema.safeParse({ ...defaultPreferences(), ...(restored.preferences ?? {}) })
     set({
-      tasks: hasTasks ? (restored.tasks as Task[]) : demoTasks(weekStart),
-      preferences: { ...defaultPreferences(), ...(restored.preferences ?? {}) },
+      tasks: validTasks ? savedTasks!.flatMap((task) => (task.success ? [task.data] : [])) : demoTasks(weekStart),
+      preferences: savedPreferences.success ? savedPreferences.data : defaultPreferences(),
       demoSet,
-      mode: restored.mode ?? 'auto',
+      mode: restored.mode === 'local' ? 'local' : 'auto',
       busy: demoBusy(weekStart),
       railTab: 'calendar',
       pins: [],
@@ -198,61 +233,88 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   },
 
   setMode(mode) {
+    if (get().syncState.status === 'syncing') return
     set({ mode })
     persist({ ...get(), mode })
   },
 
   setPreferences(patch) {
+    if (get().syncState.status === 'syncing') return
     const preferences = { ...get().preferences, ...patch }
-    set({ preferences })
+    set({ preferences, error: null, actionMessage: null, syncState: { status: 'idle' } })
     persist({ ...get(), preferences })
   },
 
   setTasks(tasks) {
-    set({ tasks })
+    if (get().syncState.status === 'syncing') return
+    set({ tasks, error: null, actionMessage: null, syncState: { status: 'idle' } })
     persist({ ...get(), tasks })
   },
 
   addTask(task) {
+    if (get().syncState.status === 'syncing') return
     const tasks = [...get().tasks, task]
-    set({ tasks })
+    set({ tasks, error: null, actionMessage: null, syncState: { status: 'idle' } })
     persist({ ...get(), tasks })
   },
 
   updateTask(id, patch) {
+    if (get().syncState.status === 'syncing') return
     const tasks = get().tasks.map((task) => (task.id === id ? { ...task, ...patch } : task))
-    set({ tasks })
+    set({ tasks, error: null, actionMessage: null, syncState: { status: 'idle' } })
     persist({ ...get(), tasks })
   },
 
   removeTask(id) {
+    if (get().syncState.status === 'syncing') return
     const tasks = get().tasks.filter((task) => task.id !== id)
     const pins = get().pins.filter((pin) => pin.taskId !== id)
-    set({ tasks, pins })
+    set({ tasks, pins, error: null, actionMessage: null, syncState: { status: 'idle' } })
     persist({ ...get(), tasks })
   },
 
   loadDemoSet(which) {
+    if (get().syncState.status === 'syncing') return
+    planRequestId += 1
     const weekStart = currentWeekStart()
     set({
+      proposal: null,
+      status: 'idle',
+      error: null,
+      actionMessage: 'Sample tasks loaded. Build your week to schedule them.',
+      syncState: { status: 'idle' },
       demoSet: which,
       tasks: which === 'overloaded' ? overloadedTasks(weekStart) : demoTasks(weekStart),
       busy: demoBusy(weekStart),
       railTab: 'calendar',
       pins: [],
       chat: [],
+      chatBusy: false,
       selectedBlockId: null,
     })
     persist({ ...get(), demoSet: which })
   },
 
   clearTasks() {
-    set({ tasks: [], pins: [], proposal: null, status: 'idle' })
+    if (get().syncState.status === 'syncing') return
+    planRequestId += 1
+    set({
+      tasks: [],
+      pins: [],
+      proposal: null,
+      selectedBlockId: null,
+      status: 'idle',
+      chatBusy: false,
+      error: null,
+      actionMessage: 'Task backlog cleared.',
+      syncState: { status: 'idle' },
+    })
     persist({ ...get(), tasks: [] })
   },
 
   setBusy(busy) {
-    set({ busy })
+    if (get().syncState.status === 'syncing') return
+    set({ busy, error: null, actionMessage: null, syncState: { status: 'idle' } })
   },
 
   selectBlock(selectedBlockId) {
@@ -263,9 +325,23 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     set({ filters: { ...get().filters, ...patch } })
   },
 
+  cancelPlanning() {
+    if (get().syncState.status === 'syncing' || (!get().chatBusy && get().status !== 'planning')) return
+    planRequestId += 1
+    set({
+      status: get().proposal ? 'ready' : 'idle',
+      chatBusy: false,
+      error: null,
+      actionMessage: 'Planning cancelled. Your previous draft and edits are unchanged.',
+    })
+  },
+
   async buildWeek(freeText) {
+    if (plannerLocked(get())) return
+    const id = ++planRequestId
+    const source = plannerSnapshotKey(get())
     const { tasks, preferences, busy, pins, mode } = get()
-    set({ status: 'planning', error: null })
+    set({ status: 'planning', error: null, actionMessage: 'Planning your week…' })
     const result = await postPlan({
       tasks,
       preferences,
@@ -276,12 +352,20 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       ...request(new Date()),
     })
 
+    if (id !== planRequestId) return
+    if (plannerSnapshotKey(get()) !== source) {
+      set({ status: 'error', error: changedDuringRequest, actionMessage: null })
+      return
+    }
     if (!result.ok) {
-      set({ status: 'error', error: result.error })
+      set({ status: 'error', error: result.error, actionMessage: null })
       return
     }
 
     set({
+      actionMessage: 'Your draft week is ready. Nothing has been published.',
+      selectedBlockId: null,
+      busy: result.data.proposal.busy,
       proposal: result.data.proposal,
       tasks: result.data.proposal.tasks,
       preferences: result.data.proposal.preferences,
@@ -297,9 +381,12 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   },
 
   async sendMessage(message) {
+    if (plannerLocked(get()) || !message.trim()) return
+    const id = ++planRequestId
+    const source = plannerSnapshotKey(get())
     const { tasks, preferences, busy, pins, mode, chat, proposal } = get()
     const entry: ChatEntry = { id: `u_${chat.length}_${message.length}`, role: 'user', text: message }
-    set({ chat: [...chat, entry], chatBusy: true, error: null })
+    set({ chat: [...chat, entry], chatBusy: true, error: null, actionMessage: 'Checking your requested changes…' })
 
     const result = await postChat({
       tasks,
@@ -321,8 +408,20 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       ...request(new Date()),
     })
 
+    if (id !== planRequestId) return
+    if (plannerSnapshotKey(get()) !== source) {
+      set({
+        chatBusy: false,
+        error: changedDuringRequest,
+        actionMessage: null,
+        chat: [...get().chat, { id: `a_stale_${Date.now()}`, role: 'agent', text: changedDuringRequest.message }],
+      })
+      return
+    }
     if (!result.ok) {
       set({
+        actionMessage: null,
+        error: result.error,
         chatBusy: false,
         chat: [...get().chat, { id: `a_err_${Date.now()}`, role: 'agent', text: result.error.message }],
       })
@@ -331,6 +430,10 @@ export const usePlanner = create<State & Actions>((set, get) => ({
 
     const data = result.data
     set({
+      busy: data.proposal.busy,
+      selectedBlockId: null,
+      syncState: { status: 'idle' },
+      actionMessage: 'Requested changes applied to the draft. Nothing has been published.',
       proposal: data.proposal,
       tasks: data.tasks,
       preferences: data.preferences,
@@ -354,61 +457,111 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   },
 
   async pinBlock(blockId, date, startMin, minutes) {
+    if (plannerLocked(get()) || hasDraftChanges(get())) return
     const { proposal, pins, tasks, preferences, busy, mode } = get()
-    if (!proposal) return
-    const block = proposal.blocks.find((b) => b.id === blockId)
-    if (!block) return
-
+    const block = proposal?.blocks.find((b) => b.id === blockId && b.kind === 'task')
+    if (!proposal || !block) return
     const snap = (value: number) => Math.round(value / SNAP_MINUTES) * SNAP_MINUTES
-    const nextPins: Pin[] = [
-      ...pins.filter((pin) => pin.taskId !== block.taskId || pin.date !== date),
-      { taskId: block.taskId, date, startMin: snap(startMin), minutes: snap(minutes ?? block.minutes) },
+    const requested = { taskId: block.taskId, date, startMin: snap(startMin), minutes: snap(minutes ?? block.minutes) }
+    if (requested.date === block.date && requested.startMin === block.startMin && requested.minutes === block.minutes)
+      return
+    const nextPins = [
+      ...pins.filter((pin) => !(pin.taskId === block.taskId && (pin.date === block.date || pin.date === date))),
+      requested,
     ]
-
-    // Optimistic: show the move immediately, then let the engine confirm or correct it (D-009).
+    const id = ++planRequestId
+    const source = plannerSnapshotKey(get())
+    // Keep the confirmed schedule visible until validation succeeds. No invalid optimistic pin survives failure.
     set({
-      pins: nextPins,
       status: 'planning',
-      proposal: {
-        ...proposal,
-        blocks: proposal.blocks.map((b) =>
-          b.id === blockId
-            ? {
-                ...b,
-                date,
-                startMin: snap(startMin),
-                endMin: snap(startMin) + snap(minutes ?? b.minutes),
-                pinned: true,
-              }
-            : b,
-        ),
-      },
+      error: null,
+      actionMessage: 'Checking the move or resize… Your previous position is kept until confirmed.',
     })
-
     const result = await postPlan({ tasks, preferences, busy, pins: nextPins, mode, ...request(new Date()) })
+    if (id !== planRequestId) return
+    if (plannerSnapshotKey(get()) !== source) {
+      set({ status: 'error', error: changedDuringRequest, actionMessage: null })
+      return
+    }
     if (!result.ok) {
-      set({ status: 'error', error: result.error })
+      set({
+        status: 'error',
+        error: { ...result.error, message: `${result.error.message} The block stayed in its previous position.` },
+        actionMessage: null,
+      })
+      return
+    }
+    const confirmed = result.data.proposal.blocks.find(
+      (b) =>
+        b.taskId === block.taskId &&
+        b.pinned &&
+        b.date === date &&
+        b.startMin === requested.startMin &&
+        b.minutes === requested.minutes,
+    )
+    if (!confirmed) {
+      set({
+        status: 'error',
+        error: {
+          code: 'MOVE_REJECTED',
+          message:
+            'That move or resize conflicts with protected time or another constraint. The previous schedule is unchanged. Choose a different slot.',
+        },
+        actionMessage: null,
+      })
       return
     }
     set({
       proposal: result.data.proposal,
+      tasks: result.data.proposal.tasks,
+      preferences: result.data.proposal.preferences,
+      busy: result.data.proposal.busy,
       pins: result.data.proposal.pins,
       status: 'ready',
+      error: null,
       trace: result.data.trace,
-      selectedBlockId: result.data.proposal.blocks.find((b) => b.taskId === block.taskId)?.id ?? null,
+      notes: result.data.notes,
+      selectedBlockId: confirmed.id,
+      syncState: { status: 'idle' },
+      actionMessage: 'Move or resize confirmed. Only the draft changed.',
     })
+    persist(get())
   },
 
   async unpinTask(taskId) {
+    if (plannerLocked(get()) || hasDraftChanges(get())) return
     const { pins, tasks, preferences, busy, mode } = get()
+    if (!pins.some((pin) => pin.taskId === taskId)) return
     const nextPins = pins.filter((pin) => pin.taskId !== taskId)
-    set({ pins: nextPins, status: 'planning' })
+    const id = ++planRequestId
+    const source = plannerSnapshotKey(get())
+    set({ status: 'planning', error: null, actionMessage: 'Replanning without this task’s pins…' })
     const result = await postPlan({ tasks, preferences, busy, pins: nextPins, mode, ...request(new Date()) })
-    if (!result.ok) {
-      set({ status: 'error', error: result.error })
+    if (id !== planRequestId) return
+    if (plannerSnapshotKey(get()) !== source) {
+      set({ status: 'error', error: changedDuringRequest, actionMessage: null })
       return
     }
-    set({ proposal: result.data.proposal, status: 'ready' })
+    if (!result.ok) {
+      set({ status: 'error', error: result.error, actionMessage: null })
+      return
+    }
+    const proposal = result.data.proposal
+    set({
+      proposal,
+      tasks: proposal.tasks,
+      preferences: proposal.preferences,
+      busy: proposal.busy,
+      pins: proposal.pins,
+      status: 'ready',
+      error: null,
+      trace: result.data.trace,
+      notes: result.data.notes,
+      selectedBlockId: proposal.blocks.find((block) => block.taskId === taskId)?.id ?? null,
+      syncState: { status: 'idle' },
+      actionMessage: 'Task unpinned and draft replanned.',
+    })
+    persist(get())
   },
 
   /**
@@ -416,6 +569,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
    * concrete preference/task change and then planned normally — never as a special case in the engine.
    */
   async applyTradeoff(kind, taskId) {
+    if (plannerLocked(get())) return
     const { tasks, preferences } = get()
     const task = tasks.find((t) => t.id === taskId)
     if (!task) return
@@ -440,9 +594,11 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   },
 
   async explainBlock(blockId) {
+    if (plannerLocked(get())) return
     const { tasks, preferences, busy, pins, mode, chat, proposal } = get()
     const block = proposal?.blocks.find((item) => item.id === blockId)
     if (!block) return
+    const id = ++planRequestId
     set({ chatBusy: true })
     const result = await postChat({
       tasks,
@@ -454,6 +610,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       explainBlockId: blockId,
       ...request(new Date()),
     })
+    if (id !== planRequestId) return
     if (result.ok) {
       set({
         chatBusy: false,
@@ -489,10 +646,11 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   },
 
   acceptPreview(data, source, taskId) {
-    if (get().status === 'planning' || get().syncState.status === 'syncing' || plannerSnapshotKey(get()) !== source)
-      return false
+    if (plannerLocked(get()) || plannerSnapshotKey(get()) !== source) return false
     const proposal = data.proposal
     set({
+      busy: proposal.busy,
+      actionMessage: 'Preview applied to your draft. Nothing has been published.',
       proposal,
       tasks: proposal.tasks,
       preferences: proposal.preferences,
@@ -509,9 +667,11 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   },
 
   async dryRun(approved) {
+    if (plannerLocked(get()) || hasDraftChanges(get())) return
     const { proposal } = get()
     if (!proposal) return
     const blockIds = approved ?? proposal.blocks.filter((b) => b.kind === 'task').map((b) => b.id)
+    if (blockIds.length === 0) return
     set({ syncState: { status: 'syncing', message: 'Checking what would be written…' } })
     const result = await postSync({ proposal, approvedBlockIds: blockIds, dryRun: true })
     if (!result.ok) {
@@ -527,16 +687,24 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     })
   },
 
-  async exportIcs() {
+  async exportIcs(approved) {
+    if (plannerLocked(get()) || hasDraftChanges(get())) return
     const { proposal, syncState } = get()
     if (!proposal) return
     set({ syncState: { ...syncState, status: 'syncing', message: 'Building the calendar file…' } })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 30_000)
     try {
-      const blockIds = proposal.blocks.filter((block) => block.kind === 'task').map((block) => block.id)
+      const blockIds = approved ?? proposal.blocks.filter((block) => block.kind === 'task').map((block) => block.id)
+      if (!blockIds.length) {
+        set({ syncState: { status: 'idle' } })
+        return
+      }
       const response = await fetch('/api/export/ics', {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ proposal, approvedBlockIds: blockIds, includeMeetings: true }),
+        body: JSON.stringify({ proposal, approvedBlockIds: blockIds, includeMeetings: false }),
       })
       if (!response.ok) throw new Error(`Export failed (${response.status})`)
       const blob = await response.blob()
@@ -565,10 +733,13 @@ export const usePlanner = create<State & Actions>((set, get) => ({
           message: error instanceof Error ? error.message : 'Could not build the calendar file.',
         },
       })
+    } finally {
+      clearTimeout(timer)
     }
   },
 
   async approveAndSync(blockIds) {
+    if (plannerLocked(get()) || hasDraftChanges(get())) return
     const { proposal } = get()
     if (!proposal || blockIds.length === 0) return
     set({ syncState: { status: 'syncing', message: 'Writing approved blocks…' } })
@@ -590,6 +761,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   },
 
   async rollback() {
+    if (plannerLocked(get())) return
     const { proposal } = get()
     if (!proposal) return
     const planId = `${proposal.weekStart}_${proposal.generatedAt}`

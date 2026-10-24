@@ -29,7 +29,7 @@ import {
   xForDay,
   yFor,
 } from './harness/dom'
-import { usePlanner } from '@/lib/store/planner-store'
+import { hasDraftChanges, usePlanner } from '@/lib/store/planner-store'
 import { WeekGrid, HOUR_HEIGHT as GRID_HOUR_HEIGHT } from '@/components/planner/WeekGrid'
 import { TaskInbox } from '@/components/planner/TaskInbox'
 import { PlanReportPanel } from '@/components/planner/PlanReportPanel'
@@ -98,6 +98,8 @@ beforeEach(() => {
     pins: [],
     chat: [],
     status: 'idle',
+    chatBusy: false,
+    actionMessage: null,
     error: null,
     selectedBlockId: null,
     notes: [],
@@ -315,10 +317,9 @@ describe('drag and drop', () => {
       )
       assert.equal(onTopOfMeeting, false, 'the engine wrote a block over a meeting')
       // …and the refusal is reported rather than silently swallowed (D-014).
-      assert.ok(
-        refreshed.report.warnings.some((warning) => warning.code === 'pin-ignored'),
-        'a refused pin went unreported',
-      )
+      assert.equal(usePlanner.getState().error?.code, 'MOVE_REJECTED')
+      assert.equal(refreshed, proposal, 'refused move changed the confirmed schedule')
+      assert.equal(usePlanner.getState().pins.length, 0)
     })
   })
 
@@ -599,7 +600,9 @@ describe('calendar panel', () => {
     })
     render(React.createElement(CalendarPanel), { wrapper: Wrapper })
 
-    const button = screen.getByRole('button', { name: /download \.ics/i })
+    fireEvent.click(screen.getByRole('button', { name: 'Select none' }))
+    fireEvent.click(screen.getAllByRole('checkbox')[0])
+    const button = screen.getByRole('button', { name: /download selected \.ics/i })
     assert.equal(button.hasAttribute('disabled'), false, 'the export was gated behind Google')
 
     // jsdom has no object URLs or downloads; record what the code tried to hand the browser.
@@ -631,6 +634,7 @@ describe('calendar panel', () => {
       HTMLAnchorElement.prototype.click = click
     }
 
+    assert.equal(usePlanner.getState().syncState.lastCount, 1, 'export ignored the chosen selection')
     assert.equal(created.length, 1, 'the export did not produce a download')
     assert.match(created[0] ?? '', /^text\/calendar/, 'the exported blob was not a calendar file')
     assert.match(downloaded ?? '', /^calendra-.*\.ics$/)
@@ -860,4 +864,382 @@ it('dry-runs only the selected task blocks', async () => {
   })
   assert.equal(usePlanner.getState().syncState.status, 'done')
   assert.equal(usePlanner.getState().syncState.lastCount, 1)
+})
+
+/** Hold a real route request so pending/race/recovery states can be observed deterministically. */
+function holdRequest(path: string) {
+  const original = globalThis.fetch
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let count = 0
+  globalThis.fetch = async (input, init) => {
+    if (String(input) === path) {
+      count += 1
+      await gate
+    }
+    return original(input, init)
+  }
+  return {
+    release,
+    count: () => count,
+    restore: () => {
+      release()
+      globalThis.fetch = original
+    },
+  }
+}
+
+it('keeps the confirmed position on network failure and permits a successful retry', async () => {
+  const proposal = await buildDemoWeek()
+  const target = proposal.blocks.find(
+    (block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90,
+  )!
+  const original = globalThis.fetch
+  globalThis.fetch = async () => {
+    throw new TypeError('offline')
+  }
+  try {
+    await act(async () => {
+      await usePlanner.getState().pinBlock(target.id, addDaysISO(proposal.weekStart, 2), 810)
+    })
+    assert.equal(usePlanner.getState().proposal, proposal)
+    assert.deepEqual(usePlanner.getState().pins, proposal.pins)
+    assert.equal(usePlanner.getState().status, 'error')
+    assert.match(usePlanner.getState().error!.message, /previous position/)
+  } finally {
+    globalThis.fetch = original
+  }
+  await act(async () => {
+    await usePlanner.getState().pinBlock(target.id, addDaysISO(proposal.weekStart, 2), 810)
+  })
+  assert.equal(usePlanner.getState().status, 'ready')
+  assert.equal(usePlanner.getState().error, null)
+  assert.ok(usePlanner.getState().pins.some((pin) => pin.taskId === target.taskId && pin.startMin === 810))
+})
+
+it('does not overwrite newer edits with a late planning response', async () => {
+  const proposal = await buildDemoWeek()
+  const held = holdRequest('/api/plan')
+  try {
+    let pending!: Promise<void>
+    await act(async () => {
+      pending = usePlanner.getState().buildWeek()
+    })
+    assert.equal(usePlanner.getState().status, 'planning')
+    await act(async () => {
+      usePlanner.getState().updateTask(proposal.tasks[0].id, { title: 'Latest edit must survive' })
+    })
+    held.release()
+    await act(async () => {
+      await pending
+    })
+    assert.equal(usePlanner.getState().tasks[0].title, 'Latest edit must survive')
+    assert.equal(usePlanner.getState().proposal, proposal)
+    assert.equal(usePlanner.getState().error?.code, 'INPUTS_CHANGED')
+    assert.equal(hasDraftChanges(usePlanner.getState()), true)
+  } finally {
+    held.restore()
+  }
+})
+
+it('serializes planner actions and ignores a cancelled response after a fresh build', async () => {
+  await buildDemoWeek()
+  const held = holdRequest('/api/plan')
+  try {
+    let first!: Promise<void>
+    await act(async () => {
+      first = usePlanner.getState().buildWeek()
+    })
+    await act(async () => {
+      await usePlanner.getState().buildWeek()
+      await usePlanner.getState().sendMessage('add new work')
+    })
+    assert.equal(held.count(), 1)
+    assert.equal(usePlanner.getState().chatBusy, false)
+    await act(async () => {
+      usePlanner.getState().cancelPlanning()
+    })
+    assert.equal(usePlanner.getState().status, 'ready')
+    assert.match(usePlanner.getState().actionMessage!, /cancelled/)
+    held.restore()
+    await act(async () => {
+      await usePlanner.getState().buildWeek()
+    })
+    const fresh = usePlanner.getState().proposal
+    await act(async () => {
+      await first
+    })
+    assert.equal(usePlanner.getState().proposal, fresh)
+    assert.match(usePlanner.getState().actionMessage!, /draft week is ready/)
+  } finally {
+    held.restore()
+  }
+})
+
+it('unpin failure keeps the confirmed pin; success reconciles both pin collections', async () => {
+  const proposal = await buildDemoWeek()
+  const target = proposal.blocks.find(
+    (block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90,
+  )!
+  await act(async () => {
+    await usePlanner.getState().pinBlock(target.id, addDaysISO(proposal.weekStart, 2), 810)
+  })
+  const pinned = usePlanner.getState().proposal
+  const original = globalThis.fetch
+  globalThis.fetch = async () => {
+    throw new TypeError('offline')
+  }
+  try {
+    await act(async () => {
+      await usePlanner.getState().unpinTask(target.taskId)
+    })
+    assert.equal(usePlanner.getState().proposal, pinned)
+    assert.ok(usePlanner.getState().pins.some((pin) => pin.taskId === target.taskId))
+  } finally {
+    globalThis.fetch = original
+  }
+  await act(async () => {
+    await usePlanner.getState().unpinTask(target.taskId)
+  })
+  assert.equal(usePlanner.getState().status, 'ready')
+  assert.ok(usePlanner.getState().pins.every((pin) => pin.taskId !== target.taskId))
+  assert.deepEqual(usePlanner.getState().pins, usePlanner.getState().proposal!.pins)
+})
+
+it('marks edited inputs stale, blocks publishing and dragging, and clears the warning after replan', async () => {
+  await buildDemoWeek()
+  render(React.createElement(PlannerPage), { wrapper: Wrapper })
+  await act(async () => {
+    usePlanner.getState().updateTask(usePlanner.getState().tasks[0].id, { title: 'Changed task' })
+  })
+  assert.ok(screen.getByRole('status', { name: 'Unsaved schedule changes' }))
+  assert.equal(screen.getByRole('button', { name: 'Review & publish' }).hasAttribute('disabled'), true)
+  const proposal = usePlanner.getState().proposal
+  const held = holdRequest('/api/plan')
+  try {
+    const block = proposal!.blocks.find((block) => block.kind === 'task')!
+    await act(async () => {
+      await usePlanner.getState().pinBlock(block.id, block.date, block.startMin + 15)
+    })
+    assert.equal(held.count(), 0)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Re-plan', exact: true }))
+    })
+    assert.equal(screen.getByRole('button', { name: 'Planning…' }).hasAttribute('disabled'), true)
+    assert.ok(screen.getByRole('button', { name: 'Cancel planning' }))
+    held.release()
+    await waitFor(() => assert.equal(usePlanner.getState().status, 'ready'))
+    assert.equal(screen.queryByRole('status', { name: 'Unsaved schedule changes' }), null)
+    assert.equal(screen.getByRole('button', { name: 'Review & publish' }).hasAttribute('disabled'), false)
+  } finally {
+    held.restore()
+  }
+})
+
+it('Escape and pointercancel abandon a drag without sending a request', async () => {
+  const proposal = await buildDemoWeek()
+  const target = proposal.blocks.find((block) => block.kind === 'task')!
+  render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+  strip()
+  const tile = tileFor(target)
+  const from = blockRect(target.dayIndex, target.startMin, target.minutes, windowOf(target.date))
+  applyRect(tile, from)
+  const held = holdRequest('/api/plan')
+  try {
+    for (const reason of ['Escape', 'pointercancel']) {
+      await act(async () => pointerDown(tile, { x: xForDay(target.dayIndex), y: from.top }))
+      await act(async () => pointerMove({ x: xForDay(target.dayIndex), y: from.top + 28 }))
+      assert.ok(document.querySelector('[data-drop-preview]'))
+      await act(async () => {
+        if (reason === 'Escape') fireEvent.keyDown(window, { key: 'Escape' })
+        else fireEvent(window, new Event('pointercancel'))
+      })
+      assert.equal(document.querySelector('[data-drop-preview]'), null)
+      await act(async () => pointerUp({ x: xForDay(target.dayIndex), y: from.top + 28 }))
+    }
+    assert.equal(held.count(), 0)
+    assert.equal(usePlanner.getState().proposal, proposal)
+  } finally {
+    held.restore()
+  }
+})
+
+it('returning focus from closed block details does not reopen them', async () => {
+  await buildDemoWeek()
+  render(React.createElement(PlannerPage), { wrapper: Wrapper })
+  const block = usePlanner.getState().proposal!.blocks.find((block) => block.kind === 'task')!
+  await act(async () => {
+    tileFor(block).focus()
+  })
+  assert.ok(screen.getByRole('button', { name: 'Close block details' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Close block details' }))
+  assert.equal(usePlanner.getState().selectedBlockId, null)
+  assert.equal((document.activeElement as HTMLElement).dataset.blockId, block.id)
+})
+
+it('keeps an intentionally empty backlog empty after hydration', async () => {
+  await buildDemoWeek()
+  await act(async () => {
+    usePlanner.getState().clearTasks()
+  })
+  // Flush the existing coalesced persistence window rather than assuming synchronous writes.
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  await act(async () => {
+    usePlanner.getState().hydrate()
+  })
+  assert.deepEqual(usePlanner.getState().tasks, [])
+})
+
+it('requires explicit undo confirmation and resets dry-run feedback when selection changes', async () => {
+  await buildDemoWeek()
+  await act(async () => {
+    usePlanner.setState({
+      capability: {
+        demoMode: false,
+        agent: { mode: 'local', provider: 'local', model: '' },
+        calendar: { configured: true, connected: true, missing: [] },
+      },
+    })
+  })
+  render(React.createElement(CalendarPanel), { wrapper: Wrapper })
+  fireEvent.click(screen.getByRole('button', { name: 'Undo this plan' }))
+  await waitFor(() => assert.equal(document.activeElement?.id, 'calendar-undo-confirmation'))
+  assert.ok(screen.getByRole('button', { name: 'Confirm undo' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Keep events' }))
+  assert.equal(screen.queryByRole('button', { name: 'Confirm undo' }), null)
+  assert.equal(document.activeElement?.id, 'calendar-undo-trigger')
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Dry run' }))
+  })
+  assert.equal(usePlanner.getState().syncState.status, 'done')
+  fireEvent.click(screen.getByRole('button', { name: 'Select none' }))
+  assert.equal(usePlanner.getState().syncState.status, 'idle')
+  assert.equal(screen.getByRole('button', { name: 'Dry run' }).hasAttribute('disabled'), true)
+  assert.equal(screen.getByRole('button', { name: /Download selected/ }).hasAttribute('disabled'), true)
+})
+
+it('blocks duplicate sync and input mutation while a calendar operation is pending', async () => {
+  const proposal = await buildDemoWeek()
+  const block = proposal.blocks.find((block) => block.kind === 'task')!
+  const held = holdRequest('/api/calendar/sync')
+  try {
+    let pending!: Promise<void>
+    await act(async () => {
+      pending = usePlanner.getState().dryRun([block.id])
+    })
+    await act(async () => {
+      await usePlanner.getState().dryRun([block.id])
+      usePlanner.getState().removeTask(block.taskId)
+      usePlanner.getState().setPreferences({ bufferMinutes: 45 })
+    })
+    assert.equal(held.count(), 1)
+    assert.equal(usePlanner.getState().tasks, proposal.tasks)
+    assert.equal(usePlanner.getState().preferences, proposal.preferences)
+    held.release()
+    await act(async () => {
+      await pending
+    })
+    assert.equal(usePlanner.getState().syncState.status, 'done')
+    assert.equal(usePlanner.getState().syncState.lastCount, 1)
+  } finally {
+    held.restore()
+  }
+})
+
+it('recovers safely from malformed saved tasks, rules and session JSON', async () => {
+  for (const raw of [
+    'null',
+    '{bad json',
+    JSON.stringify({ tasks: [null], preferences: { workingHours: null }, mode: 'invalid' }),
+  ]) {
+    window.localStorage.setItem('calendra.session.v1', raw)
+    await act(async () => {
+      usePlanner.getState().hydrate()
+    })
+    assert.ok(usePlanner.getState().tasks.every((task) => typeof task.title === 'string'))
+    assert.ok(usePlanner.getState().preferences.workingHours)
+    assert.equal(usePlanner.getState().mode, 'auto')
+  }
+})
+
+it('shows an actionable empty state instead of offering an empty build', async () => {
+  await buildDemoWeek()
+  render(React.createElement(PlannerPage), { wrapper: Wrapper })
+  await act(async () => {
+    usePlanner.getState().clearTasks()
+  })
+  assert.ok(screen.getByRole('region', { name: 'Empty task backlog' }))
+  assert.equal(screen.getByRole('button', { name: 'Build my week' }).hasAttribute('disabled'), true)
+  fireEvent.click(screen.getByRole('button', { name: 'Add tasks', exact: true }))
+  await waitFor(() => assert.equal(document.activeElement?.id, 'planner-panel-tasks'))
+})
+
+it('moves a selected block using explicit controls and keeps invalid positions unchanged', async () => {
+  const proposal = await buildDemoWeek()
+  const target = proposal.blocks.find(
+    (block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90,
+  )!
+  await act(async () => {
+    usePlanner.getState().selectBlock(target.id)
+  })
+  render(React.createElement(PlanReportPanel), { wrapper: Wrapper })
+  const wednesday = addDaysISO(proposal.weekStart, 2)
+  fireEvent.change(screen.getByLabelText('Date'), { target: { value: wednesday } })
+  fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '15:00' } })
+  await act(async () => {
+    fireEvent.submit(screen.getByRole('button', { name: 'Apply move or resize' }).closest('form')!)
+  })
+  assert.equal(usePlanner.getState().error?.code, 'MOVE_REJECTED')
+  assert.equal(usePlanner.getState().proposal, proposal)
+  fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '13:30' } })
+  await act(async () => {
+    fireEvent.submit(screen.getByRole('button', { name: 'Apply move or resize' }).closest('form')!)
+  })
+  assert.equal(usePlanner.getState().status, 'ready')
+  assert.ok(
+    usePlanner
+      .getState()
+      .pins.some((pin) => pin.taskId === target.taskId && pin.date === wednesday && pin.startMin === 810),
+  )
+})
+
+it('announces dry-run failure, keeps selection, and allows retry without publishing', async () => {
+  await buildDemoWeek()
+  render(React.createElement(CalendarPanel), { wrapper: Wrapper })
+  fireEvent.click(screen.getByRole('button', { name: 'Select none' }))
+  fireEvent.click(screen.getAllByRole('checkbox')[0])
+  const original = globalThis.fetch
+  globalThis.fetch = async () => {
+    throw new TypeError('offline')
+  }
+  try {
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Dry run' }))
+    })
+    assert.equal(usePlanner.getState().syncState.status, 'error')
+    assert.match(screen.getByRole('alert').textContent ?? '', /Could not reach/)
+    assert.equal(screen.getByRole('button', { name: 'Dry run' }).hasAttribute('disabled'), false)
+  } finally {
+    globalThis.fetch = original
+  }
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Dry run' }))
+  })
+  assert.equal(usePlanner.getState().syncState.status, 'done')
+  assert.equal(usePlanner.getState().syncState.lastCount, 1)
+  assert.match(usePlanner.getState().syncState.message!, /nothing has been sent to Google/)
+})
+
+it('Enter reveals and focuses block editing, and Escape returns focus to the canvas', async () => {
+  await buildDemoWeek()
+  render(React.createElement(PlannerPage), { wrapper: Wrapper })
+  const block = usePlanner.getState().proposal!.blocks.find((block) => block.kind === 'task')!
+  const tile = tileFor(block)
+  fireEvent.keyDown(tile, { key: 'Enter' })
+  await waitFor(() => assert.equal(document.activeElement?.id, 'planner-block-details'))
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+  assert.equal(usePlanner.getState().selectedBlockId, null)
+  assert.equal((document.activeElement as HTMLElement).dataset.blockId, block.id)
 })

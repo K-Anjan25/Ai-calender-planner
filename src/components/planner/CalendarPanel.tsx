@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 import { CalendarCheck, CalendarX, CloudDownload, Download, Eye, Link2, RotateCcw, ShieldCheck } from 'lucide-react'
 import { fmtDuration } from '@/lib/scheduler/slots'
-import { usePlanner } from '@/lib/store/planner-store'
+import { hasDraftChanges, plannerLocked, usePlanner } from '@/lib/store/planner-store'
 import { calendarAuthUrl } from '@/lib/api'
 import { PaperButton, PaperChip } from '@/components/paper/PaperControls'
 import { PaperSheet } from '@/components/paper/PaperSheet'
@@ -18,8 +18,11 @@ import { PaperSheet } from '@/components/paper/PaperSheet'
  */
 
 export function CalendarPanel() {
-  const { capability, proposal, syncState, status, dryRun, approveAndSync, rollback, refreshCapability, exportIcs } =
+  const { capability, proposal, syncState, dryRun, approveAndSync, rollback, refreshCapability, exportIcs } =
     usePlanner()
+  const locked = usePlanner(plannerLocked)
+  const stale = usePlanner(hasDraftChanges)
+  const [confirmUndo, setConfirmUndo] = useState(false)
   const [selected, setSelected] = useState<string[] | null>(null)
 
   const taskBlocks = proposal?.blocks.filter((block) => block.kind === 'task') ?? []
@@ -32,8 +35,16 @@ export function CalendarPanel() {
     .filter((block) => approval.includes(block.id))
     .reduce((sum, block) => sum + block.minutes, 0)
 
+  useEffect(() => {
+    if (confirmUndo) document.getElementById('calendar-undo-confirmation')?.focus()
+  }, [confirmUndo])
+  const selectBlocks = (ids: string[]) => {
+    if (locked || stale) return
+    setSelected(ids)
+    usePlanner.setState({ syncState: { status: 'idle' } })
+  }
   const toggle = (id: string) => {
-    setSelected(approval.includes(id) ? approval.filter((value) => value !== id) : [...approval, id])
+    selectBlocks(approval.includes(id) ? approval.filter((value) => value !== id) : [...approval, id])
   }
 
   return (
@@ -120,25 +131,25 @@ export function CalendarPanel() {
             </PaperChip>
           </div>
 
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <PaperButton size="sm" variant="flat" onClick={() => setSelected(taskBlocks.map((block) => block.id))}>
+          <fieldset disabled={locked || stale} className="mb-2 flex flex-wrap items-center gap-1.5">
+            <PaperButton size="sm" variant="flat" onClick={() => selectBlocks(taskBlocks.map((block) => block.id))}>
               Select all
             </PaperButton>
-            <PaperButton size="sm" variant="flat" onClick={() => setSelected([])}>
+            <PaperButton size="sm" variant="flat" onClick={() => selectBlocks([])}>
               Select none
             </PaperButton>
             <PaperButton
               size="sm"
               variant="flat"
               onClick={() =>
-                setSelected(
+                selectBlocks(
                   taskBlocks.filter((b) => b.priority === 'P0' || b.priority === 'P1').map((block) => block.id),
                 )
               }
             >
               Only P0/P1
             </PaperButton>
-          </div>
+          </fieldset>
 
           <ul className="paper-well max-h-[220px] space-y-1 overflow-y-auto p-2">
             {taskBlocks.map((block) => {
@@ -149,7 +160,7 @@ export function CalendarPanel() {
                     <input
                       type="checkbox"
                       checked={checked}
-                      disabled={status === 'planning' || syncState.status === 'syncing'}
+                      disabled={locked || stale}
                       onChange={() => toggle(block.id)}
                       className="h-3.5 w-3.5 accent-teal-deep"
                     />
@@ -170,7 +181,7 @@ export function CalendarPanel() {
             <PaperButton
               size="sm"
               variant="flat"
-              disabled={approval.length === 0 || status === 'planning' || syncState.status === 'syncing'}
+              disabled={approval.length === 0 || locked || stale}
               onClick={() => {
                 void dryRun(approval)
               }}
@@ -181,7 +192,7 @@ export function CalendarPanel() {
             <PaperButton
               size="sm"
               tone="teal"
-              disabled={!connected || approval.length === 0 || status === 'planning' || syncState.status === 'syncing'}
+              disabled={!connected || approval.length === 0 || locked || stale}
               onClick={() => void approveAndSync(approval)}
             >
               <CloudDownload size={13} aria-hidden="true" />
@@ -190,19 +201,60 @@ export function CalendarPanel() {
             <PaperButton
               size="sm"
               variant="flat"
-              disabled={!connected || status === 'planning' || syncState.status === 'syncing'}
-              onClick={() => void rollback()}
+              disabled={!connected || locked || stale}
+              id="calendar-undo-trigger"
+              onClick={() => setConfirmUndo(true)}
             >
               <RotateCcw size={13} aria-hidden="true" />
               Undo this plan
             </PaperButton>
             {/* No account, no scope, no server write: a file the user owns (T-604). */}
-            <PaperButton size="sm" variant="flat" disabled={taskBlocks.length === 0} onClick={() => void exportIcs()}>
+            <PaperButton
+              size="sm"
+              variant="flat"
+              disabled={locked || stale || approval.length === 0}
+              onClick={() => void exportIcs(approval)}
+            >
               <Download size={13} aria-hidden="true" />
-              Download .ics
+              Download selected .ics
             </PaperButton>
           </div>
 
+          {stale && (
+            <p role="status" className="mt-2 text-sm font-semibold">
+              Inputs changed. Re-plan before exporting or publishing.
+            </p>
+          )}
+          {confirmUndo && (
+            <section
+              id="calendar-undo-confirmation"
+              tabIndex={-1}
+              aria-label="Confirm calendar undo"
+              className="paper-well mt-3 space-y-2 p-3"
+            >
+              <p className="text-sm">
+                Remove this plan’s published events from Google Calendar? Other meetings and your draft stay unchanged.
+              </p>
+              <PaperButton
+                disabled={locked}
+                onClick={() => {
+                  setConfirmUndo(false)
+                  void rollback()
+                }}
+              >
+                Confirm undo
+              </PaperButton>
+              <PaperButton
+                disabled={locked}
+                onClick={() => {
+                  setConfirmUndo(false)
+                  document.getElementById('calendar-undo-trigger')?.focus()
+                }}
+              >
+                Keep events
+              </PaperButton>
+            </section>
+          )}
           <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
             About to write <strong className="tnum">{fmtDuration(approvedMinutes)}</strong> of work. Every event is
             tagged so a re-sync updates it instead of creating a duplicate, and so “undo this plan” removes exactly what
@@ -215,11 +267,11 @@ export function CalendarPanel() {
                 'paper-well mt-2.5 p-2.5',
                 syncState.status === 'error' ? 'border-rose/40' : syncState.status === 'done' ? 'border-olive/40' : '',
               )}
-              role="status"
+              role={syncState.status === 'error' ? 'alert' : 'status'}
             >
               <p className="text-[11.5px] font-semibold text-ink-soft">{syncState.message}</p>
               {syncState.status === 'syncing' ? (
-                <p className="mt-1 text-[11px] text-ink-faint">Talking to Google…</p>
+                <p className="mt-1 text-[11px] text-ink-faint">Please wait for this operation to finish.</p>
               ) : null}
             </div>
           ) : null}

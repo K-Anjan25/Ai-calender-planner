@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Plus, Trash2, Info } from 'lucide-react'
 import { SNAP_MINUTES, WEEKDAYS, WEEKDAY_LABEL, WEEKDAY_SHORT, type Preferences, type Weekday } from '@/lib/types'
 import { fmtClock, fmtDuration } from '@/lib/scheduler/slots'
-import { usePlanner } from '@/lib/store/planner-store'
+import { plannerLocked, usePlanner } from '@/lib/store/planner-store'
 import { PaperButton, PaperInput, PaperLabel, PaperSelect, PaperToggle } from '@/components/paper/PaperControls'
 import { PaperSheet } from '@/components/paper/PaperSheet'
 
@@ -33,6 +33,7 @@ function fromTime(value: string): number {
 }
 
 export function PreferencePanel() {
+  const locked = usePlanner(plannerLocked)
   const { preferences, setPreferences } = usePlanner()
   const [customPeak, setCustomPeak] = useState({ start: 9 * 60, end: 12 * 60 })
 
@@ -45,7 +46,11 @@ export function PreferencePanel() {
 
   const toggleWorkday = (weekday: Weekday) => {
     const current = preferences.workingHours[weekday]
-    const next = current ? null : weekday === 'sat' || weekday === 'sun' ? { start: 10 * 60, end: 13 * 60 } : { start: 9 * 60, end: 17 * 60 }
+    const next = current
+      ? null
+      : weekday === 'sat' || weekday === 'sun'
+        ? { start: 10 * 60, end: 13 * 60 }
+        : { start: 9 * 60, end: 17 * 60 }
     update({ workingHours: { ...preferences.workingHours, [weekday]: next } })
   }
 
@@ -56,7 +61,8 @@ export function PreferencePanel() {
     : null
 
   return (
-    <div className="flex flex-col gap-3">
+    <fieldset disabled={locked} aria-busy={locked} className="flex min-w-0 flex-col gap-3 disabled:opacity-60">
+      <legend className="sr-only">Rule editing</legend>
       <PaperSheet className="p-3.5">
         <h3 className="mb-2 text-[15px]">Working hours</h3>
         <ul className="space-y-1.5">
@@ -65,7 +71,12 @@ export function PreferencePanel() {
             return (
               <li key={weekday} className="flex items-center gap-2">
                 <span className="w-[42px] shrink-0 text-xs font-bold text-ink-soft">{WEEKDAY_SHORT[weekday]}</span>
-                <PaperToggle checked={Boolean(hours)} onChange={() => toggleWorkday(weekday)} label={`${WEEKDAY_LABEL[weekday]} is a working day`} tone="olive" />
+                <PaperToggle
+                  checked={Boolean(hours)}
+                  onChange={() => toggleWorkday(weekday)}
+                  label={`${WEEKDAY_LABEL[weekday]} is a working day`}
+                  tone="olive"
+                />
                 {/*
                   The two bounds share whatever is left after the toggle, and each keeps a floor it
                   will not shrink past instead of forcing the row wider than the sheet. Fixed pixel
@@ -158,7 +169,11 @@ export function PreferencePanel() {
               aria-label="Low-energy window start"
               className="min-w-[74px] flex-1"
               value={toTime(preferences.energyTrough?.start ?? 15 * 60)}
-              onChange={(event) => update({ energyTrough: { start: fromTime(event.target.value), end: preferences.energyTrough?.end ?? 17 * 60 } })}
+              onChange={(event) =>
+                update({
+                  energyTrough: { start: fromTime(event.target.value), end: preferences.energyTrough?.end ?? 17 * 60 },
+                })
+              }
             />
             <span className="shrink-0 text-ink-faint">–</span>
             <PaperInput
@@ -166,7 +181,14 @@ export function PreferencePanel() {
               aria-label="Low-energy window end"
               className="min-w-[74px] flex-1"
               value={toTime(preferences.energyTrough?.end ?? 17 * 60)}
-              onChange={(event) => update({ energyTrough: { start: preferences.energyTrough?.start ?? 15 * 60, end: fromTime(event.target.value) } })}
+              onChange={(event) =>
+                update({
+                  energyTrough: {
+                    start: preferences.energyTrough?.start ?? 15 * 60,
+                    end: fromTime(event.target.value),
+                  },
+                })
+              }
             />
           </div>
         </div>
@@ -210,7 +232,9 @@ export function PreferencePanel() {
           <div>
             <div className="mb-1 flex items-center justify-between">
               <PaperLabel className="mb-0">Deep work per day, max</PaperLabel>
-              <span className="text-xs font-bold text-ink-soft">{fmtDuration(preferences.maxDeepWorkMinutesPerDay)}</span>
+              <span className="text-xs font-bold text-ink-soft">
+                {fmtDuration(preferences.maxDeepWorkMinutesPerDay)}
+              </span>
             </div>
             <input
               type="range"
@@ -226,7 +250,9 @@ export function PreferencePanel() {
           <div>
             <div className="mb-1 flex items-center justify-between">
               <PaperLabel className="mb-0">All work per day, max</PaperLabel>
-              <span className="text-xs font-bold text-ink-soft">{fmtDuration(preferences.maxPlannedMinutesPerDay)}</span>
+              <span className="text-xs font-bold text-ink-soft">
+                {fmtDuration(preferences.maxPlannedMinutesPerDay)}
+              </span>
             </div>
             <input
               type="range"
@@ -271,7 +297,9 @@ export function PreferencePanel() {
                 aria-label="Lunch end"
                 className="min-w-[74px] flex-1"
                 value={toTime(lunch.end)}
-                onChange={(event) => update({ lunch: { start: lunch.start, minutes: lunch.minutes, end: fromTime(event.target.value) } })}
+                onChange={(event) =>
+                  update({ lunch: { start: lunch.start, minutes: lunch.minutes, end: fromTime(event.target.value) } })
+                }
               />
             </span>
           ) : (
@@ -290,7 +318,12 @@ export function PreferencePanel() {
               update({
                 blackouts: [
                   ...preferences.blackouts,
-                  { id: `bo_${preferences.blackouts.length}_${Date.now()}`, label: 'Busy', start: 15 * 60, end: 16 * 60 },
+                  {
+                    id: `bo_${preferences.blackouts.length}_${Date.now()}`,
+                    label: 'Busy',
+                    start: 15 * 60,
+                    end: 16 * 60,
+                  },
                 ],
               })
             }
@@ -300,7 +333,9 @@ export function PreferencePanel() {
           </PaperButton>
         </div>
         {preferences.blackouts.length === 0 ? (
-          <p className="text-xs text-ink-faint">Nothing blocked. School runs, therapy, no-meeting windows and travel days belong here.</p>
+          <p className="text-xs text-ink-faint">
+            Nothing blocked. School runs, therapy, no-meeting windows and travel days belong here.
+          </p>
         ) : (
           <ul className="space-y-1.5">
             {preferences.blackouts.map((blackout, index) => (
@@ -328,7 +363,9 @@ export function PreferencePanel() {
                     type="button"
                     aria-label={`Remove ${blackout.label}`}
                     className="shrink-0 rounded-[var(--radius-cut-xs)] p-1 text-ink-faint hover:bg-paper-sand hover:text-rose-deep"
-                    onClick={() => update({ blackouts: preferences.blackouts.filter((item) => item.id !== blackout.id) })}
+                    onClick={() =>
+                      update({ blackouts: preferences.blackouts.filter((item) => item.id !== blackout.id) })
+                    }
                   >
                     <Trash2 size={13} aria-hidden="true" />
                   </button>
@@ -387,8 +424,8 @@ export function PreferencePanel() {
       <PaperSheet className="p-3.5">
         <h3 className="mb-2 text-[15px]">When the week is full</h3>
         <p className="mb-2 text-[11px] leading-relaxed text-ink-faint">
-          Something has to give when demand beats capacity. Tell the engine which compromise you would rather make — it will
-          always tell you what it did.
+          Something has to give when demand beats capacity. Tell the engine which compromise you would rather make — it
+          will always tell you what it did.
         </p>
         <div className="flex flex-wrap gap-1.5">
           {(
@@ -419,7 +456,9 @@ export function PreferencePanel() {
           </div>
           <PaperToggle
             checked={preferences.weekendMode !== 'off'}
-            onChange={(next) => update({ weekendMode: next ? 'light' : 'off', overflowPreference: next ? 'weekend' : 'shoulder' })}
+            onChange={(next) =>
+              update({ weekendMode: next ? 'light' : 'off', overflowPreference: next ? 'weekend' : 'shoulder' })
+            }
             label="Allow weekend planning"
             tone="rose"
           />
@@ -429,6 +468,6 @@ export function PreferencePanel() {
           {WEEKDAY_LABEL[preferences.weekStartsOn]}
         </p>
       </PaperSheet>
-    </div>
+    </fieldset>
   )
 }

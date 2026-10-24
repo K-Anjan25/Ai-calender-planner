@@ -33,6 +33,7 @@ export function ScheduleBlock({
   block,
   style,
   compact,
+  editable = true,
   selected,
   dragging,
   onSelect,
@@ -43,6 +44,7 @@ export function ScheduleBlock({
   block: PlacedBlock
   style: React.CSSProperties
   compact?: boolean
+  editable?: boolean
   selected: boolean
   dragging: boolean
   onSelect(): void
@@ -90,7 +92,9 @@ export function ScheduleBlock({
         'focus-visible:outline-2 focus-visible:outline-teal-deep',
         dragging
           ? 'paper-lifted cursor-grabbing'
-          : 'hover:-translate-y-px hover:shadow-[var(--shadow-lift)] cursor-grab',
+          : editable
+            ? 'hover:-translate-y-px hover:shadow-[var(--shadow-lift)] cursor-grab'
+            : 'cursor-default',
         selected && 'ring-2 ring-teal-deep/70 ring-offset-1 ring-offset-paper-ivory',
         block.conflict === 'deadline-risk' && 'border-dashed border-rose',
         isSpecial && 'border-dashed',
@@ -144,7 +148,7 @@ export function ScheduleBlock({
       </span>
 
       {/* resize grip: paper does not stretch, it gets another cut */}
-      {!isSpecial ? (
+      {!isSpecial && editable ? (
         <span
           role="separator"
           aria-label={`Resize ${block.title}`}

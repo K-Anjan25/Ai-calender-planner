@@ -353,3 +353,14 @@ drop-preview feedback and the collapsed assistant. Planner keyboard: arrows insp
 Local verification includes real-route interaction tests and browser checks for isolated panels,
 keyboard focus, dedicated publishing, and calendar tiles remaining inside the day grid (including
 placements outside normal working hours). No live Google Calendar writes are exercised by these checks.
+
+### Calendar action feedback and recovery
+
+- Task/rule edits mark the existing schedule **out of date**. Re-plan before moving, exporting or publishing.
+- Pending planning can be cancelled; late responses are ignored. Already-running provider work may still complete.
+- Moves/resizes keep the last confirmed schedule until accepted; failures keep it intact and allow retry.
+- Select a task, then use **Move or resize this block** → date/start/minutes → **Apply move or resize**
+  as an alternative to dragging. Enter opens focused details; Escape/close returns to the block.
+- Escape, pointer cancellation and outside-grid release cancel a drag without committing.
+- **Download selected .ics** and **Dry run** use the selected task blocks. **Undo this plan** asks for confirmation.
+- See `docs/LAUNCH-READINESS.md` for the action/state audit, evidence and remaining live-account tests.

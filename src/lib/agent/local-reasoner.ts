@@ -9,7 +9,7 @@ import {
   type Task,
   type Weekday,
 } from '@/lib/types'
-import { addDaysISO, fmtClock, fmtDuration, parseDate, weekdayOfDate } from '@/lib/scheduler/slots'
+import { addDaysISO, fmtClock, fmtDuration, parseDate, weekdayOfDate, workingHoursFor } from '@/lib/scheduler/slots'
 import { estimateDurationMinutes, type InterpretedMessage, type Interpreter, type ParsedTasks } from '@/lib/agent/tools'
 
 /**
@@ -560,7 +560,8 @@ export function interpretLocally(
     if (matched && targetDay) {
       const date = dateOfWeekday(targetDay, ctx.weekStartDate)
       const time = parseTimeOfDay(target)
-      const startMin = time ? time.hour * 60 + time.minute : 9 * 60
+      const hours = workingHoursFor({ ...ctx.preferences, ...preferences }, targetDay)
+      const startMin = time ? time.hour * 60 + time.minute : (hours?.start ?? 9 * 60)
       pins.push({ taskId: matched.id, date, startMin, minutes: Math.min(matched.estimateMinutes, 90) })
       changes.push(`Pinned “${matched.title}” to ${targetDay} ${fmtClock(startMin)}.`)
     }

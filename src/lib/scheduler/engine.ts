@@ -99,8 +99,9 @@ function materialisePins(
     const start = clamp(Math.round(pin.startMin / SNAP_MINUTES) * SNAP_MINUTES, 0, 24 * 60)
     const end = start + Math.max(SNAP_MINUTES, pin.minutes)
     const hours = workingHoursFor(ctx.prefs, day.weekday)
-    const blocked = !hours || end > hours.end
-    const collides = ctx.busy.some((event) => event.date === pin.date && overlaps(start, end, event.startMin, event.endMin))
+    const blocked = !hours || start < hours.start || end > hours.end
+    const collides = staticOccupancy(day.weekday, day.date, ctx.prefs, ctx.busy).some(event => overlaps(start, end, event.start, event.end)) ||
+      blocks.some(block => block.date === pin.date && overlaps(start, end, block.startMin, block.endMin))
     if (blocked || collides) {
       dropped.push(pin.taskId)
       continue

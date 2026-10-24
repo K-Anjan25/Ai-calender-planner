@@ -539,3 +539,20 @@ and 150×90px responsive widths/sizes), keeping the real Google map rather than 
 placeholder. Removed the new full-width/220px expansion and restored responsive location layout.
 Map remains visible on mobile. Contact map unchanged. Lint, 182 tests, production build and all
 seven browser widths passed, including compact map geometry; provider responses remain stubbed.
+
+## Calendar interaction reliability audit — 2026-10-24
+
+Implemented the UI-first phase requested before any LLM/RAG work. Store serializes draft requests,
+rejects stale snapshots, supports cancel/discard via request generation, keeps confirmed positions
+on move/unpin failure, reconciles accepted server pins, and prevents publishing stale inputs or
+starting duplicate calendar operations. Pending controls lock; status/error/recovery feedback is
+visible. Undo confirmation, selection-aware ICS/dry-run, export timeout, safe empty/corrupt hydration.
+Canvas cancels on Escape/pointercancel/blur/outside release, keeps resize on its original day/start,
+clips protected bands, restores focus, and offers explicit date/time/duration editing for selected
+blocks. Enter/tap focuses details; Escape/close returns to tile. Buttons/tabs/remove controls have
+44px minimum targets. Engine validates protected time for pins; local implicit placement uses that
+day's working start rather than assuming 09:00 on a 10:00 weekend.
+198 tests/49 suites, lint/typecheck, smoke/build, seven-width Chromium checks passed; planner actions
+at390/768/1280 include failure/retry/stale edits/cancellation/editor geometry. Full matrix and remaining
+live-account/device/production gaps are in LAUNCH-READINESS.md. No provider inference/write claims,
+no RAG/Hugging Face integration, no PR. Cancellation discards results, not guaranteed provider costs.

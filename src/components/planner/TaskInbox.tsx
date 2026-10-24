@@ -31,8 +31,20 @@ import { PaperSheet } from '@/components/paper/PaperSheet'
 const ENERGY_OPTIONS: Energy[] = ['deep', 'light', 'admin', 'social', 'physical']
 
 export function TaskInbox() {
-  const { tasks, addTask, removeTask, updateTask, buildWeek, status, demoSet, loadDemoSet, clearTasks, proposal } =
-    usePlanner()
+  const {
+    tasks,
+    addTask,
+    removeTask,
+    updateTask,
+    buildWeek,
+    status,
+    demoSet,
+    loadDemoSet,
+    clearTasks,
+    proposal,
+    chatBusy,
+    syncState,
+  } = usePlanner()
   const weekStart = proposal?.weekStart ?? currentWeekStart()
   const [brief, setBrief] = useState('')
   const [draft, setDraft] = useState({
@@ -48,7 +60,7 @@ export function TaskInbox() {
   })
   const [showForm, setShowForm] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const busy = status === 'planning'
+  const busy = status === 'planning' || chatBusy || syncState.status === 'syncing'
 
   const submitTask = () => {
     const title = draft.title.trim()
@@ -74,7 +86,8 @@ export function TaskInbox() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <fieldset disabled={busy} aria-busy={busy} className="flex min-w-0 flex-col gap-3 disabled:opacity-60">
+      <legend className="sr-only">Task editing</legend>
       <PaperSheet className="p-3.5">
         <PaperLabel htmlFor="brief">Tell Calendra what your week holds</PaperLabel>
         <PaperTextarea
@@ -296,7 +309,7 @@ export function TaskInbox() {
                     </div>
                     <button
                       type="button"
-                      className="mt-[2px] text-ink-faint hover:text-rose-deep"
+                      className="mt-[2px] grid min-h-11 min-w-11 shrink-0 place-items-center text-ink-faint hover:text-rose-deep"
                       aria-label={`Remove ${task.title}`}
                       onClick={() => removeTask(task.id)}
                     >
@@ -396,6 +409,6 @@ export function TaskInbox() {
           </button>
         </footer>
       </PaperSheet>
-    </div>
+    </fieldset>
   )
 }

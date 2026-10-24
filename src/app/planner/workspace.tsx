@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { clsx } from 'clsx'
 import { CalendarRange, Filter, Layers3, ListChecks, Settings2, Sparkles, RefreshCw, LogIn } from 'lucide-react'
-import { usePlanner } from '@/lib/store/planner-store'
+import { hasDraftChanges, plannerLocked, usePlanner } from '@/lib/store/planner-store'
 import { PaperButton, PaperChip, PaperTabs } from '@/components/paper/PaperControls'
 import { PaperSheet } from '@/components/paper/PaperSheet'
 import { WeekGrid } from '@/components/planner/WeekGrid'
@@ -38,6 +38,9 @@ export default function PlannerWorkspace() {
     setFilters,
     selectedBlockId,
     syncState,
+    chatBusy,
+    cancelPlanning,
+    actionMessage,
   } = usePlanner()
   const { status: sessionStatus, user: sessionUser } = useSession()
   const [publishing, setPublishing] = useState(false)
@@ -61,6 +64,8 @@ export default function PlannerWorkspace() {
     setRailTab(tab)
     setTimeout(() => document.getElementById(`planner-panel-${tab}`)?.focus({ preventScroll: true }), 0)
   }
+  const locked = plannerLocked({ status, chatBusy, syncState })
+  const stale = usePlanner(hasDraftChanges)
   const blocks = proposal?.blocks ?? []
   const filtersActive = filters.energy.length > 0 || filters.categories.length > 0 || filters.pinnedOnly
   const statusLine = useMemo(
@@ -113,11 +118,23 @@ export default function PlannerWorkspace() {
               Sign in
             </Link>
           )}
-          <PaperButton size="sm" variant="press" active={mode === 'auto'} onClick={() => setMode('auto')}>
+          <PaperButton
+            size="sm"
+            variant="press"
+            disabled={locked}
+            active={mode === 'auto'}
+            onClick={() => setMode('auto')}
+          >
             <Sparkles size={12} aria-hidden="true" />
             Agent
           </PaperButton>
-          <PaperButton size="sm" variant="press" active={mode === 'local'} onClick={() => setMode('local')}>
+          <PaperButton
+            size="sm"
+            variant="press"
+            disabled={locked}
+            active={mode === 'local'}
+            onClick={() => setMode('local')}
+          >
             <Layers3 size={12} aria-hidden="true" />
             Local
           </PaperButton>
@@ -133,7 +150,7 @@ export default function PlannerWorkspace() {
           <div className="flex flex-wrap gap-2">
             <PaperButton
               tone="terracotta"
-              disabled={status === 'planning' || syncState.status === 'syncing'}
+              disabled={locked || tasks.length === 0}
               onClick={async () => {
                 await buildWeek()
                 if (usePlanner.getState().status === 'ready') activate('calendar')
@@ -142,8 +159,9 @@ export default function PlannerWorkspace() {
               <RefreshCw size={14} aria-hidden="true" />
               {status === 'planning' ? 'Planning…' : proposal ? 'Re-plan' : 'Build my week'}
             </PaperButton>
+            {(status === 'planning' || chatBusy) && <PaperButton onClick={cancelPlanning}>Cancel planning</PaperButton>}
             <PaperButton
-              disabled={!proposal || status === 'planning' || syncState.status === 'syncing'}
+              disabled={!proposal || locked || stale}
               onClick={() => {
                 setRailTab('calendar')
                 setPublishing(true)
@@ -154,6 +172,32 @@ export default function PlannerWorkspace() {
             </PaperButton>
           </div>
         </div>
+        {tasks.length === 0 && !locked && (
+          <section className="paper-sheet p-4 text-sm text-ink" aria-label="Empty task backlog">
+            <p>No tasks to schedule yet. Add a task or paste a brief to start planning.</p>
+            <PaperButton onClick={() => activate('tasks')}>Add tasks</PaperButton>
+          </section>
+        )}
+        {stale && (
+          <section
+            role="status"
+            aria-label="Unsaved schedule changes"
+            className="paper-sheet bg-frost p-4 text-sm text-ink"
+          >
+            Tasks or rules have changed. The calendar shows the previous schedule. Re-plan before moving blocks,
+            exporting or publishing.
+          </section>
+        )}
+        {actionMessage && (
+          <p role="status" className="paper-well p-3 text-sm text-ink">
+            {actionMessage}
+          </p>
+        )}
+        {!publishing && syncState.status !== 'idle' && (
+          <p role={syncState.status === 'error' ? 'alert' : 'status'} className="paper-well p-3 text-sm text-ink">
+            {syncState.message}
+          </p>
+        )}
         <section
           role={hasConflicts || error ? 'alert' : 'status'}
           aria-label="Planning status"
@@ -277,14 +321,14 @@ export default function PlannerWorkspace() {
                   <ul className="space-y-2 text-sm">
                     <li>Arrows: inspect neighbouring blocks.</li>
                     <li>Ctrl/Command + arrows: move by 15 minutes; add Shift to move one hour.</li>
-                    <li>Alt + up/down: resize. Enter: open details. Escape: clear selection.</li>
+                    <li>Alt + up/down: resize. Enter: open details. Escape: cancel a drag or clear selection.</li>
                     <li>Drag a task to preview a move. Every move is checked by the engine.</li>
                   </ul>
                 </details>
                 <WeekGrid
                   blocks={blocks}
-                  busy={busy}
-                  preferences={preferences}
+                  busy={proposal?.busy ?? busy}
+                  preferences={proposal?.preferences ?? preferences}
                   weekLabel={proposal?.weekLabel ?? 'this week'}
                   weekStart={proposal?.weekStart}
                 />
@@ -302,7 +346,10 @@ export default function PlannerWorkspace() {
                   tabIndex={-1}
                   className="paper-sheet p-3"
                   open={diagnosticsOpen}
-                  onToggle={(event) => setDiagnosticsOpen(event.currentTarget.open)}
+                  onToggle={(event) => {
+                    setDiagnosticsOpen(event.currentTarget.open)
+                    if (!event.currentTarget.open) usePlanner.getState().selectBlock(null)
+                  }}
                 >
                   <summary className="cursor-pointer py-2 font-semibold">Plan report &amp; quick fixes</summary>
                   <PlanReportPanel />

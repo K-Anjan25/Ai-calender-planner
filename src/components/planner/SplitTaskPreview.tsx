@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PlanResponse } from '@/lib/types'
 import { postPlan } from '@/lib/api'
 import { fmtClock, fmtDuration } from '@/lib/scheduler/slots'
-import { plannerSnapshotKey, usePlanner } from '@/lib/store/planner-store'
+import { plannerLocked, plannerSnapshotKey, usePlanner } from '@/lib/store/planner-store'
 import { PaperButton } from '@/components/paper/PaperControls'
 
 /** Preview a real engine answer without mutating the current draft or writing calendar events. */
@@ -50,11 +50,7 @@ export function SplitTaskPreview({ taskId, title }: { taskId: string; title: str
   }
   return (
     <div className="space-y-2">
-      <PaperButton
-        size="sm"
-        disabled={pending || state.status === 'planning' || state.syncState.status === 'syncing'}
-        onClick={() => void preview()}
-      >
+      <PaperButton size="sm" disabled={pending || plannerLocked(state)} onClick={() => void preview()}>
         {pending ? 'Finding room…' : 'Preview 15-minute chunks'}
       </PaperButton>
       {open && (
@@ -100,9 +96,7 @@ export function SplitTaskPreview({ taskId, title }: { taskId: string; title: str
                 Applying replaces the draft week; other tasks may move. Publishing still requires your approval.
               </p>
               <PaperButton
-                disabled={
-                  stale || !blocks.length || state.status === 'planning' || state.syncState.status === 'syncing'
-                }
+                disabled={stale || !blocks.length || plannerLocked(state)}
                 onClick={() => {
                   if (!state.acceptPreview(data, source, taskId))
                     setError('The plan changed. Generate a fresh preview.')

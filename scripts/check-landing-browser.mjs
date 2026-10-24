@@ -532,7 +532,7 @@ try {
     assert.ok(!(await page.getByRole('dialog').isVisible()))
     await form.scrollIntoViewIfNeeded()
     await page.screenshot({ path: join(artifacts, `contact-${width}.png`) })
-    if (width === 1280) {
+    if ([390, 768, 1280].includes(width)) {
       await page.goto(`${base}/planner`, { waitUntil: 'networkidle' })
       await page
         .getByRole('button', { name: 'Build my week', exact: true })
@@ -566,7 +566,8 @@ try {
       assert.equal(await page.locator('[data-block-id]').count(), 0)
       await page.getByRole('button', { name: 'Back to week' }).click()
       assert.equal(await page.getByRole('button', { name: /dry run/i }).count(), 0)
-      await page.screenshot({ path: join(artifacts, 'planner-calendar-1280.png') })
+      await page.screenshot({ path: join(artifacts, `planner-calendar-${width}.png`) })
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width}: planner page overflows`)
       const geometry = await page
         .locator('[data-block-id]')
         .evaluateAll((nodes) =>
@@ -588,6 +589,15 @@ try {
       )
       const first = page.locator('[data-block-id]').first()
       await first.focus()
+      await page.getByRole('button', { name: 'Apply move or resize', exact: true }).waitFor()
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width}: block editor overflows`)
+      for (const id of ['block-edit-date', 'block-edit-time', 'block-edit-duration']) {
+        assert.ok(await page.locator(`#${id}`).evaluate(el => {
+          const box = el.getBoundingClientRect()
+          return box.height >= 44 && box.width <= el.parentElement.clientWidth + 1
+        }), `${width}: block editor control clips or has a small target`)
+      }
+      await page.screenshot({ path: join(artifacts, `planner-selected-${width}.png`) })
       await first.press('ArrowDown')
       assert.ok(
         await page.locator('[data-block-id]:focus').count(),
@@ -600,7 +610,30 @@ try {
       await page.mouse.down()
       await page.mouse.move(box.x + box.width / 2, box.y + 38, { steps: 4 })
       await page.locator('[data-drop-preview]').first().waitFor()
+      await page.keyboard.press('Escape')
+      assert.equal(await page.locator('[data-drop-preview]').count(), 0, 'Escape did not cancel drag')
       await page.mouse.up()
+      const before = await page.locator('[data-block-id]').count()
+      await page.route('**/api/plan', route => route.fulfill({
+        status: 503, contentType: 'application/json',
+        body: JSON.stringify({ ok: false, error: { code: 'TEST_OFFLINE', message: 'Connection interrupted. Try again.' } }),
+      }))
+      await page.getByRole('button', { name: 'Re-plan', exact: true }).click()
+      await page.getByText('Connection interrupted. Try again.', { exact: true }).waitFor()
+      assert.equal(await page.locator('[data-block-id]').count(), before, 'failure erased the prior schedule')
+      assert.ok(await page.getByRole('button', { name: 'Re-plan', exact: true }).isEnabled())
+      await page.unroute('**/api/plan')
+      await page.getByRole('button', { name: 'Re-plan', exact: true }).click()
+      await page.getByText('Your draft week is ready. Nothing has been published.', { exact: true }).waitFor()
+      await tasksTab.click()
+      await page.getByRole('button', { name: /^Remove / }).first().click()
+      await page.getByRole('status', { name: 'Unsaved schedule changes' }).waitFor()
+      assert.ok(await page.getByRole('button', { name: 'Review & publish', exact: true }).isDisabled())
+      await page.getByRole('button', { name: 'Re-plan', exact: true }).click()
+      await page.getByText('Your draft week is ready. Nothing has been published.', { exact: true }).waitFor()
+      assert.equal(await page.getByRole('status', { name: 'Unsaved schedule changes' }).count(), 0)
+      assert.ok(await page.getByRole('button', { name: 'Review & publish', exact: true }).isEnabled())
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${width}: replanned page overflows`)
       assert.ok(
         !(await page
           .getByPlaceholder('Tell me what changed…')

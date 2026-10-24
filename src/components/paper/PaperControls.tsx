@@ -55,7 +55,7 @@ export function PaperButton({
   }[size]
 
   const base =
-    'paper-fibre inline-flex select-none items-center justify-center rounded-[var(--radius-cut-sm)] border font-semibold transition-[transform,box-shadow,background-color] duration-150 ease-[var(--ease-paper)] disabled:cursor-not-allowed disabled:opacity-45'
+    'paper-fibre inline-flex min-h-11 min-w-11 select-none items-center justify-center rounded-[var(--radius-cut-sm)] border font-semibold transition-[transform,box-shadow,background-color] duration-150 ease-[var(--ease-paper)] disabled:cursor-not-allowed disabled:opacity-45'
 
   const byVariant =
     variant === 'raised'
@@ -248,7 +248,7 @@ export function PaperTabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(tab.id)}
             className={clsx(
-              'paper-fibre relative flex items-center gap-1.5 rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-xs font-bold transition-all duration-150 ease-[var(--ease-paper)]',
+              'paper-fibre relative flex min-h-11 min-w-11 items-center gap-1.5 rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-xs font-bold transition-all duration-150 ease-[var(--ease-paper)]',
               active
                 ? 'bg-terracotta text-ink shadow-[var(--shadow-tile)]'
                 : 'text-ink-faint hover:bg-paper-ivory/50 hover:text-ink-soft',
