@@ -66,7 +66,7 @@ export function PaperButton({
       : variant === 'press'
         ? clsx(
             'shadow-[var(--shadow-press)] border-[color:rgba(55,112,191,0.18)]',
-            active ? ACCENT_SOLID[tone] : 'bg-paper-sand text-ink-soft hover:bg-paper-kraft',
+            active ? clsx(tone === 'ivory' ? 'bg-frost text-ink' : ACCENT_SOLID[tone], 'ring-1 ring-teal') : 'bg-paper-sand text-ink-soft hover:bg-paper-kraft',
           )
         : clsx(
             'border-transparent bg-transparent text-ink-soft hover:bg-paper-sand/70 hover:text-ink',
@@ -74,7 +74,7 @@ export function PaperButton({
           )
 
   return (
-    <button type="button" data-accent={tone} className={clsx(base, sizes, byVariant, className)} {...rest}>
+    <button type="button" aria-pressed={variant === 'press' ? active : undefined} data-accent={tone} className={clsx(base, sizes, byVariant, className)} {...rest}>
       {children}
     </button>
   )
@@ -169,7 +169,7 @@ export function PaperInput({
       className={clsx(
         // `paper-field`, not `w-full`: see the note in globals.css — `w-full` here makes every
         // caller's width override dead code.
-        'paper-well paper-field rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-faint',
+        'paper-well paper-field min-h-11 rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-faint',
         'bg-paper-ivory focus:bg-paper-ivory transition-colors',
         'focus-visible:outline-2 focus-visible:outline-teal-deep',
         className,
@@ -289,19 +289,18 @@ export function PaperToggle({
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={clsx(
-        'paper-fibre relative h-[22px] w-[42px] shrink-0 rounded-full border border-[color:rgba(55,112,191,0.2)] transition-colors duration-200',
-        checked ? ACCENT_SOLID[tone] : 'bg-paper-kraft',
-        checked ? 'shadow-[var(--shadow-press)]' : 'shadow-[var(--shadow-tile)]',
-        disabled && 'opacity-45',
-      )}
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg disabled:cursor-not-allowed disabled:opacity-45"
     >
-      <span
-        className={clsx(
-          'absolute top-[2px] h-[16px] w-[16px] rounded-full bg-paper-ivory shadow-[var(--shadow-tile)] transition-all duration-200 ease-[var(--ease-paper)]',
-          checked ? 'left-[23px]' : 'left-[2px]',
-        )}
-      />
+      <span aria-hidden="true" className={clsx(
+        'relative block h-6 w-11 rounded-full border border-[color:rgba(55,112,191,0.4)] transition-colors duration-150',
+        checked ? (['olive', 'terracotta'].includes(tone) ? 'bg-terracotta' : 'bg-teal') : 'bg-paper-kraft',
+      )}>
+        <span className={clsx(
+          'absolute top-[2px] h-[18px] w-[18px] rounded-full transition-transform duration-150 motion-reduce:transition-none',
+          checked && !['olive', 'terracotta'].includes(tone) ? 'bg-paper-ivory' : 'bg-ink',
+          checked ? 'left-[2px] translate-x-5' : 'left-[2px]',
+        )} />
+      </span>
     </button>
   )
 }
@@ -314,7 +313,7 @@ export function PaperSelect({
   return (
     <select
       className={clsx(
-        'paper-well paper-field appearance-none rounded-[var(--radius-cut-xs)] bg-paper-ivory px-2.5 py-1.5 text-sm text-ink',
+        'paper-well paper-field min-h-11 appearance-none rounded-[var(--radius-cut-xs)] bg-paper-ivory px-2.5 py-1.5 text-sm text-ink',
         className,
       )}
       {...rest}

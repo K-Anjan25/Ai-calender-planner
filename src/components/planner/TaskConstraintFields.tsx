@@ -1,5 +1,6 @@
 'use client'
 import { WEEKDAYS, WEEKDAY_SHORT, type Task } from '@/lib/types'
+import { ValidatedTextInput } from '@/components/paper/ValidatedTextInput'
 import { PaperInput, PaperLabel } from '@/components/paper/PaperControls'
 
 /** Optional constraints are editable for both newly entered and previously extracted tasks. */
@@ -9,7 +10,7 @@ export function TaskConstraintFields({ prefix, value, tasks, onChange, editing =
   const days = value.recurrence?.byWeekday ?? value.repeatDays ?? []
   return <div className="col-span-2 min-w-0 space-y-3">
     {editing && <>
-      <PaperLabel htmlFor={`${prefix}-title`}>Task title</PaperLabel><PaperInput id={`${prefix}-title`} maxLength={160} value={value.title ?? ''} onChange={event => onChange({ title: event.target.value })} />
+      <PaperLabel htmlFor={`${prefix}-title`}>Task title</PaperLabel><ValidatedTextInput id={`${prefix}-title`} maxLength={160} value={value.title ?? ''} onValueChange={title => onChange({ title })} />
       <PaperLabel htmlFor={`${prefix}-deadline`}>Deadline</PaperLabel><PaperInput id={`${prefix}-deadline`} type="datetime-local" value={value.deadline?.slice(0,16) ?? ''} onChange={event => onChange({ deadline: event.target.value || undefined })} />
     </>}
     <div><PaperLabel htmlFor={`${prefix}-earliest`}>Earliest start</PaperLabel><PaperInput id={`${prefix}-earliest`} type="datetime-local" value={value.earliestStart?.slice(0,16) ?? ''} onChange={event => onChange({ earliestStart: event.target.value || undefined })} /></div>

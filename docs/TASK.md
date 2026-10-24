@@ -492,3 +492,13 @@ Validation: 215 tests / 52 suites, lint/typecheck, production build, seven-width
 (including planner at 390/768/1280). New tests cover timezone/DST, context refresh/errors, private
 access, streamed tool steps/default JSON, provider budget, strict constraints and conservation.
 60-day metrics, live p95, full WCAG/device acceptance and live Google/LLM sign-off remain pending.
+
+## Rules/day-enabler and shared control repair — 2026-10-24
+
+- [x] Resolve weekend fallback vs day/master switch disagreement using effective scheduler hours.
+- [x] Fix switch targets/thumb/fills, pressed-state semantics, select arrows and field target sizes.
+- [x] Responsive Rules layout; validated times, meeting caps, lunch edits, blackout/name editing.
+- [x] Safe task-duration edits, min-chunk resizing and recovery after clearing a preview estimate.
+- [x] Remove ineffective automatic-overflow UI; preserve explicit report trade-offs and hard rules.
+- [x] 230 tests / 54 suites, lint/typecheck, production build; seven-width landing and four-width
+  planner/Rules Chromium regressions. No live external-integration claims.

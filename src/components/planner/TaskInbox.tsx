@@ -19,6 +19,7 @@ import {
 } from '@/components/paper/PaperControls'
 import { TaskConstraintFields } from '@/components/planner/TaskConstraintFields'
 import { TaskBriefPreview } from '@/components/planner/TaskBriefPreview'
+import { ValidatedMinutesInput } from '@/components/paper/ValidatedMinutesInput'
 import { PaperSheet } from '@/components/paper/PaperSheet'
 
 /**
@@ -121,6 +122,7 @@ export function TaskInbox() {
                   id="task-minutes"
                   type="number"
                   min={SNAP_MINUTES}
+                  max={720}
                   step={SNAP_MINUTES}
                   value={draft.estimateMinutes}
                   onChange={(event) =>
@@ -196,7 +198,7 @@ export function TaskInbox() {
             <TaskConstraintFields prefix="new-task" value={{ earliestStart: draft.earliestStart || undefined, location: draft.location, dependsOn: draft.dependsOn, repeatDays: draft.repeatDays }} tasks={tasks} onChange={patch => setDraft(current => ({ ...current, earliestStart: patch.earliestStart !== undefined ? patch.earliestStart : ('earliestStart' in patch ? '' : current.earliestStart), location: 'location' in patch ? patch.location ?? '' : current.location, dependsOn: patch.dependsOn ?? current.dependsOn, repeatDays: patch.repeatDays ?? current.repeatDays }))} />
             {formError && <p role="alert" className="text-sm">{formError}</p>}
             <div className="flex items-center justify-between gap-2 pt-1">
-              <label className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
+              <label className="flex min-h-11 items-center gap-2 text-xs font-semibold text-ink-soft">
                 <input
                   type="checkbox"
                   checked={draft.splittable}
@@ -293,15 +295,14 @@ export function TaskInbox() {
                       <TaskConstraintFields prefix={`edit-${task.id}`} value={task} tasks={tasks} editing onChange={patch => updateTask(task.id, patch)} />
                       <div>
                         <PaperLabel htmlFor={`${task.id}-minutes`}>Minutes</PaperLabel>
-                        <PaperInput
+                        <ValidatedMinutesInput
                           id={`${task.id}-minutes`}
                           type="number"
                           min={SNAP_MINUTES}
                           step={SNAP_MINUTES}
                           value={task.estimateMinutes}
-                          onChange={(event) =>
-                            updateTask(task.id, { estimateMinutes: Math.max(SNAP_MINUTES, Number(event.target.value)) })
-                          }
+                          max={720}
+                          onValueChange={estimateMinutes => updateTask(task.id, { estimateMinutes, minChunkMinutes: Math.min(task.minChunkMinutes, estimateMinutes) })}
                         />
                       </div>
                       <div>
@@ -335,7 +336,7 @@ export function TaskInbox() {
                         </PaperSelect>
                       </div>
                       <div className="flex items-end">
-                        <label className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
+                        <label className="flex min-h-11 items-center gap-2 text-xs font-semibold text-ink-soft">
                           <input
                             type="checkbox"
                             checked={task.splittable}
@@ -374,7 +375,7 @@ export function TaskInbox() {
           </div>
           <button
             type="button"
-            className={clsx('text-[11px] font-semibold text-ink-faint hover:text-rose-deep')}
+            className={clsx('min-h-11 min-w-11 rounded-lg px-2 text-xs font-semibold text-ink-soft hover:bg-frost-light')}
             onClick={clearTasks}
           >
             Clear all

@@ -191,6 +191,14 @@
     min-width: 0;
   }
 
+  select.paper-field {
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m5 7 5 5 5-5' fill='none' stroke='%23102C50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-size: 1rem;
+    background-repeat: no-repeat;
+  }
+
   /* Compatibility selectors for shared controls; rendered as clean, flat surfaces. */
   .paper-fibre { position: relative; }
   .paper-board { background-color: var(--color-paper-cream); }

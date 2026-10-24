@@ -90,15 +90,13 @@ describe('the week survives a narrow window', () => {
 })
 
 describe('the rules panel and the grid keep their content inside', () => {
-  it('gives every flex row of controls a shrinkable child', () => {
+  it('uses the shared shrinkable two-column grid for every rule time window', () => {
     const panel = readFileSync(join(ROOT, 'src/components/planner/PreferencePanel.tsx'), 'utf8')
-    // Rows that hold two fields must let them share space; `flex-1` on the field is the mechanism.
-    const pairs = [...panel.matchAll(/aria-label="[^"]*(?:start|end)"[\s\S]{0,200}?className="([^"]*)"/g)]
-    assert.ok(pairs.length >= 8, `expected the time-range inputs, found ${pairs.length}`)
-    for (const [, classes] of pairs) {
-      assert.match(classes ?? '', /min-w-\[74px\]/, `time input is not shrinkable: class="${classes}"`)
-      assert.match(classes ?? '', /flex-1/, `time input does not share its row: class="${classes}"`)
-    }
+    const fields = readFileSync(join(ROOT, 'src/components/planner/RuleTimeWindow.tsx'), 'utf8')
+    assert.ok((panel.match(/<RuleTimeWindow/g) ?? []).length >= 5, 'all five rule window types must use the validated shared control')
+    assert.match(fields, /grid min-w-0 grid-cols-2/, 'time bounds must share shrinkable columns')
+    assert.match(fields, /className="w-full min-w-0"/, 'native time fields must not set a fixed minimum width')
+    assert.match(fields, /\['start', 'end'\]/, 'both bounds must be rendered')
   })
 
   it('clips a protected band to its own window', () => {

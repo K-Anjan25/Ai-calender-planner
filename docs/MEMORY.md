@@ -576,3 +576,15 @@ Validation: 215 tests / 52 suites, lint/typecheck, production build, seven-width
 (including planner at 390/768/1280). New tests cover timezone/DST, context refresh/errors, private
 access, streamed tool steps/default JSON, provider budget, strict constraints and conservation.
 60-day metrics, live p95, full WCAG/device acceptance and live Google/LLM sign-off remain pending.
+
+## Rules controls repair — 2026-10-24
+
+Effective weekend hours (workingHoursFor) are the source of truth for Rules switch state. A single
+weekend toggle materializes both effective weekend windows, then sets weekendMode=off so null really
+means off. The master toggle sets explicit Saturday/Sunday hours rather than only changing the legacy
+mode. Shared RuleTimeWindow keeps incomplete edits local and commits only valid ordered 15-minute
+windows; end 00:00 means 1440. Validated number/text controls prevent empty task/rule edits corrupting
+planner inputs. PaperToggle uses an independent 44px target with a contained visible track/thumb;
+press buttons now have aria-pressed and distinct fills. Desktop Rules uses two columns with stacked
+energy/limits/lunch; mobile stays one column. Misleading implicit-overflow preference buttons removed.
+230 tests, lint/typecheck/build and Chromium landing seven widths + planner/Rules four widths passed.

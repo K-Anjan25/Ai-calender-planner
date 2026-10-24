@@ -54,7 +54,7 @@ export function TaskBriefPreview() {
         <PaperLabel htmlFor={`review-title-${task.id}`}>Task title</PaperLabel>
         <PaperInput id={`review-title-${task.id}`} value={task.title} onChange={event => patch(task.id, { title: event.target.value })} />
         <div className="grid grid-cols-2 gap-2">
-          <div><PaperLabel htmlFor={`review-minutes-${task.id}`}>Minutes{task.estimatedByAI ? ' (inferred)' : ''}</PaperLabel><PaperInput id={`review-minutes-${task.id}`} type="number" min={15} max={720} step={15} value={task.estimateMinutes} onChange={event => patch(task.id, { estimateMinutes: Number(event.target.value), minChunkMinutes: Math.min(task.minChunkMinutes, Number(event.target.value)), estimatedByAI: false })} /></div>
+          <div><PaperLabel htmlFor={`review-minutes-${task.id}`}>Minutes{task.estimatedByAI ? ' (inferred)' : ''}</PaperLabel><PaperInput id={`review-minutes-${task.id}`} type="number" min={15} max={720} step={15} value={task.estimateMinutes} onChange={event => patch(task.id, { estimateMinutes: Number(event.target.value), minChunkMinutes: Math.max(15, Math.min(task.minChunkMinutes, Number(event.target.value) || 15)), estimatedByAI: false })} /></div>
           <div><PaperLabel htmlFor={`review-priority-${task.id}`}>Priority</PaperLabel><PaperSelect id={`review-priority-${task.id}`} value={task.priority} onChange={event => patch(task.id, { priority: event.target.value as Task['priority'] })}>{['P0','P1','P2','P3'].map(value => <option key={value}>{value}</option>)}</PaperSelect></div>
         </div>
         <PaperLabel htmlFor={`review-deadline-${task.id}`}>Deadline</PaperLabel>

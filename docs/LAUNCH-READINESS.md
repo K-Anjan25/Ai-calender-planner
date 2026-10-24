@@ -179,3 +179,30 @@ Validation: 215 tests / 52 suites, lint/typecheck, production build, seven-width
 (including planner at 390/768/1280). New tests cover timezone/DST, context refresh/errors, private
 access, streamed tool steps/default JSON, provider budget, strict constraints and conservation.
 60-day metrics, live p95, full WCAG/device acceptance and live Google/LLM sign-off remain pending.
+
+## Rules and shared-control bug fixes — 2026-10-24
+
+- Day switches now reflect effective scheduler hours, including legacy weekend-mode fallback.
+  Turning a single weekend day off materializes the other day's hours before disabling fallback;
+  the master switch enables/disables both explicit weekend windows consistently.
+- Switches have independent 44×44 targets, a contained thumb, visibly distinct on/off fills, and
+  native keyboard operation. Pressed buttons now expose aria-pressed and a distinct selected fill.
+- Rules use a responsive two-column desktop layout and a single column on mobile. Time pairs and
+  blackout controls no longer squeeze five controls into one row. Selects have visible chevrons;
+  shared inputs/selects and rule sliders have 44px targets; secondary cards use subtle borders.
+- Shared time-window fields retain incomplete/reversed/off-grid edits locally, announce the error,
+  and only commit valid 15-minute windows. Midnight end is represented as 1440. Editing lunch start
+  does not unexpectedly shift its end. Custom peak/lunch/day hours restore while editing the panel.
+- Meeting caps and edited task durations no longer turn empty text into zero/15 or persist invalid
+  estimates. Task minimum chunks shrink with a shortened estimate. Required task/blackout names
+  can be edited locally without persisting empty names. Correcting a preview estimate after clearing
+  it now recovers its minimum chunk and re-enables confirmation.
+- Removed misleading automatic-overflow controls: hard constraints stay protected and the Plan
+  Report is the explicit path for trade-offs. Slider bounds now cover the actual preference schema.
+
+Evidence: lint/typecheck; 230 tests across 54 suites; production build; Chromium landing checks at
+320/390/768/900/1024/1280/1440px and planner/Rules checks at 320/390/768/1280px. Browser regressions
+cover Space-key switches, state restoration, master/individual weekends, invalid cap recovery,
+switch thumb containment/on-off fill, 44px field geometry, no page overflow, and existing calendar,
+preview/discard, move failure/retry, export/publish and stale-state flows. This is not a claim of
+exhaustive device/browser coverage or live Google/provider verification.

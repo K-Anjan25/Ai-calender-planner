@@ -492,6 +492,11 @@ describe('free-text intake', () => {
 
     await waitFor(() => assert.ok(screen.getByRole('region', { name: 'Review extracted tasks' })))
     assert.equal(usePlanner.getState().tasks.length, 0, 'preview committed records before confirmation')
+    const reviewMinutes = screen.getAllByLabelText(/^Minutes/)[0]
+    fireEvent.change(reviewMinutes, { target: { value: '' } })
+    assert.equal((screen.getByRole('button', { name: 'Confirm tasks & plan' }) as HTMLButtonElement).disabled, true)
+    fireEvent.change(reviewMinutes, { target: { value: '60' } })
+    assert.equal((screen.getByRole('button', { name: 'Confirm tasks & plan' }) as HTMLButtonElement).disabled, false, 'correcting the estimate must recover its minimum chunk')
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Confirm tasks & plan' })) })
     await waitFor(() => assert.ok(usePlanner.getState().tasks.length >= 2, 'the brief produced no tasks'))
     const tasks = usePlanner.getState().tasks
