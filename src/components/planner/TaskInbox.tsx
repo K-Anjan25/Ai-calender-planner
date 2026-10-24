@@ -1,0 +1,386 @@
+'use client'
+
+import { useState } from 'react'
+import { clsx } from 'clsx'
+import { Plus, Trash2, Clock, Flag, Ban, ChevronDown, ChevronRight } from 'lucide-react'
+import { SNAP_MINUTES, taskSchema, type Energy, type Task } from '@/lib/types'
+import { ENERGY_LABEL } from '@/lib/types'
+import { fmtDuration } from '@/lib/scheduler/slots'
+import { recurrenceLabel } from '@/lib/scheduler/policies'
+import { currentWeekStart } from '@/lib/sample-data'
+import { estimateDurationMinutes } from '@/lib/agent/tools'
+import { usePlanner } from '@/lib/store/planner-store'
+import {
+  PaperButton,
+  PaperChip,
+  PaperInput,
+  PaperLabel,
+  PaperSelect,
+} from '@/components/paper/PaperControls'
+import { TaskConstraintFields } from '@/components/planner/TaskConstraintFields'
+import { TaskBriefPreview } from '@/components/planner/TaskBriefPreview'
+import { PaperSheet } from '@/components/paper/PaperSheet'
+
+/**
+ * Intake (FR-1.x).
+ *
+ * Two doors into the same room: type a brief in your own words, or fill in a form. Free text is
+ * parsed by the agent and only *committed* when you press Build — nothing is silently invented
+ * behind your back (FR-1.2).
+ */
+
+const ENERGY_OPTIONS: Energy[] = ['deep', 'light', 'admin', 'social', 'physical']
+
+export function TaskInbox() {
+  const {
+    tasks,
+    addTask,
+    removeTask,
+    updateTask,
+    status,
+    demoSet,
+    loadDemoSet,
+    clearTasks,
+    proposal,
+    chatBusy,
+    syncState,
+  } = usePlanner()
+  const weekStart = proposal?.weekStart ?? currentWeekStart()
+  const [draft, setDraft] = useState({
+    title: '',
+    estimateMinutes: 60,
+    priority: 'P2' as Task['priority'],
+    energy: 'deep' as Energy,
+    category: 'work' as Task['category'],
+    deadlineDate: '',
+    deadlineTime: '17:00',
+    splittable: true,
+    location: '',
+    earliestStart: '',
+    dependsOn: [] as string[],
+    repeatDays: [] as Task['repeatDays'],
+  })
+  const [formError, setFormError] = useState('')
+  const [showForm, setShowForm] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const busy = status === 'planning' || chatBusy || syncState.status === 'syncing'
+
+  const submitTask = () => {
+    const title = draft.title.trim()
+    if (title.length < 2 || tasks.length >= 120) { setFormError('Use a title of at least 2 characters; keep the backlog to 120 tasks.'); return }
+    if (tasks.some(task => task.title.trim().toLowerCase() === title.toLowerCase())) { setFormError('This task already exists. Edit it below or use a different title.'); return }
+    const estimate = draft.estimateMinutes || estimateDurationMinutes(title, draft.energy, draft.category)
+    const result = taskSchema.safeParse({
+      id: `t_${crypto.randomUUID()}`, title, estimateMinutes: estimate,
+      deadline: draft.deadlineDate ? `${draft.deadlineDate}T${draft.deadlineTime}:00` : undefined,
+      earliestStart: draft.earliestStart || undefined, dependsOn: draft.dependsOn, repeatDays: draft.repeatDays,
+      priority: draft.priority, energy: draft.energy, category: draft.category, splittable: draft.splittable,
+      minChunkMinutes: Math.min(estimate, draft.energy === 'deep' ? 60 : 30),
+      location: draft.location.trim() || undefined, source: 'user', estimatedByAI: !draft.estimateMinutes,
+    })
+    if (!result.success || estimate % SNAP_MINUTES || (result.data.deadline && result.data.earliestStart && result.data.earliestStart >= result.data.deadline)) { setFormError('Use 15–720 minutes in 15-minute steps, with earliest start before the deadline.'); return }
+    setFormError('')
+    addTask(result.data)
+    setDraft((current) => ({ ...current, title: '', deadlineDate: '', location: '', earliestStart: '', dependsOn: [], repeatDays: [] }))
+  }
+
+  return (
+    <fieldset disabled={busy} aria-busy={busy} className="flex min-w-0 flex-col gap-3 disabled:opacity-60">
+      <legend className="sr-only">Task editing</legend>
+      <TaskBriefPreview />
+
+      <PaperSheet className="p-3.5">
+        <header className="mb-2 flex items-center justify-between">
+          <h3 className="text-[15px]">Tasks</h3>
+          <div className="flex items-center gap-1">
+            <PaperButton size="sm" variant="flat" onClick={() => setShowForm((value) => !value)}>
+              <Plus size={13} aria-hidden="true" />
+              Add
+            </PaperButton>
+          </div>
+        </header>
+
+        {showForm ? (
+          <div className="paper-well mb-3 space-y-2 p-2.5">
+            <div>
+              <PaperLabel htmlFor="task-title">Task</PaperLabel>
+              <PaperInput
+                id="task-title"
+                value={draft.title}
+                placeholder="Finish the Q4 board deck"
+                onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') submitTask()
+                }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <PaperLabel htmlFor="task-minutes">Minutes</PaperLabel>
+                <PaperInput
+                  id="task-minutes"
+                  type="number"
+                  min={SNAP_MINUTES}
+                  step={SNAP_MINUTES}
+                  value={draft.estimateMinutes}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, estimateMinutes: Number(event.target.value) }))
+                  }
+                />
+              </div>
+              <div>
+                <PaperLabel htmlFor="task-priority">Priority</PaperLabel>
+                <PaperSelect
+                  id="task-priority"
+                  value={draft.priority}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, priority: event.target.value as Task['priority'] }))
+                  }
+                >
+                  <option value="P0">P0 · must happen</option>
+                  <option value="P1">P1 · important</option>
+                  <option value="P2">P2 · should happen</option>
+                  <option value="P3">P3 · nice to have</option>
+                </PaperSelect>
+              </div>
+              <div>
+                <PaperLabel htmlFor="task-energy">Energy it needs</PaperLabel>
+                <PaperSelect
+                  id="task-energy"
+                  value={draft.energy}
+                  onChange={(event) => setDraft((current) => ({ ...current, energy: event.target.value as Energy }))}
+                >
+                  {ENERGY_OPTIONS.map((energy) => (
+                    <option key={energy} value={energy}>
+                      {ENERGY_LABEL[energy]}
+                    </option>
+                  ))}
+                </PaperSelect>
+              </div>
+              <div>
+                <PaperLabel htmlFor="task-category">Category</PaperLabel>
+                <PaperSelect
+                  id="task-category"
+                  value={draft.category}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, category: event.target.value as Task['category'] }))
+                  }
+                >
+                  {['work', 'study', 'health', 'life', 'admin', 'creative'].map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </PaperSelect>
+              </div>
+              <div>
+                <PaperLabel htmlFor="task-deadline">Deadline</PaperLabel>
+                <PaperInput
+                  id="task-deadline"
+                  type="date"
+                  value={draft.deadlineDate}
+                  onChange={(event) => setDraft((current) => ({ ...current, deadlineDate: event.target.value }))}
+                />
+              </div>
+              <div>
+                <PaperLabel htmlFor="task-time">By</PaperLabel>
+                <PaperInput
+                  id="task-time"
+                  type="time"
+                  value={draft.deadlineTime}
+                  disabled={!draft.deadlineDate}
+                  onChange={(event) => setDraft((current) => ({ ...current, deadlineTime: event.target.value }))}
+                />
+              </div>
+            </div>
+            <TaskConstraintFields prefix="new-task" value={{ earliestStart: draft.earliestStart || undefined, location: draft.location, dependsOn: draft.dependsOn, repeatDays: draft.repeatDays }} tasks={tasks} onChange={patch => setDraft(current => ({ ...current, earliestStart: patch.earliestStart !== undefined ? patch.earliestStart : ('earliestStart' in patch ? '' : current.earliestStart), location: 'location' in patch ? patch.location ?? '' : current.location, dependsOn: patch.dependsOn ?? current.dependsOn, repeatDays: patch.repeatDays ?? current.repeatDays }))} />
+            {formError && <p role="alert" className="text-sm">{formError}</p>}
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <label className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={draft.splittable}
+                  onChange={(event) => setDraft((current) => ({ ...current, splittable: event.target.checked }))}
+                  className="h-3.5 w-3.5 accent-teal-deep"
+                />
+                Can be split into sessions
+              </label>
+              <PaperButton size="sm" tone="teal" onClick={submitTask}>
+                Add task
+              </PaperButton>
+            </div>
+          </div>
+        ) : null}
+
+        {tasks.length === 0 ? (
+          <div className="py-6 text-center">
+            <p className="text-sm text-ink-soft">Nothing to plan yet.</p>
+            <div className="mt-2 flex justify-center gap-2">
+              <PaperButton size="sm" variant="flat" onClick={() => loadDemoSet('realistic')}>
+                Load a realistic week
+              </PaperButton>
+              <PaperButton size="sm" variant="flat" onClick={() => loadDemoSet('overloaded')}>
+                Load an overbooked week
+              </PaperButton>
+            </div>
+          </div>
+        ) : (
+          <ul className="space-y-1.5">
+            {tasks.map((task) => {
+              const expanded = expandedId === task.id
+              return (
+                <li key={task.id} className="paper-tile">
+                  <div className="flex items-start gap-2 p-2">
+                    <button
+                      type="button"
+                      className="mt-[3px] text-ink-faint hover:text-ink"
+                      aria-expanded={expanded}
+                      aria-label={`${expanded ? 'Collapse' : 'Expand'} ${task.title}`}
+                      onClick={() => setExpandedId(expanded ? null : task.id)}
+                    >
+                      {expanded ? (
+                        <ChevronDown size={13} aria-hidden="true" />
+                      ) : (
+                        <ChevronRight size={13} aria-hidden="true" />
+                      )}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-ink">{task.title}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <PaperChip tone="kraft" icon={<Clock size={9} aria-hidden="true" />}>
+                          {fmtDuration(task.estimateMinutes)}
+                          {(() => {
+                            const cadence = recurrenceLabel(task, weekStart)
+                            return cadence ? ` ↻ ${cadence}` : ''
+                          })()}
+                        </PaperChip>
+                        <PaperChip
+                          tone={task.priority === 'P0' ? 'rose' : task.priority === 'P1' ? 'terracotta' : 'olive'}
+                          icon={<Flag size={9} aria-hidden="true" />}
+                        >
+                          {task.priority}
+                        </PaperChip>
+                        <PaperChip tone="teal">{ENERGY_LABEL[task.energy]}</PaperChip>
+                        {task.deadline ? (
+                          <PaperChip tone="rose">
+                            due {task.deadline.slice(5, 10)} {task.deadline.slice(11, 16)}
+                          </PaperChip>
+                        ) : null}
+                        {task.estimatedByAI ? (
+                          <PaperChip tone="frost" title="Duration was inferred, not stated">
+                            estimated
+                          </PaperChip>
+                        ) : null}
+                        {!task.splittable ? (
+                          <PaperChip tone="kraft" icon={<Ban size={9} aria-hidden="true" />}>
+                            one sitting
+                          </PaperChip>
+                        ) : null}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="mt-[2px] grid min-h-11 min-w-11 shrink-0 place-items-center text-ink-faint hover:text-rose-deep"
+                      aria-label={`Remove ${task.title}`}
+                      onClick={() => removeTask(task.id)}
+                    >
+                      <Trash2 size={13} aria-hidden="true" />
+                    </button>
+                  </div>
+
+                  {expanded ? (
+                    <div className="paper-well m-2 mt-0 grid grid-cols-2 gap-2 p-2">
+                      <TaskConstraintFields prefix={`edit-${task.id}`} value={task} tasks={tasks} editing onChange={patch => updateTask(task.id, patch)} />
+                      <div>
+                        <PaperLabel htmlFor={`${task.id}-minutes`}>Minutes</PaperLabel>
+                        <PaperInput
+                          id={`${task.id}-minutes`}
+                          type="number"
+                          min={SNAP_MINUTES}
+                          step={SNAP_MINUTES}
+                          value={task.estimateMinutes}
+                          onChange={(event) =>
+                            updateTask(task.id, { estimateMinutes: Math.max(SNAP_MINUTES, Number(event.target.value)) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <PaperLabel htmlFor={`${task.id}-priority`}>Priority</PaperLabel>
+                        <PaperSelect
+                          id={`${task.id}-priority`}
+                          value={task.priority}
+                          onChange={(event) =>
+                            updateTask(task.id, { priority: event.target.value as Task['priority'] })
+                          }
+                        >
+                          {['P0', 'P1', 'P2', 'P3'].map((priority) => (
+                            <option key={priority} value={priority}>
+                              {priority}
+                            </option>
+                          ))}
+                        </PaperSelect>
+                      </div>
+                      <div>
+                        <PaperLabel htmlFor={`${task.id}-energy`}>Energy</PaperLabel>
+                        <PaperSelect
+                          id={`${task.id}-energy`}
+                          value={task.energy}
+                          onChange={(event) => updateTask(task.id, { energy: event.target.value as Energy })}
+                        >
+                          {ENERGY_OPTIONS.map((energy) => (
+                            <option key={energy} value={energy}>
+                              {ENERGY_LABEL[energy]}
+                            </option>
+                          ))}
+                        </PaperSelect>
+                      </div>
+                      <div className="flex items-end">
+                        <label className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
+                          <input
+                            type="checkbox"
+                            checked={task.splittable}
+                            onChange={(event) => updateTask(task.id, { splittable: event.target.checked })}
+                            className="h-3.5 w-3.5 accent-teal-deep"
+                          />
+                          Splittable
+                        </label>
+                      </div>
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+
+        <footer className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:rgba(55,112,191,0.25)] pt-2.5">
+          <div className="flex gap-1.5">
+            <PaperButton
+              size="sm"
+              variant="press"
+              active={demoSet === 'realistic'}
+              onClick={() => loadDemoSet('realistic')}
+            >
+              Realistic
+            </PaperButton>
+            <PaperButton
+              size="sm"
+              variant="press"
+              active={demoSet === 'overloaded'}
+              onClick={() => loadDemoSet('overloaded')}
+            >
+              Overbooked
+            </PaperButton>
+          </div>
+          <button
+            type="button"
+            className={clsx('text-[11px] font-semibold text-ink-faint hover:text-rose-deep')}
+            onClick={clearTasks}
+          >
+            Clear all
+          </button>
+        </footer>
+      </PaperSheet>
+    </fieldset>
+  )
+}

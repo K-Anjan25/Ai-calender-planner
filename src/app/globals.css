@@ -1,0 +1,309 @@
+@import 'tailwindcss';
+
+/* ==================================================================
+   CALENDRA — Design tokens (DESIGN.md §3–§7)
+   Shared application colors, surfaces and motion.
+   No component may hardcode a hex value (RULES.md L8).
+   ================================================================== */
+
+@theme {
+  /* --- base paper stock ------------------------------------------------ */
+  --color-paper-cream: #F3F6FF;
+  --color-paper-ivory: #F3F6FF;
+  --color-paper-sand: #F3F6FF;
+  --color-paper-kraft: #F3F6FF;
+  --color-paper-edge: #3770BF;
+
+  /* --- ink (warm, never pure black) ------------------------------------ */
+  --color-ink: #102C50;
+  --color-ink-soft: #102C50;
+  --color-ink-faint: #102C50;
+  --color-ink-ghost: #102C50;
+
+  /* --- dyed sheet accents ---------------------------------------------- */
+  --color-rose: #3770BF;
+  --color-rose-deep: #102C50;
+  --color-rose-light: #F3F6FF;
+
+  --color-terracotta: #CEF26D;
+  --color-terracotta-deep: #102C50;
+  --color-terracotta-light: #F3F6FF;
+
+  --color-olive: #8DC2FF;
+  --color-olive-deep: #102C50;
+  --color-olive-light: #F3F6FF;
+
+  --color-teal: #3770BF;
+  --color-teal-deep: #102C50;
+  --color-teal-light: #F3F6FF;
+
+  --color-plum: #3770BF;
+  --color-plum-deep: #102C50;
+  --color-plum-light: #F3F6FF;
+
+  --color-frost: #8DC2FF;
+  --color-frost-deep: #102C50;
+  --color-frost-light: #F3F6FF;
+
+  /* --- light & shadow: warm, soft, never grey -------------------------- */
+  --shadow-mat: none;
+  --shadow-sheet: none;
+  --shadow-lift: none;
+  --shadow-cut: none;
+  --shadow-press: none;
+  --shadow-tile: none;
+
+  /* --- hand-cut radii (asymmetric on purpose) -------------------------- */
+  --radius-cut: 14px;
+  --radius-cut-sm: 10px;
+  --radius-cut-xs: 6px;
+  --radius-well: 12px;
+
+  /* --- typography ------------------------------------------------------ */
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, ui-serif, serif;
+  --font-sans: 'Nunito Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* --- motion ---------------------------------------------------------- */
+  --ease-paper: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ==================================================================
+   Base
+   ================================================================== */
+
+@layer base {
+  html {
+    background-color: var(--color-paper-cream);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+
+  ::selection {
+    background: var(--color-teal-light);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-teal-deep);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-ink-faint);
+  }
+
+  input[type='time']::-webkit-calendar-picker-indicator,
+  input[type='date']::-webkit-calendar-picker-indicator {
+    opacity: 0.45;
+  }
+
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-paper-sand);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-paper-edge);
+    border-radius: 8px;
+    border: 2px solid var(--color-paper-sand);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-ghost);
+  }
+}
+
+/* ==================================================================
+   Paper materials (DESIGN.md §2, §4, §6)
+   ================================================================== */
+
+@layer base {
+  /*
+   * Text overflow guard.
+   *
+   * Two classes of bug produced text escaping its card:
+   *  - a long unbroken token (a URL, an email, a 40-character task title typed without spaces) cannot
+   *    wrap under the default `overflow-wrap: normal`, so it forces the line box wider than its parent;
+   *  - a flex or grid child defaults to `min-width: auto`, so it refuses to shrink below its content
+   *    and pushes the layout instead of wrapping.
+   *
+   * `overflow-wrap: break-word` lets a word break only when it would otherwise overflow, so prose is
+   * unaffected. `hyphens: none` keeps it explicit. Headings are included because a headline is where a
+   * long word is most visible.
+   */
+  :where(h1, h2, h3, h4, p, li, dd, dt, td, th, span, a, code, strong, em, figcaption) {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  /* Media never exceeds its container. */
+  :where(img, svg, video, canvas, table, pre) {
+    max-width: 100%;
+  }
+}
+
+@layer components {
+  /*
+   * A field (input, textarea, select) fills its container by default.
+   *
+   * This lives in the **components** layer on purpose, and the JSX must not also pass `w-full`.
+   * Both `w-full` and `w-[86px]` are utilities at the same specificity, so the cascade decides by
+   * source order — and Tailwind emits `.w-full` *after* every arbitrary width. With `w-full` in the
+   * base class list, each caller's `className="w-[86px]"` was dead code, every field silently became
+   * 100% wide, and the working-hours rows in the rules panel overflowed their sheet. That is the bug
+   * this rule replaces.
+   *
+   * Sitting in an earlier layer means anything in `utilities` beats it: `w-full`, `w-[86px]` and
+   * `flex-1` all still work at the call site. `min-width: 0` keeps a field from refusing to shrink
+   * inside a flex row — the other half of "text overflows its card" (DESIGN.md §10).
+   */
+  .paper-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Compatibility selectors for shared controls; rendered as clean, flat surfaces. */
+  .paper-fibre { position: relative; }
+  .paper-board { background-color: var(--color-paper-cream); }
+  .paper-sheet, .paper-well, .paper-tile {
+    background-color: var(--color-paper-ivory);
+    border: 1px solid var(--color-paper-edge);
+    border-radius: 12px;
+  }
+  .paper-perforation { border-top: 1px solid var(--color-paper-edge); }
+  .paper-lifted { z-index: 5; }
+  .paper-pressed { transform: translateY(1px); }
+
+}
+
+/* ==================================================================
+   Motion (DESIGN.md §7)
+   ================================================================== */
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes layer-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tile-settle {
+  0% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes paper-slide {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@utility animate-sheet-in {
+  animation: sheet-in 320ms var(--ease-paper) both;
+}
+
+@utility animate-layer-in {
+  animation: layer-in 620ms var(--ease-paper) both;
+}
+
+@utility animate-tile-settle {
+  animation: tile-settle 240ms var(--ease-paper) both;
+}
+
+@utility animate-paper-slide {
+  animation: paper-slide 200ms var(--ease-paper) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .paper-lifted {
+    transform: none;
+  }
+}
+
+/* Tabular numerals anywhere we show a time. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Native landing anchors account for the fixed menu; honor reduced motion globally. */
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Sunny Herb / Blue Harbor reaches 3.91:1, suitable for large bold type,
+   not small body labels. Keep all primary attention buttons above that threshold. */
+button[data-accent='terracotta'] { font-size: 19px; font-weight: 700; min-height: 44px; }
+
+/* Approved fifth swatch: dark blue text for AAA contrast on the brand surfaces. */
+html { scroll-padding-top: 110px; }
+
+/* Uniform dense-calendar affordances; full detail is available on selection. */
+[data-block-id] { border: 1px solid var(--color-ink); background: var(--color-paper-cream); overflow: hidden; }
+[data-block-id]:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; z-index: 25; }
+.planner-status-chip { display: inline-block; border: 1px solid var(--color-paper-edge); border-radius: 4px; background: var(--color-paper-cream); padding: 1px 4px; font-size: 10px; font-weight: 600; color: var(--color-ink); }
+
+.planner-meeting:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; z-index: 25; }

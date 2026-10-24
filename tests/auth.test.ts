@@ -1,0 +1,266 @@
+import './harness/setup-dom'
+
+import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+import { authRedirectUri, googleAuthConfig } from '@/lib/auth/google'
+import { decodeSession, demoUser, encodeSession, safeNext, type SessionUser } from '@/lib/auth/session'
+import { FALLBACK_ORIGIN, googleOriginProblem, requestOrigin } from '@/lib/request-origin'
+import { calendarConfig } from '@/lib/google/scopes'
+
+/**
+ * Sessions and authorisation (PRD §13, ARCHITECTURE §15).
+ *
+ * Authentication is the one part of an app where "it looks right" is worth nothing: the failure mode is
+ * a forged cookie that grants a workspace, and it fails silently. So these assert the *negative* cases
+ * as carefully as the positive one — an edited payload, a swapped signature, an expired token, and a
+ * redirect target that points off-site.
+ */
+
+const USER: SessionUser = {
+  id: 'google_12345',
+  email: 'someone@example.com',
+  name: 'Someone',
+  provider: 'google',
+}
+
+describe('session cookies are signed, not trusted', () => {
+  it('round-trips a session it issued', () => {
+    const raw = encodeSession(USER)
+    const decoded = decodeSession(raw)
+    assert.ok(decoded, 'a freshly issued session failed verification')
+    assert.equal(decoded?.user.email, USER.email)
+    assert.equal(decoded?.user.provider, 'google')
+  })
+
+  it('rejects a payload edited after signing', () => {
+    const raw = encodeSession(USER)
+    const [body, signature] = raw.split('.')
+    const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(body, 'base64url').toString()), user: { ...USER, email: 'attacker@example.com' } })).toString('base64url')
+    assert.equal(decodeSession(`${forged}.${signature}`), null, 'an edited payload kept its signature valid')
+  })
+
+  it('rejects a swapped or truncated signature', () => {
+    const a = encodeSession(USER)
+    const b = encodeSession({ ...USER, id: 'google_999' })
+    const [, sigA] = a.split('.')
+    const [bodyB] = b.split('.')
+    assert.equal(decodeSession(`${bodyB}.${sigA}`), null)
+    assert.equal(decodeSession(`${a.split('.')[0]}.`), null)
+    assert.equal(decodeSession('not-a-cookie'), null)
+    assert.equal(decodeSession(undefined), null)
+    assert.equal(decodeSession(''), null)
+  })
+
+  it('treats an expired session as no session', () => {
+    const issued = Date.now() - 60 * 24 * 60 * 60 * 1000
+    const raw = encodeSession(USER, issued)
+    assert.equal(decodeSession(raw, Date.now()), null, 'an expired session was accepted')
+    // …and the same cookie verifies while it is still inside its window.
+    assert.ok(decodeSession(encodeSession(USER, Date.now())))
+  })
+
+  it('gives a demo session a name that says what it is', () => {
+    const user = demoUser()
+    assert.equal(user.provider, 'demo')
+    assert.equal(user.name, 'Demo session')
+    assert.match(user.email, /@calendra\.local$/)
+  })
+})
+
+describe('redirect targets stay on-site', () => {
+  it('accepts a path and rejects everything else', () => {
+    assert.equal(safeNext('/planner'), '/planner')
+    assert.equal(safeNext('/pricing?plan=pro'), '/pricing?plan=pro')
+    assert.equal(safeNext(null), '/planner')
+    assert.equal(safeNext(''), '/planner')
+    // Protocol-relative and absolute URLs are the open-redirect shapes.
+    assert.equal(safeNext('//evil.example.com'), '/planner')
+    assert.equal(safeNext('https://evil.example.com'), '/planner')
+    assert.equal(safeNext('javascript:alert(1)'), '/planner')
+    assert.equal(safeNext('/ok', '/fallback'), '/ok')
+  })
+})
+
+describe('the redirect URI follows the request, not the build machine', () => {
+  /*
+   * Google matches `redirect_uri` against the registered list exactly. A hardcoded localhost default
+   * therefore breaks every deployment: the deployed app would ask Google to send the browser to
+   * `http://localhost:3000`, which is the developer's machine, and sign-in fails with
+   * `redirect_uri_mismatch` even though the client id and secret are correct. The origin comes from
+   * the request so one OAuth client works on localhost, a preview URL and a custom domain.
+   */
+  it('resolves both grants from the request origin', () => {
+    assert.equal(authRedirectUri('https://calendra.example'), 'https://calendra.example/api/auth/callback')
+    assert.equal(calendarConfig('https://calendra.example').redirectUri, 'https://calendra.example/api/calendar/callback')
+    // Trailing slashes are not part of an origin, but a proxy can hand one through — the URI must
+    // still be well formed.
+    assert.match(authRedirectUri('https://calendra.example'), /^https:\/\/calendra\.example\/api\/auth\/callback$/)
+  })
+
+  it('falls back to something obviously local when no request is in scope', () => {
+    // Tests and build-time rendering have no request. The fallback is deliberately the wrong answer
+    // for a deployment, and deliberately obvious rather than plausible.
+    assert.equal(FALLBACK_ORIGIN, 'http://localhost:3000')
+    assert.equal(authRedirectUri(), `${FALLBACK_ORIGIN}/api/auth/callback`)
+    assert.equal(calendarConfig().redirectUri, `${FALLBACK_ORIGIN}/api/calendar/callback`)
+  })
+
+  it('prefers the forwarded host and protocol behind a proxy', () => {
+    // Vercel terminates TLS at its edge: the request arrives over http on an internal host, and the
+    // public origin is in the forwarded headers. Reading only `request.url` would produce
+    // `http://<internal>/api/auth/callback`, which is not a registered URI.
+    const request = new Request('http://10.0.0.4:3000/api/auth/google', {
+      headers: { 'x-forwarded-host': 'calendra.example', 'x-forwarded-proto': 'https' },
+    })
+    assert.equal(requestOrigin(request), 'https://calendra.example')
+  })
+
+  it('takes the first entry of a forwarded chain', () => {
+    const request = new Request('https://ignored.example/api/auth/google', {
+      headers: { 'x-forwarded-host': 'calendra.example, edge.internal', 'x-forwarded-proto': 'https, http' },
+    })
+    assert.equal(requestOrigin(request), 'https://calendra.example')
+  })
+
+  it('falls back to the request URL when nothing is forwarded', () => {
+    assert.equal(requestOrigin(new Request('http://localhost:4000/api/auth/google')), 'http://localhost:4000')
+  })
+})
+
+describe('addresses Google will refuse are caught before it does', () => {
+  /*
+   * Next prints a LAN address in its dev banner (`Network: http://192.168.1.2:3000`), so it is the
+   * natural thing to open when you want to try the app on a phone. Google answers with
+   *
+   *   device_id and device_name are required for private IP: http://192.168.1.2:3000/api/auth/callback
+   *
+   * which is its limited-input-device flow asking for parameters this app has no reason to send, and
+   * it tells the user nothing about the cause. The app checks first and explains instead (RULES L9).
+   */
+  it('flags private network addresses, including the usual dev LAN', () => {
+    for (const host of ['192.168.1.2', '10.0.0.7', '172.16.4.9', '172.31.255.1', '169.254.1.1']) {
+      const problem = googleOriginProblem(`http://${host}:3000`)
+      assert.equal(problem?.reason, 'private-network', `${host} was not flagged as a private address`)
+      assert.equal(problem?.host, host, 'the problem must name the host so the page can show it')
+    }
+  })
+
+  it('flags bare IPs and invented TLDs, which Google also refuses', () => {
+    // No TLD at all.
+    assert.equal(googleOriginProblem('http://8.8.8.8:3000')?.reason, 'not-public')
+    assert.equal(googleOriginProblem('http://buildbox:3000')?.reason, 'not-public')
+    // Reserved TLDs — `.local` is the one mDNS hands out, `.test` the one test suites use.
+    assert.equal(googleOriginProblem('http://calendra.local:3000')?.reason, 'not-public')
+    assert.equal(googleOriginProblem('http://calendra.test')?.reason, 'not-public')
+  })
+
+  it('accepts loopback and real hosts', () => {
+    for (const origin of [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'https://aicalenderplanner.vercel.app',
+      'https://aicalenderplanner-git-main-abc.vercel.app',
+      'https://calendra.example.com',
+      'https://deep.subdomain.example.co.uk',
+    ]) {
+      assert.equal(googleOriginProblem(origin), null, `${origin} should be usable as a redirect target`)
+    }
+  })
+
+  it('never blocks the deployed case it was written to protect', () => {
+    // The regression that would matter most: a real deployment being refused.
+    const origin = requestOrigin(
+      new Request('http://10.0.0.4:3000/api/auth/google', {
+        headers: { 'x-forwarded-host': 'aicalenderplanner-git-main-abc.vercel.app', 'x-forwarded-proto': 'https' },
+      }),
+    )
+    assert.equal(googleOriginProblem(origin), null)
+  })
+})
+
+/**
+ * "Sign-in is off" is not a diagnosis; "GOOGLE_CLIENT_SECRET is absent" is.
+ *
+ * Reported from a real Vercel deployment: the variables were added in the dashboard, the deployment
+ * was not rebuilt, and the panel said only that sign-in needed *both* names — which reads as "my
+ * values are wrong" rather than "this build has never seen them". The list below is what lets the
+ * panel tell those apart, so it is asserted the same way as the other security-adjacent state.
+ */
+describe('the deployment reports which Google variables it cannot see', () => {
+  const KEYS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const
+
+  const withEnv = (values: Partial<Record<(typeof KEYS)[number], string | undefined>>) => {
+    const saved = KEYS.map((key) => [key, process.env[key]] as const)
+    for (const key of KEYS) delete process.env[key]
+    for (const [key, value] of Object.entries(values)) {
+      if (value !== undefined) process.env[key] = value
+    }
+    return () => {
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+  }
+
+  it('names exactly the one that is absent, not both', () => {
+    const restore = withEnv({ GOOGLE_CLIENT_ID: '1234.apps.googleusercontent.com' })
+    try {
+      const config = googleAuthConfig()
+      assert.equal(config.configured, false)
+      assert.deepEqual(config.missing, ['GOOGLE_CLIENT_SECRET'])
+    } finally {
+      restore()
+    }
+  })
+
+  it('names both when the deployment has neither', () => {
+    const restore = withEnv({})
+    try {
+      assert.deepEqual(googleAuthConfig().missing, ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'])
+    } finally {
+      restore()
+    }
+  })
+
+  it('names neither once both are present', () => {
+    const restore = withEnv({ GOOGLE_CLIENT_ID: '1234.apps.googleusercontent.com', GOOGLE_CLIENT_SECRET: 'GOCSPX-x' })
+    try {
+      const config = googleAuthConfig()
+      assert.equal(config.configured, true)
+      assert.deepEqual(config.missing, [])
+    } finally {
+      restore()
+    }
+  })
+
+  it('counts a whitespace-only value as absent rather than as configured', () => {
+    // The classic Vercel paste: a value that looks filled in but is empty. `readEnv` trims, so this is
+    // reported as a missing variable instead of being handed to Google as an empty client id.
+    const restore = withEnv({ GOOGLE_CLIENT_ID: '   ', GOOGLE_CLIENT_SECRET: 'GOCSPX-x' })
+    try {
+      assert.deepEqual(googleAuthConfig().missing, ['GOOGLE_CLIENT_ID'])
+    } finally {
+      restore()
+    }
+  })
+})
+
+/**
+ * The *routes* (`/api/auth/*`) are deliberately not unit-tested here.
+ *
+ * They call `cookies()` from `next/headers`, which needs Next's request scope; driving them through the
+ * jsdom fetch bridge throws "`cookies` was called outside a request scope" — the same constraint the
+ * Google OAuth callback routes already have (MEMORY §5.9). Faking a request scope would test the fake,
+ * not the route.
+ *
+ * They are verified over HTTP against a running server instead, where the cookie jar is real:
+ *   curl -s -c jar -b jar -X POST <origin>/api/auth/demo     → 200, sets calendra_session
+ *   curl -s -b jar <origin>/api/auth/session                 → user.name = "Demo session"
+ *   curl -s -b jar -X POST <origin>/api/auth/signout         → 200
+ *   curl -s -b jar <origin>/api/auth/session                 → user = null
+ *   curl -s -b "calendra_session=<tampered>" <origin>/api/auth/session → user = null
+ *
+ * The parts with security consequence — the signature, the expiry, the redirect target — are pure
+ * functions and are asserted above.
+ */

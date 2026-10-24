@@ -1,0 +1,12 @@
+{
+  "//": "Test-time compiler options. The app tsconfig keeps Next's `jsx: preserve` (SWC compiles JSX); the test runner is esbuild/tsx, which needs a transform, so the automatic runtime is turned on here. Used via TSX_TSCONFIG_PATH in the `test` scripts.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "noEmit": true
+  },
+  "//include": "src/** is listed because a test runner resolves the nearest tsconfig per file; a file outside `include` silently falls back to the app config (jsx: preserve -> classic transform -> React is not defined).",
+  "include": ["tests/**/*.ts", "tests/**/*.tsx", "scripts/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "next-env.d.ts"]
+}
