@@ -197,7 +197,10 @@ export function PaperTextarea({
 
 export function PaperLabel({ className, children, ...rest }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
-    <label className={clsx('mb-1 block text-[11px] font-bold uppercase tracking-[0.08em] text-ink-faint', className)} {...rest}>
+    <label
+      className={clsx('mb-1 block text-[11px] font-bold uppercase tracking-[0.08em] text-ink-faint', className)}
+      {...rest}
+    >
       {children}
     </label>
   )
@@ -215,7 +218,7 @@ export function PaperTabs<T extends string>({
   className?: string
 }) {
   return (
-    <div role="tablist" className={clsx('paper-well flex items-end gap-1 p-1', className)}>
+    <div role="tablist" aria-label="Planner views" className={clsx('paper-well flex items-end gap-1 p-1', className)}>
       {tabs.map((tab) => {
         const active = tab.id === value
         return (
@@ -223,19 +226,40 @@ export function PaperTabs<T extends string>({
             key={tab.id}
             role="tab"
             type="button"
+            id={`planner-tab-${tab.id}`}
+            aria-controls={`planner-panel-${tab.id}`}
+            tabIndex={active ? 0 : -1}
+            onKeyDown={(event) => {
+              const index = tabs.findIndex((item) => item.id === tab.id)
+              const next =
+                event.key === 'Home'
+                  ? 0
+                  : event.key === 'End'
+                    ? tabs.length - 1
+                    : event.key === 'ArrowRight'
+                      ? (index + 1) % tabs.length
+                      : event.key === 'ArrowLeft'
+                        ? (index - 1 + tabs.length) % tabs.length
+                        : -1
+              if (next < 0) return
+              event.preventDefault()
+              document.getElementById(`planner-tab-${tabs[next].id}`)?.focus()
+            }}
             aria-selected={active}
             onClick={() => onChange(tab.id)}
             className={clsx(
               'paper-fibre relative flex items-center gap-1.5 rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-xs font-bold transition-all duration-150 ease-[var(--ease-paper)]',
               active
-                ? 'bg-paper-ivory text-ink shadow-[var(--shadow-tile)]'
+                ? 'bg-terracotta text-ink shadow-[var(--shadow-tile)]'
                 : 'text-ink-faint hover:bg-paper-ivory/50 hover:text-ink-soft',
             )}
           >
             {tab.icon}
             {tab.label}
             {typeof tab.badge === 'number' && tab.badge > 0 ? (
-              <span className="tnum rounded-full bg-rose-light px-1.5 text-[10px] font-bold text-rose-deep">{tab.badge}</span>
+              <span className="tnum rounded-full bg-rose-light px-1.5 text-[10px] font-bold text-rose-deep">
+                {tab.badge}
+              </span>
             ) : null}
           </button>
         )

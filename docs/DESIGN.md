@@ -467,3 +467,22 @@ Drag preview shows target time and preliminary protected-time flags; server rema
 Only one input tab is shown at any viewport. Assistant and example prompts collapse by default.
 Unplaced tasks expose working-hours review; eligible tasks allow15-minute chunks and a real rebuild.
 No silent availability extension, deadline shift, scope reduction or calendar write.
+
+
+## Focused planner views — 2026-10-24
+
+Tasks, Rules and Calendar are associated, manually activated tabs/tabpanel views, not headings above
+stacked sections. Only one panel is exposed at once; editing state stays mounted. Arrow/Home/End
+keys inspect tabs; Enter/Space activates and transfers focus to revealed content. The active tab is
+Sunny Herb. Re-plan and Review & publish live in one global action bar.
+
+A persistent status/conflict summary precedes the schedule; Review conflicts reveals and focuses
+Plan report & quick fixes. Diagnostics, insights, assistant and shared Keyboard help collapse by
+default. Calendar publishing is a bounded subflow with Back to week, not a checklist below the grid.
+Dry run and approval use the same selected task IDs; pending planning/writes disable publication controls.
+
+Smaller-chunk remediation is preview-first: actual engine placements, dates/times and residual
+unplaced minutes, then explicit Use preview. No draft mutation on preview, no external write on apply,
+no claim of a fit when there are no placements. Stale previews cannot overwrite an edited draft.
+All day columns share a time axis that includes actual blocks/meetings, so shoulder-hour placements
+cannot escape into the header. Overflow candidates also subtract protected blackouts and lunch.

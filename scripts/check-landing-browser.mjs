@@ -523,21 +523,51 @@ try {
         .first()
         .click()
       await page.locator('[data-block-id]').first().waitFor({ timeout: 30000 })
+      const tasksTab = page.getByRole('tab', { name: /^Tasks/ })
+      const rulesTab = page.getByRole('tab', { name: 'Rules', exact: true })
+      const calendarTab = page.getByRole('tab', { name: 'Calendar', exact: true })
+      assert.equal(await page.getByRole('tabpanel').count(), 1)
+      assert.equal(await page.getByRole('button', { name: /dry run/i }).count(), 0)
+      await tasksTab.click()
+      await page.locator('#planner-panel-tasks:focus').waitFor()
+      assert.ok(await page.getByRole('heading', { name: 'Task backlog' }).isVisible())
+      assert.equal(await page.locator('[data-block-id]:visible').count(), 0)
+      await tasksTab.focus()
+      await tasksTab.press('ArrowRight')
+      assert.ok(await rulesTab.evaluate(el => el === document.activeElement))
+      assert.equal(await tasksTab.getAttribute('aria-selected'), 'true')
+      await rulesTab.press('Enter')
+      await page.locator('#planner-panel-prefs:focus').waitFor()
+      assert.ok(await page.getByRole('heading', { name: 'Working rules' }).isVisible())
+      await rulesTab.focus()
+      await rulesTab.press('End')
+      assert.ok(await calendarTab.evaluate(el => el === document.activeElement))
+      await calendarTab.press('Space')
+      await page.locator('#planner-panel-calendar:focus').waitFor()
+      await page.getByRole('button', { name: 'Review & publish', exact: true }).click()
+      await page.locator('#planner-publishing:focus').waitFor()
+      assert.ok(await page.getByRole('button', { name: /dry run/i }).isVisible())
+      assert.equal(await page.locator('[data-block-id]').count(), 0)
+      await page.getByRole('button', { name: 'Back to week' }).click()
+      assert.equal(await page.getByRole('button', { name: /dry run/i }).count(), 0)
+      await page.screenshot({ path: join(artifacts, 'planner-calendar-1280.png') })
       const geometry = await page
         .locator('[data-block-id]')
         .evaluateAll((nodes) =>
           nodes.map((el) => {
             const box = el.getBoundingClientRect(),
-              content = el.children[2].getBoundingClientRect()
+              content = el.children[2].getBoundingClientRect(),
+              column = el.closest('[data-day-date]').getBoundingClientRect()
             return {
               height: box.height,
+              insideDay: box.top >= column.top && box.bottom <= column.bottom,
               contentFits:
                 content.bottom <= box.bottom && content.top >= box.top,
             }
           }),
         )
       assert.ok(
-        geometry.every((item) => item.height >= 26 && item.contentFits),
+        geometry.every((item) => item.height >= 26 && item.contentFits && item.insideDay),
         'Planner tile content clips vertically',
       )
       const first = page.locator('[data-block-id]').first()

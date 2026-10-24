@@ -10,7 +10,14 @@ import { recurrenceLabel } from '@/lib/scheduler/policies'
 import { currentWeekStart } from '@/lib/sample-data'
 import { estimateDurationMinutes } from '@/lib/agent/tools'
 import { usePlanner } from '@/lib/store/planner-store'
-import { PaperButton, PaperChip, PaperInput, PaperLabel, PaperSelect, PaperTextarea } from '@/components/paper/PaperControls'
+import {
+  PaperButton,
+  PaperChip,
+  PaperInput,
+  PaperLabel,
+  PaperSelect,
+  PaperTextarea,
+} from '@/components/paper/PaperControls'
 import { PaperSheet } from '@/components/paper/PaperSheet'
 
 /**
@@ -24,7 +31,8 @@ import { PaperSheet } from '@/components/paper/PaperSheet'
 const ENERGY_OPTIONS: Energy[] = ['deep', 'light', 'admin', 'social', 'physical']
 
 export function TaskInbox() {
-  const { tasks, addTask, removeTask, updateTask, buildWeek, status, demoSet, loadDemoSet, clearTasks, proposal } = usePlanner()
+  const { tasks, addTask, removeTask, updateTask, buildWeek, status, demoSet, loadDemoSet, clearTasks, proposal } =
+    usePlanner()
   const weekStart = proposal?.weekStart ?? currentWeekStart()
   const [brief, setBrief] = useState('')
   const [draft, setDraft] = useState({
@@ -47,7 +55,10 @@ export function TaskInbox() {
     if (title.length < 2) return
     const estimate = draft.estimateMinutes || estimateDurationMinutes(title, draft.energy, draft.category)
     addTask({
-      id: `t_${title.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 28)}_${tasks.length}`,
+      id: `t_${title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .slice(0, 28)}_${tasks.length}`,
       title,
       estimateMinutes: estimate,
       deadline: draft.deadlineDate ? `${draft.deadlineDate}T${draft.deadlineTime}:00` : undefined,
@@ -70,21 +81,29 @@ export function TaskInbox() {
           id="brief"
           rows={4}
           value={brief}
-          placeholder={'Finish the Q4 deck by Thursday 5pm (4h). Review PRs every weekday. Gym Mon/Wed/Fri, 45 min. Study module 4 before Sunday night.'}
+          placeholder={
+            'Finish the Q4 deck by Thursday 5pm (4h). Review PRs every weekday. Gym Mon/Wed/Fri, 45 min. Study module 4 before Sunday night.'
+          }
           onChange={(event) => setBrief(event.target.value)}
         />
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <PaperButton tone="terracotta" onClick={() => void buildWeek(brief)} disabled={busy}>
+          <PaperButton
+            tone="terracotta"
+            onClick={async () => {
+              await buildWeek(brief)
+              if (usePlanner.getState().status === 'ready') usePlanner.getState().setRailTab('calendar')
+            }}
+            disabled={busy || !brief.trim()}
+          >
             <Wand2 size={14} aria-hidden="true" />
-            {busy ? 'Planning…' : 'Build my week'}
+            {busy ? 'Planning…' : 'Plan this brief'}
           </PaperButton>
-          <PaperButton variant="flat" onClick={() => void buildWeek()} disabled={busy}>
-            Re-plan with my tasks
-          </PaperButton>
+
           <span className="ml-auto text-[11px] text-ink-faint">{tasks.length} tasks ready</span>
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
-          Durations you do not give are estimated and flagged. Everything the parser reads appears below before it reaches your calendar.
+          Durations you do not give are estimated and flagged. Everything the parser reads appears below before it
+          reaches your calendar.
         </p>
       </PaperSheet>
 
@@ -122,7 +141,9 @@ export function TaskInbox() {
                   min={SNAP_MINUTES}
                   step={SNAP_MINUTES}
                   value={draft.estimateMinutes}
-                  onChange={(event) => setDraft((current) => ({ ...current, estimateMinutes: Number(event.target.value) }))}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, estimateMinutes: Number(event.target.value) }))
+                  }
                 />
               </div>
               <div>
@@ -130,7 +151,9 @@ export function TaskInbox() {
                 <PaperSelect
                   id="task-priority"
                   value={draft.priority}
-                  onChange={(event) => setDraft((current) => ({ ...current, priority: event.target.value as Task['priority'] }))}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, priority: event.target.value as Task['priority'] }))
+                  }
                 >
                   <option value="P0">P0 · must happen</option>
                   <option value="P1">P1 · important</option>
@@ -157,7 +180,9 @@ export function TaskInbox() {
                 <PaperSelect
                   id="task-category"
                   value={draft.category}
-                  onChange={(event) => setDraft((current) => ({ ...current, category: event.target.value as Task['category'] }))}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, category: event.target.value as Task['category'] }))
+                  }
                 >
                   {['work', 'study', 'health', 'life', 'admin', 'creative'].map((category) => (
                     <option key={category} value={category}>
@@ -229,7 +254,11 @@ export function TaskInbox() {
                       aria-label={`${expanded ? 'Collapse' : 'Expand'} ${task.title}`}
                       onClick={() => setExpandedId(expanded ? null : task.id)}
                     >
-                      {expanded ? <ChevronDown size={13} aria-hidden="true" /> : <ChevronRight size={13} aria-hidden="true" />}
+                      {expanded ? (
+                        <ChevronDown size={13} aria-hidden="true" />
+                      ) : (
+                        <ChevronRight size={13} aria-hidden="true" />
+                      )}
                     </button>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-semibold text-ink">{task.title}</p>
@@ -241,12 +270,23 @@ export function TaskInbox() {
                             return cadence ? ` ↻ ${cadence}` : ''
                           })()}
                         </PaperChip>
-                        <PaperChip tone={task.priority === 'P0' ? 'rose' : task.priority === 'P1' ? 'terracotta' : 'olive'} icon={<Flag size={9} aria-hidden="true" />}>
+                        <PaperChip
+                          tone={task.priority === 'P0' ? 'rose' : task.priority === 'P1' ? 'terracotta' : 'olive'}
+                          icon={<Flag size={9} aria-hidden="true" />}
+                        >
                           {task.priority}
                         </PaperChip>
                         <PaperChip tone="teal">{ENERGY_LABEL[task.energy]}</PaperChip>
-                        {task.deadline ? <PaperChip tone="rose">due {task.deadline.slice(5, 10)} {task.deadline.slice(11, 16)}</PaperChip> : null}
-                        {task.estimatedByAI ? <PaperChip tone="frost" title="Duration was inferred, not stated">estimated</PaperChip> : null}
+                        {task.deadline ? (
+                          <PaperChip tone="rose">
+                            due {task.deadline.slice(5, 10)} {task.deadline.slice(11, 16)}
+                          </PaperChip>
+                        ) : null}
+                        {task.estimatedByAI ? (
+                          <PaperChip tone="frost" title="Duration was inferred, not stated">
+                            estimated
+                          </PaperChip>
+                        ) : null}
                         {!task.splittable ? (
                           <PaperChip tone="kraft" icon={<Ban size={9} aria-hidden="true" />}>
                             one sitting
@@ -274,7 +314,9 @@ export function TaskInbox() {
                           min={SNAP_MINUTES}
                           step={SNAP_MINUTES}
                           value={task.estimateMinutes}
-                          onChange={(event) => updateTask(task.id, { estimateMinutes: Math.max(SNAP_MINUTES, Number(event.target.value)) })}
+                          onChange={(event) =>
+                            updateTask(task.id, { estimateMinutes: Math.max(SNAP_MINUTES, Number(event.target.value)) })
+                          }
                         />
                       </div>
                       <div>
@@ -282,7 +324,9 @@ export function TaskInbox() {
                         <PaperSelect
                           id={`${task.id}-priority`}
                           value={task.priority}
-                          onChange={(event) => updateTask(task.id, { priority: event.target.value as Task['priority'] })}
+                          onChange={(event) =>
+                            updateTask(task.id, { priority: event.target.value as Task['priority'] })
+                          }
                         >
                           {['P0', 'P1', 'P2', 'P3'].map((priority) => (
                             <option key={priority} value={priority}>
@@ -343,7 +387,11 @@ export function TaskInbox() {
               Overbooked
             </PaperButton>
           </div>
-          <button type="button" className={clsx('text-[11px] font-semibold text-ink-faint hover:text-rose-deep')} onClick={clearTasks}>
+          <button
+            type="button"
+            className={clsx('text-[11px] font-semibold text-ink-faint hover:text-rose-deep')}
+            onClick={clearTasks}
+          >
             Clear all
           </button>
         </footer>

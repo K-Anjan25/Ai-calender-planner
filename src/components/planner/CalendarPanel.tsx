@@ -18,15 +18,19 @@ import { PaperSheet } from '@/components/paper/PaperSheet'
  */
 
 export function CalendarPanel() {
-  const { capability, proposal, syncState, dryRun, approveAndSync, rollback, refreshCapability, exportIcs } = usePlanner()
+  const { capability, proposal, syncState, status, dryRun, approveAndSync, rollback, refreshCapability, exportIcs } =
+    usePlanner()
   const [selected, setSelected] = useState<string[] | null>(null)
-  const [showPreflight, setShowPreflight] = useState(false)
 
   const taskBlocks = proposal?.blocks.filter((block) => block.kind === 'task') ?? []
   const configured = capability?.calendar.configured ?? false
   const connected = capability?.calendar.connected ?? false
-  const approval = selected ?? taskBlocks.map((block) => block.id)
-  const approvedMinutes = taskBlocks.filter((block) => approval.includes(block.id)).reduce((sum, block) => sum + block.minutes, 0)
+  const approval = (selected ?? taskBlocks.map((block) => block.id)).filter((id) =>
+    taskBlocks.some((block) => block.id === id),
+  )
+  const approvedMinutes = taskBlocks
+    .filter((block) => approval.includes(block.id))
+    .reduce((sum, block) => sum + block.minutes, 0)
 
   const toggle = (id: string) => {
     setSelected(approval.includes(id) ? approval.filter((value) => value !== id) : [...approval, id])
@@ -36,22 +40,32 @@ export function CalendarPanel() {
     <div className="flex flex-col gap-3">
       <PaperSheet className="p-3.5">
         <h3 className="mb-1.5 flex items-center gap-1.5 text-[15px]">
-          {connected ? <CalendarCheck size={14} className="text-olive-deep" aria-hidden="true" /> : <CalendarX size={14} className="text-ink-faint" aria-hidden="true" />}
+          {connected ? (
+            <CalendarCheck size={14} className="text-olive-deep" aria-hidden="true" />
+          ) : (
+            <CalendarX size={14} className="text-ink-faint" aria-hidden="true" />
+          )}
           Google Calendar
         </h3>
 
         {!configured ? (
           <div className="space-y-2">
             <p className="text-[12px] leading-relaxed text-ink-soft">
-              Not configured on this deployment. Planning works completely without it — you just do not get your existing
-              meetings imported, and nothing gets written out.
+              Not configured on this deployment. Planning works completely without it — you just do not get your
+              existing meetings imported, and nothing gets written out.
             </p>
             <div className="paper-well p-2.5">
               <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-faint">To enable it</p>
               <ol className="mt-1 space-y-1 text-[11px] leading-relaxed text-ink-soft">
                 <li>1. Create an OAuth client in Google Cloud Console.</li>
-                <li>2. Set <code className="rounded bg-paper-kraft px-1">GOOGLE_CLIENT_ID</code> and <code className="rounded bg-paper-kraft px-1">GOOGLE_CLIENT_SECRET</code>.</li>
-                <li>3. Add this app&apos;s <code className="rounded bg-paper-kraft px-1">/api/calendar/callback</code> as a redirect URI.</li>
+                <li>
+                  2. Set <code className="rounded bg-paper-kraft px-1">GOOGLE_CLIENT_ID</code> and{' '}
+                  <code className="rounded bg-paper-kraft px-1">GOOGLE_CLIENT_SECRET</code>.
+                </li>
+                <li>
+                  3. Add this app&apos;s <code className="rounded bg-paper-kraft px-1">/api/calendar/callback</code> as
+                  a redirect URI.
+                </li>
               </ol>
               <p className="mt-1.5 text-[11px] text-ink-faint">
                 {capability?.calendar.missing.length ? `Missing: ${capability.calendar.missing.join(', ')}` : ''}
@@ -61,11 +75,14 @@ export function CalendarPanel() {
         ) : !connected ? (
           <div className="space-y-2">
             <p className="text-[12px] leading-relaxed text-ink-soft">
-              Connect to import your real meetings as fixed context and to push approved blocks back. Calendra reads free/busy
-              only — it never reads event details it does not need.
+              Connect to import your real meetings as fixed context and to push approved blocks back. Calendra reads
+              free/busy only — it never reads event details it does not need.
             </p>
             {/* A real anchor: OAuth consent must be a full navigation, not a client route. */}
-            <a href={calendarAuthUrl()} className="paper-fibre inline-flex items-center gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(55,112,191,0.2)] bg-plum px-3.5 py-1.5 text-sm font-semibold text-paper-ivory shadow-[var(--shadow-tile)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[var(--shadow-lift)]">
+            <a
+              href={calendarAuthUrl()}
+              className="paper-fibre inline-flex items-center gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(55,112,191,0.2)] bg-plum px-3.5 py-1.5 text-sm font-semibold text-paper-ivory shadow-[var(--shadow-tile)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[var(--shadow-lift)]"
+            >
               <Link2 size={13} aria-hidden="true" />
               Connect Google Calendar
             </a>
@@ -98,7 +115,9 @@ export function CalendarPanel() {
         <PaperSheet className="p-3.5">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-[15px]">Approve before writing</h3>
-            <PaperChip tone="kraft">{approval.length} of {taskBlocks.length}</PaperChip>
+            <PaperChip tone="kraft">
+              {approval.length} of {taskBlocks.length}
+            </PaperChip>
           </div>
 
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -108,7 +127,15 @@ export function CalendarPanel() {
             <PaperButton size="sm" variant="flat" onClick={() => setSelected([])}>
               Select none
             </PaperButton>
-            <PaperButton size="sm" variant="flat" onClick={() => setSelected(taskBlocks.filter((b) => b.priority === 'P0' || b.priority === 'P1').map((block) => block.id))}>
+            <PaperButton
+              size="sm"
+              variant="flat"
+              onClick={() =>
+                setSelected(
+                  taskBlocks.filter((b) => b.priority === 'P0' || b.priority === 'P1').map((block) => block.id),
+                )
+              }
+            >
               Only P0/P1
             </PaperButton>
           </div>
@@ -122,6 +149,7 @@ export function CalendarPanel() {
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={status === 'planning' || syncState.status === 'syncing'}
                       onChange={() => toggle(block.id)}
                       className="h-3.5 w-3.5 accent-teal-deep"
                     />
@@ -142,10 +170,9 @@ export function CalendarPanel() {
             <PaperButton
               size="sm"
               variant="flat"
-              disabled={taskBlocks.length === 0}
+              disabled={approval.length === 0 || status === 'planning' || syncState.status === 'syncing'}
               onClick={() => {
-                setShowPreflight(true)
-                void dryRun()
+                void dryRun(approval)
               }}
             >
               <Eye size={13} aria-hidden="true" />
@@ -154,13 +181,18 @@ export function CalendarPanel() {
             <PaperButton
               size="sm"
               tone="teal"
-              disabled={!connected || approval.length === 0 || syncState.status === 'syncing'}
+              disabled={!connected || approval.length === 0 || status === 'planning' || syncState.status === 'syncing'}
               onClick={() => void approveAndSync(approval)}
             >
               <CloudDownload size={13} aria-hidden="true" />
               Approve &amp; write {approval.length} block{approval.length === 1 ? '' : 's'}
             </PaperButton>
-            <PaperButton size="sm" variant="flat" disabled={!connected} onClick={() => void rollback()}>
+            <PaperButton
+              size="sm"
+              variant="flat"
+              disabled={!connected || status === 'planning' || syncState.status === 'syncing'}
+              onClick={() => void rollback()}
+            >
               <RotateCcw size={13} aria-hidden="true" />
               Undo this plan
             </PaperButton>
@@ -172,11 +204,12 @@ export function CalendarPanel() {
           </div>
 
           <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
-            About to write <strong className="tnum">{fmtDuration(approvedMinutes)}</strong> of work. Every event is tagged so a
-            re-sync updates it instead of creating a duplicate, and so “undo this plan” removes exactly what this plan added.
+            About to write <strong className="tnum">{fmtDuration(approvedMinutes)}</strong> of work. Every event is
+            tagged so a re-sync updates it instead of creating a duplicate, and so “undo this plan” removes exactly what
+            this plan added.
           </p>
 
-          {showPreflight && syncState.status !== 'idle' ? (
+          {syncState.status !== 'idle' ? (
             <div
               className={clsx(
                 'paper-well mt-2.5 p-2.5',
@@ -185,7 +218,9 @@ export function CalendarPanel() {
               role="status"
             >
               <p className="text-[11.5px] font-semibold text-ink-soft">{syncState.message}</p>
-              {syncState.status === 'syncing' ? <p className="mt-1 text-[11px] text-ink-faint">Talking to Google…</p> : null}
+              {syncState.status === 'syncing' ? (
+                <p className="mt-1 text-[11px] text-ink-faint">Talking to Google…</p>
+              ) : null}
             </div>
           ) : null}
         </PaperSheet>

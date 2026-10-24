@@ -8,6 +8,7 @@ import { fmtDuration } from '@/lib/scheduler/slots'
 import { usePlanner } from '@/lib/store/planner-store'
 import { PaperButton, PaperChip } from '@/components/paper/PaperControls'
 import { PaperSheet, PaperWell } from '@/components/paper/PaperSheet'
+import { SplitTaskPreview } from '@/components/planner/SplitTaskPreview'
 import { PaperSkeleton } from '@/components/planner/AgentChat'
 
 /**
@@ -37,8 +38,7 @@ const VERDICT_STYLE: Record<PlanReport['fits'], { tone: string; icon: React.Reac
 }
 
 export function PlanReportPanel() {
-  const { proposal, status, error, selectBlock, applyTradeoff, notes, tasks, updateTask, buildWeek, setRailTab } =
-    usePlanner()
+  const { proposal, status, error, selectBlock, applyTradeoff, notes, tasks, setRailTab } = usePlanner()
 
   if (!proposal) {
     return (
@@ -181,21 +181,7 @@ export function PlanReportPanel() {
                       task.id === item.taskId &&
                       task.estimateMinutes > 15 &&
                       (!task.splittable || task.minChunkMinutes > 15),
-                  ) && (
-                    <PaperButton
-                      size="sm"
-                      disabled={status === 'planning'}
-                      onClick={() => {
-                        updateTask(item.taskId, {
-                          splittable: true,
-                          minChunkMinutes: 15,
-                        })
-                        void buildWeek()
-                      }}
-                    >
-                      Allow 15-minute chunks &amp; re-plan
-                    </PaperButton>
-                  )}
+                  ) && <SplitTaskPreview taskId={item.taskId} title={item.title} />}
                   <PaperButton
                     size="sm"
                     disabled={status === 'planning'}

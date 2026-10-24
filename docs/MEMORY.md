@@ -492,3 +492,23 @@ Allow15-minute chunks & re-plan sets splittable/minChunk15 then real engine rebu
 No automatic extension/deferral/shrinking or external calendar write. Removed stale visible material
 copy from loading/sample-task title.177 tests (incl new navigation/remedy/rebuild tests), lint,
 typecheck/native smoke/build and Chromium7 landing widths/DPR2 + real planner1280 checks passed.
+
+
+## Focused planner completion — 2026-10-24
+
+- Isolated Tasks/Rules/Calendar panels with associated tabs, manual keyboard activation, obvious
+  active styling and focus transfer; one global build/re-plan and review/publish action bar.
+- Persistent unplaced/deadline summary routes to detailed remedies. Reports/insights/help/assistant
+  are collapsed; publishing replaces the weekly view with an explicit Back to week path.
+- Real smaller-chunk preview is nonmutating and shows actual placements/residual unplaced work.
+  Use preview explicitly replaces the draft; snapshot guards reject stale edits/moves/rebuilds/modes.
+  No calendar write occurs. Dry runs now respect selected block IDs, matching approval scope.
+- Fixed shoulder-slot generation bypassing blackouts/lunch. Regression proves an unsplittable task
+  remains unplaced while 15-minute chunks fit real gaps. Aligned time axes include all placements,
+  preventing early/late blocks overlapping headers or escaping day bounds.
+- Verification: lint/typecheck, 180 tests/49 suites, native smoke, production build, Chromium at
+  320/390/768/900/1024/1280/1440px DPR2. Browser tests exercise panel isolation, Arrow/End and
+  Enter/Space activation, focus, publishing/back flow and tile/day containment. Preview tests cover
+  unchanged tasks before apply, stale-edit rejection and explicit apply; selected dry run returns one.
+- Build required NODE_OPTIONS=--max-old-space-size=4096 after the default Node heap was exhausted.
+  Local verification only: no real provider inference, OAuth approval/write or Vercel promotion claim.

@@ -486,7 +486,7 @@ describe('free-text intake', () => {
       },
     })
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /build my week/i }))
+      fireEvent.click(screen.getByRole('button', { name: /plan this brief/i }))
     })
 
     await waitFor(() => assert.ok(usePlanner.getState().tasks.length >= 2, 'the brief produced no tasks'))
@@ -728,13 +728,63 @@ it('provides a working-hours action for each task that does not fit', async () =
   assert.equal(usePlanner.getState().railTab, 'prefs')
 })
 
-it('applies the inline smaller-chunks fix and really rebuilds the plan', async () => {
+it('previews and explicitly applies smaller chunks without changing the draft first', async () => {
   await buildDemoWeek()
   await act(async () => {
-    usePlanner.getState().loadDemoSet('overloaded')
-    await usePlanner.getState().buildWeek()
+    const store = usePlanner.getState()
+    const template = store.tasks[0]
+    store.setTasks([
+      {
+        ...template,
+        id: 'preview-task',
+        title: 'Interrupted task',
+        estimateMinutes: 30,
+        splittable: false,
+        minChunkMinutes: 30,
+        energy: 'admin',
+        deadline: undefined,
+        earliestStart: undefined,
+        recurrence: undefined,
+        repeatDays: undefined,
+        dependsOn: undefined,
+      },
+    ])
+    store.setPreferences({
+      ...defaultPreferences(),
+      lunch: null,
+      bufferMinutes: 0,
+      minBlockMinutes: 15,
+      blackouts: [
+        { id: 'before', label: 'Before work', start: 0, end: 540 },
+        { id: 'after', label: 'After work', start: 600, end: 1440 },
+      ],
+    })
+    store.setBusy(
+      Array.from({ length: 7 }, (_, index) => ({
+        id: `busy-${index}`,
+        title: 'Meeting',
+        date: addDaysISO(WEEK_START, index),
+        startMin: 555,
+        endMin: 585,
+        source: 'demo' as const,
+      })),
+    )
+    // Only two 15-minute gaps remain on each working day.
+    const hours = usePlanner.getState().preferences.workingHours
+    store.setPreferences({
+      workingHours: {
+        ...hours,
+        mon: { start: 540, end: 600 },
+        tue: { start: 540, end: 600 },
+        wed: { start: 540, end: 600 },
+        thu: { start: 540, end: 600 },
+        fri: { start: 540, end: 600 },
+      },
+    })
+    await store.buildWeek()
   })
   const state = usePlanner.getState()
+  assert.equal(state.status, 'ready', JSON.stringify(state.error))
   const item = state.proposal!.report.unscheduled.find((item) =>
     state.tasks.some(
       (task) => task.id === item.taskId && task.estimateMinutes > 15 && (!task.splittable || task.minChunkMinutes > 15),
@@ -745,12 +795,69 @@ it('applies the inline smaller-chunks fix and really rebuilds the plan', async (
   await act(async () => {
     fireEvent.click(
       screen.getAllByRole('button', {
-        name: 'Allow 15-minute chunks & re-plan',
+        name: 'Preview 15-minute chunks',
       })[0],
     )
+  })
+  await waitFor(() => assert.ok(screen.getByRole('button', { name: 'Use preview' })))
+  const before = usePlanner.getState().tasks.find((task) => task.id === item.taskId)!
+  assert.ok(!before.splittable || before.minChunkMinutes > 15, 'Preview changed live task settings')
+  await act(async () => {
+    usePlanner.getState().updateTask(item.taskId, { title: 'Edited after preview' })
+  })
+  assert.equal(screen.getByRole('button', { name: 'Use preview' }).hasAttribute('disabled'), true)
+  assert.ok(screen.getByText(/Generate a fresh preview before applying/))
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Preview 15-minute chunks' }))
+  })
+  await waitFor(() => assert.equal(screen.getByRole('button', { name: 'Use preview' }).hasAttribute('disabled'), false))
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Use preview' }))
   })
   await waitFor(() => assert.equal(usePlanner.getState().status, 'ready'))
   const task = usePlanner.getState().tasks.find((task) => task.id === item.taskId)!
   assert.equal(task.splittable, true)
   assert.equal(task.minChunkMinutes, 15)
+})
+
+it('isolates views, associates tabs, and focuses revealed content', async () => {
+  await buildDemoWeek()
+  render(React.createElement(PlannerPage), { wrapper: Wrapper })
+  const tasks = screen.getByRole('tab', { name: /^Tasks/ })
+  const rules = screen.getByRole('tab', { name: 'Rules' })
+  const calendar = screen.getByRole('tab', { name: 'Calendar' })
+  assert.equal(screen.getAllByRole('tabpanel').length, 1)
+  assert.equal(screen.queryByRole('heading', { name: 'Task backlog' }), null)
+  assert.equal(screen.queryByRole('heading', { name: 'Working rules' }), null)
+  assert.equal(screen.queryByRole('button', { name: /dry run/i }), null)
+  fireEvent.click(tasks)
+  await waitFor(() => assert.equal(document.activeElement?.id, 'planner-panel-tasks'))
+  assert.equal(screen.getByRole('tabpanel').getAttribute('aria-labelledby'), tasks.id)
+  assert.equal(tasks.getAttribute('aria-controls'), screen.getByRole('tabpanel').id)
+  fireEvent.keyDown(tasks, { key: 'ArrowRight' })
+  assert.equal(document.activeElement, rules)
+  assert.equal(tasks.getAttribute('aria-selected'), 'true', 'arrows must not activate a view')
+  fireEvent.click(rules)
+  await waitFor(() => assert.equal(document.activeElement?.id, 'planner-panel-prefs'))
+  assert.equal(screen.queryByRole('heading', { name: 'Task backlog' }), null)
+  fireEvent.keyDown(rules, { key: 'End' })
+  assert.equal(document.activeElement, calendar)
+  fireEvent.click(calendar)
+  await waitFor(() => assert.equal(document.activeElement?.id, 'planner-panel-calendar'))
+  fireEvent.click(screen.getByRole('button', { name: 'Review & publish' }))
+  await waitFor(() => assert.equal(document.activeElement?.id, 'planner-publishing'))
+  assert.ok(screen.getByRole('button', { name: /dry run/i }))
+  assert.equal(document.querySelector('[data-block-id]'), null)
+  fireEvent.click(screen.getByRole('button', { name: 'Back to week' }))
+  assert.equal(screen.queryByRole('button', { name: /dry run/i }), null)
+})
+
+it('dry-runs only the selected task blocks', async () => {
+  const proposal = await buildDemoWeek()
+  const block = proposal.blocks.find((block) => block.kind === 'task')!
+  await act(async () => {
+    await usePlanner.getState().dryRun([block.id])
+  })
+  assert.equal(usePlanner.getState().syncState.status, 'done')
+  assert.equal(usePlanner.getState().syncState.lastCount, 1)
 })

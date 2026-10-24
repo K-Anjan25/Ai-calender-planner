@@ -17,6 +17,7 @@ import {
   minutesOfIso,
   overlaps,
   subtractRanges,
+  staticOccupancy,
   workingHoursFor,
   type FreeSlot,
   type WeekFrame,
@@ -647,7 +648,7 @@ function shoulderSlots(ctx: PlacementContext): FreeSlot[] {
       { start: hours.end, end: Math.min(22 * 60, hours.end + 120) },
     ]
     const holes = [
-      ...ctx.busy.filter((e) => e.date === day.date).map((e) => ({ start: e.startMin, end: e.endMin })),
+      ...staticOccupancy(day.weekday, day.date, ctx.prefs, ctx.busy).map((item) => ({ start: item.start, end: item.end })),
       ...ctx.blocks.filter((b) => b.date === day.date).map((b) => ({ start: b.startMin, end: b.endMin })),
     ]
     for (const window of windows) {

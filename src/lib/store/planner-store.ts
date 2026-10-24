@@ -6,6 +6,7 @@ import {
   type BusyEvent,
   type Pin,
   type PlanProposal,
+  type PlanResponse,
   type Preferences,
   type Task,
 } from '@/lib/types'
@@ -76,7 +77,8 @@ type Actions = {
   applyTradeoff(kind: string, taskId: string): Promise<void>
   explainBlock(blockId: string): Promise<void>
   refreshCapability(): Promise<void>
-  dryRun(): Promise<void>
+  dryRun(blockIds?: string[]): Promise<void>
+  acceptPreview(data: PlanResponse['data'], source: string, taskId: string): boolean
   exportIcs(): Promise<void>
   approveAndSync(blockIds: string[]): Promise<void>
   rollback(): Promise<void>
@@ -141,6 +143,13 @@ function request(now: Date) {
   return { now: now.toISOString() }
 }
 
+/** Snapshot identity guards previews against edits, moves, rebuilds or changed planning mode. */
+export function plannerSnapshotKey(
+  state: Pick<State, 'tasks' | 'preferences' | 'busy' | 'pins' | 'mode' | 'proposal'>,
+) {
+  return JSON.stringify([state.tasks, state.preferences, state.busy, state.pins, state.mode, state.proposal])
+}
+
 export const usePlanner = create<State & Actions>((set, get) => ({
   tasks: [],
   preferences: defaultPreferences(),
@@ -154,7 +163,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
   mode: 'auto',
   demoSet: 'realistic',
   capability: null,
-  railTab: 'tasks',
+  railTab: 'calendar',
   chat: [],
   chatBusy: false,
   selectedBlockId: null,
@@ -179,6 +188,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       demoSet,
       mode: restored.mode ?? 'auto',
       busy: demoBusy(weekStart),
+      railTab: 'calendar',
       pins: [],
     })
   },
@@ -228,6 +238,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       demoSet: which,
       tasks: which === 'overloaded' ? overloadedTasks(weekStart) : demoTasks(weekStart),
       busy: demoBusy(weekStart),
+      railTab: 'calendar',
       pins: [],
       chat: [],
       selectedBlockId: null,
@@ -300,17 +311,20 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       previousPreferences: preferences,
       previousBlocks: proposal?.blocks
         .filter((block) => block.kind === 'task')
-        .map((block) => ({ id: block.id, taskId: block.taskId, date: block.date, startMin: block.startMin, minutes: block.minutes })),
+        .map((block) => ({
+          id: block.id,
+          taskId: block.taskId,
+          date: block.date,
+          startMin: block.startMin,
+          minutes: block.minutes,
+        })),
       ...request(new Date()),
     })
 
     if (!result.ok) {
       set({
         chatBusy: false,
-        chat: [
-          ...get().chat,
-          { id: `a_err_${Date.now()}`, role: 'agent', text: result.error.message },
-        ],
+        chat: [...get().chat, { id: `a_err_${Date.now()}`, role: 'agent', text: result.error.message }],
       })
       return
     }
@@ -327,7 +341,13 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       status: 'ready',
       chat: [
         ...get().chat,
-        { id: `a_${get().chat.length}_${data.reply.length}`, role: 'agent', text: data.reply, changes: data.changes, trace: data.trace },
+        {
+          id: `a_${get().chat.length}_${data.reply.length}`,
+          role: 'agent',
+          text: data.reply,
+          changes: data.changes,
+          trace: data.trace,
+        },
       ],
     })
     persist({ ...get(), tasks: data.tasks, preferences: data.preferences })
@@ -352,7 +372,15 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       proposal: {
         ...proposal,
         blocks: proposal.blocks.map((b) =>
-          b.id === blockId ? { ...b, date, startMin: snap(startMin), endMin: snap(startMin) + snap(minutes ?? b.minutes), pinned: true } : b,
+          b.id === blockId
+            ? {
+                ...b,
+                date,
+                startMin: snap(startMin),
+                endMin: snap(startMin) + snap(minutes ?? b.minutes),
+                pinned: true,
+              }
+            : b,
         ),
       },
     })
@@ -429,16 +457,24 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     if (result.ok) {
       set({
         chatBusy: false,
-        chat: [...chat, { id: `a_explain_${blockId}`, role: 'agent', text: result.data.reply, trace: result.data.trace }],
+        chat: [
+          ...chat,
+          { id: `a_explain_${blockId}`, role: 'agent', text: result.data.reply, trace: result.data.trace },
+        ],
       })
     } else {
-      set({ chatBusy: false, chat: [...chat, { id: `a_explain_err_${blockId}`, role: 'agent', text: result.error.message }] })
+      set({
+        chatBusy: false,
+        chat: [...chat, { id: `a_explain_err_${blockId}`, role: 'agent', text: result.error.message }],
+      })
     }
   },
 
   async refreshCapability() {
     const [health, calendar] = await Promise.all([getHealth(), getCalendarStatus()])
-    const agent = health.ok ? health.data.agent : { mode: 'local' as const, provider: 'local', model: '', reason: 'Health check failed' }
+    const agent = health.ok
+      ? health.data.agent
+      : { mode: 'local' as const, provider: 'local', model: '', reason: 'Health check failed' }
     set({
       capability: {
         demoMode: health.ok ? health.data.demoMode : true,
@@ -452,10 +488,30 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     })
   },
 
-  async dryRun() {
+  acceptPreview(data, source, taskId) {
+    if (get().status === 'planning' || get().syncState.status === 'syncing' || plannerSnapshotKey(get()) !== source)
+      return false
+    const proposal = data.proposal
+    set({
+      proposal,
+      tasks: proposal.tasks,
+      preferences: proposal.preferences,
+      pins: proposal.pins,
+      trace: data.trace,
+      notes: data.notes,
+      status: 'ready',
+      error: null,
+      selectedBlockId: proposal.blocks.find((block) => block.taskId === taskId)?.id ?? null,
+      syncState: { status: 'idle' },
+    })
+    persist(get())
+    return true
+  },
+
+  async dryRun(approved) {
     const { proposal } = get()
     if (!proposal) return
-    const blockIds = proposal.blocks.filter((b) => b.kind === 'task').map((b) => b.id)
+    const blockIds = approved ?? proposal.blocks.filter((b) => b.kind === 'task').map((b) => b.id)
     set({ syncState: { status: 'syncing', message: 'Checking what would be written…' } })
     const result = await postSync({ proposal, approvedBlockIds: blockIds, dryRun: true })
     if (!result.ok) {

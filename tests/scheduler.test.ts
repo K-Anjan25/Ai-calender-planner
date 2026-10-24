@@ -492,3 +492,28 @@ describe('performance', () => {
     assert.ok(elapsed < 400, `planning took ${elapsed.toFixed(0)}ms`)
   })
 })
+
+
+it('never uses protected shoulder hours to fake a fit for an unsplittable task', () => {
+  const prefs = defaultPreferences()
+  prefs.weekendMode = 'off'
+  prefs.bufferMinutes = 0
+  prefs.minBlockMinutes = 15
+  prefs.lunch = null
+  prefs.blackouts = [
+    { id: 'before', start: 0, end: 540, label: 'Before work' },
+    { id: 'after', start: 600, end: 1440, label: 'After work' },
+  ]
+  for (const day of ['mon', 'tue', 'wed', 'thu', 'fri'] as const) prefs.workingHours[day] = { start: 540, end: 600 }
+  const busy: BusyEvent[] = Array.from({ length: 7 }, (_, index) => ({
+    id: `interrupt-${index}`, title: 'Meeting', date: addDaysISO(WEEK_START, index), startMin: 555, endMin: 585, source: 'demo',
+  }))
+  const task: Task = { ...demoTasks(WEEK_START)[0], id: 'protected', estimateMinutes: 30, splittable: false, minChunkMinutes: 30, energy: 'admin', deadline: undefined }
+  const unchanged = plan([task], prefs, busy)
+  assert.equal(unchanged.blocks.filter(block => block.kind === 'task').length, 0)
+  assert.ok(unchanged.report.unscheduled.some(item => item.taskId === task.id))
+  const split = plan([{ ...task, splittable: true, minChunkMinutes: 15 }], prefs, busy)
+  const blocks = split.blocks.filter(block => block.kind === 'task')
+  assert.equal(blocks.reduce((sum, block) => sum + block.minutes, 0), 30)
+  assert.ok(blocks.every(block => block.startMin >= 540 && block.endMin <= 600))
+})

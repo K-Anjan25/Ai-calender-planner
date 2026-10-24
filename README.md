@@ -323,7 +323,7 @@ Playwright Core and packaged Chromium, extracting minimal Linux browser librarie
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an installed Chromium instead. Screenshots are
 written outside Git to `/tmp/calendra-browser-check` (`BROWSER_ARTIFACTS` overrides this).
 
-It checks five viewport widths at DPR2 for actual form geometry, overflow, input validation,
+It checks seven viewport widths at DPR2 for actual form geometry, overflow, input validation,
 submission feedback/reset, newsletter and menu behavior. Remote fonts are blocked to exercise
 fallbacks; acceptance/failure delivery responses are mocked. This does not verify a live webhook.
 
@@ -332,3 +332,24 @@ headings are visible, and footer links stack with touch-safe spacing. At1280px t
 planner, builds a real week through the local API, checks tile content bounds, keyboard inspection,
 drop-preview feedback and the collapsed assistant. Planner keyboard: arrows inspect; Ctrl/Command
 + arrows move, Shift adds hour steps, Alt + up/down resizes. Every move is validated by the engine.
+
+
+### Focused planner workflow
+
+- **Tasks** → add tasks or paste a brief → **Plan this brief**. Edit estimates/priorities in this view.
+- **Rules** → adjust working hours, protected time, buffers and energy preferences.
+- **Calendar** → inspect the weekly schedule. **Build my week** / **Re-plan** is available globally.
+- The persistent status summary shows unplaced work and deadline risks. **Review conflicts** opens
+  **Plan report & quick fixes**; diagnostics and **Week insights** otherwise stay collapsed.
+- For eligible unplaced tasks, **Preview 15-minute chunks** requests real scheduling results without
+  changing the draft. Read the placement times and any remaining unplaced minutes; **Use preview**
+  explicitly replaces the draft week. Other tasks may move. Edits invalidate old previews.
+- **Review & publish** → choose task blocks → **Dry run** to inspect only that selection without writes.
+  Calendar approval is separate, requires a connected account, and writes only selected blocks.
+  **Back to week** returns to the schedule. Downloading .ics remains available without Google.
+- Tabs use Left/Right/Home/End to move focus; Enter/Space activates and focuses the revealed panel.
+  **Keyboard help** contains shared calendar shortcuts rather than repeating them on every tile.
+
+Local verification includes real-route interaction tests and browser checks for isolated panels,
+keyboard focus, dedicated publishing, and calendar tiles remaining inside the day grid (including
+placements outside normal working hours). No live Google Calendar writes are exercised by these checks.

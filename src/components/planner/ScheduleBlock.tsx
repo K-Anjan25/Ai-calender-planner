@@ -156,7 +156,7 @@ export function ScheduleBlock({
         />
       ) : null}
       <span id={`block-description-${block.id}`} className="sr-only">
-        {`${fmtDuration(block.minutes)}${block.chunkCount > 1 ? `, session ${block.chunkIndex + 1} of ${block.chunkCount}` : ''}. ${block.reasonText}. Arrows inspect; Control or Command with arrows moves; Alt with up or down resizes.`}{' '}
+        {`${fmtDuration(block.minutes)}${block.chunkCount > 1 ? `, session ${block.chunkIndex + 1} of ${block.chunkCount}` : ''}. ${block.reasonText}.`}{' '}
       </span>
     </button>
   )

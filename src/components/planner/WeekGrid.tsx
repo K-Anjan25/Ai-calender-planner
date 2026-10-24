@@ -74,25 +74,26 @@ export function WeekGrid({
 
   const resolvedStart = weekStart ?? (mounted ? startOfCurrentWeek(preferences) : null)
 
-  /**
-   * The week's shape, built from the two settings that decide it — nothing else.
-   *
-   * `days` used to depend on the whole `preferences` object, so *any* change rebuilt the array: drag
-   * the buffer slider, tick "protect lunch", and every `day` prop changed identity, which changed
-   * `beginDrag` and `onBlockKeyDown` (both close over `days`), which re-rendered all seven memoised
-   * `DayColumn`s and every tile inside them. A slider therefore re-rendered the whole week at ~60 Hz.
-   *
-   * `workingHours` and `weekStartsOn` keep their identity across unrelated preferences patches
-   * (`setPreferences` replaces only the key that changed), so depending on them exactly — rather than
-   * on their container — is what lets the columns sit still while the rest of the panel changes.
-   */
+  /** Keep one aligned time axis, including actual overflow placements and meetings.
+   * Unrelated preference edits retain the same day geometry. */
   const workingHours = preferences.workingHours
   const weekendMode = preferences.weekendMode
   const weekStartsOn = preferences.weekStartsOn
-  const days = useMemo(
-    () => (resolvedStart ? weekDays(workingHours, weekendMode, weekStartsOn, resolvedStart) : []),
-    [workingHours, weekendMode, weekStartsOn, resolvedStart],
-  )
+  const days = useMemo(() => {
+    if (!resolvedStart) return []
+    const base = weekDays(workingHours, weekendMode, weekStartsOn, resolvedStart)
+    const dates = new Set(base.map((day) => day.date))
+    const events = [...blocks, ...busy].filter((event) => dates.has(event.date))
+    const start = Math.max(
+      0,
+      Math.floor(Math.min(...base.map((day) => day.windowStart), ...events.map((event) => event.startMin)) / 60) * 60,
+    )
+    const end = Math.min(
+      1440,
+      Math.ceil(Math.max(...base.map((day) => day.windowEnd), ...events.map((event) => event.endMin)) / 60) * 60,
+    )
+    return base.map((day) => ({ ...day, windowStart: start, windowEnd: end }))
+  }, [workingHours, weekendMode, weekStartsOn, resolvedStart, blocks, busy])
   const { selectedBlockId, selectBlock, pinBlock, status, filters } = usePlanner()
   const dragRef = useRef<DragDescriptor | null>(null)
   const [ghost, setGhostState] = useState<Ghost | null>(null)
@@ -458,10 +459,8 @@ export function WeekGrid({
         </div>
       </PaperWell>
 
-      <p className="mt-2 px-1 text-[11px] text-ink-faint">
-        Arrows inspect blocks; Ctrl/Command + arrows move by 15 minutes (Shift for an hour); Alt + up/down resizes. Drag
-        to move. Anything you place yourself is pinned and survives a rebuild. On a narrow window the week scrolls
-        sideways rather than squeezing seven days into a sliver.
+      <p className="mt-2 px-1 text-sm text-ink">
+        Select a block for full details. Keyboard shortcuts are available in Keyboard help above the week.
       </p>
     </div>
   )
