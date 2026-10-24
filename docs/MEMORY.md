@@ -512,3 +512,12 @@ typecheck/native smoke/build and Chromium7 landing widths/DPR2 + real planner128
   unchanged tasks before apply, stale-edit rejection and explicit apply; selected dry run returns one.
 - Build required NODE_OPTIONS=--max-old-space-size=4096 after the default Node heap was exhausted.
   Local verification only: no real provider inference, OAuth approval/write or Vercel promotion claim.
+
+## Location map repair — 2026-10-24
+
+Replaced the contact section’s decorative map placeholder with a responsive, titled, lazy-loaded
+OpenStreetMap embed centered on Hyderabad (city view, not an office address). An always-available
+Open map link and the footer location text open the same location independently of iframe delivery.
+No API key required. Removed placeholder road CSS. Verified lint/typecheck, 181 tests, production
+build and seven-width DPR2 browser regression. External map delivery is stubbed in browser tests
+because sandbox networking excludes the map host; actual third-party tile delivery is not verified.

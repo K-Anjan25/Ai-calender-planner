@@ -62,6 +62,10 @@ try {
     await page.route(/https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) =>
       route.abort(),
     )
+    // External map delivery is not available in the sandbox; verify embed geometry/wiring, not tiles.
+    await page.route('https://www.openstreetmap.org/export/embed.html**', route =>
+      route.fulfill({ contentType: 'text/html', body: '<p>Map provider test fixture</p>' }),
+    )
     await page.goto(base, { waitUntil: 'networkidle' })
     const hero = page.locator('main section').first()
     const preview = page.getByRole('region', {
@@ -388,6 +392,11 @@ try {
       )
     }
     const form = page.getByRole('form', { name: 'Contact Calendra' })
+    const locationMap = page.getByTitle('Map of Hyderabad, India', { exact: true })
+    assert.ok(await locationMap.isVisible(), `${width}: location map is missing`)
+    assert.ok((await locationMap.getAttribute('src')).startsWith('https://www.openstreetmap.org/export/embed.html?'))
+    assert.ok(await locationMap.evaluate(el => el.getBoundingClientRect().width <= el.parentElement.clientWidth + 1))
+    assert.ok(await page.getByRole('link', { name: 'Open map', exact: true }).isVisible())
     await form.scrollIntoViewIfNeeded()
     await page.waitForFunction(
       () => !document.querySelector('[data-sticky-cta]'),

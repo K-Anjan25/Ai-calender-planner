@@ -70,3 +70,13 @@ it('uses uniform pricing cards with shared tracks and in-flow product visuals', 
   assert.match(source, /role="figure"\s+aria-label="Illustrative task intake"/)
   assert.match(css, /margin-bottom:\s*clamp\(48px,\s*5vw,\s*72px\)/)
 })
+
+
+it('embeds a real Hyderabad map and keeps direct map links available', () => {
+  assert.match(source, /<iframe\s+title="Map of Hyderabad, India"/)
+  assert.match(source, /src="https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?bbox=/)
+  assert.match(source, /loading="lazy"\s+referrerPolicy="no-referrer"/)
+  assert.match(source, /aria-label="Open Hyderabad location map \(new tab\)"/)
+  assert.ok(!source.includes('Decorative location illustration'))
+  assert.match(css, /\.map iframe\s*\{[^}]*width:\s*100%/s)
+})

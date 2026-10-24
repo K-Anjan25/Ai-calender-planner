@@ -816,16 +816,25 @@ function Contact() {
               <small>Made for weeks everywhere.</small>
             </span>
           </div>
-          <div
-            className={s.map}
-            role="img"
-            aria-label="Decorative location illustration for Hyderabad, India"
-          >
-            <div className={s.mapRoad} />
-            <MapPin size={30} />
-            <b>HYDERABAD</b>
-            <span>17.3850° N · 78.4867° E</span>
-          </div>
+          <figure className={s.map} aria-label="Hyderabad location map">
+            <iframe
+              title="Map of Hyderabad, India"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=78.36%2C17.30%2C78.60%2C17.48&layer=mapnik&marker=17.3850%2C78.4867"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+            />
+            <figcaption>
+              <span>Hyderabad, India · City view</span>
+              <a
+                href="https://www.openstreetmap.org/?mlat=17.3850&mlon=78.4867#map=12/17.3850/78.4867"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open map <ArrowUpRight size={16} aria-hidden="true" />
+              </a>
+            </figcaption>
+          </figure>
         </Reveal>
         <Reveal>
           <Form />
@@ -888,7 +897,16 @@ function Footer() {
           <div className={s.tinyMap} aria-hidden="true">
             <MapPin size={24} />
           </div>
-          <span>HYDERABAD, INDIA</span>
+          <span>
+            <a
+              href="https://www.openstreetmap.org/?mlat=17.3850&mlon=78.4867#map=12/17.3850/78.4867"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open Hyderabad location map (new tab)"
+            >
+              HYDERABAD, INDIA
+            </a>
+          </span>
           <p>
             A small point on the map.
             <br />A little more room in your week.
