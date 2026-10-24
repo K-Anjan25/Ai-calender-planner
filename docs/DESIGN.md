@@ -444,3 +444,26 @@ Task intake/capacity mockups are inline DOM figures with explicit illustrative l
 and shrink-safe alternating columns, stacking at760px. No missing image URLs or invented screenshots.
 Hero note is now static with16px separation, not an overlapping absolute widget. FAQ top spacing
 80–112px and heading-to-list spacing48–72px. Palette, enquiry behavior and contrast remain unchanged.
+
+## 2026-10-24 — fluid hero, inverse footer and dense planner
+
+Supersedes the112px/602px marketing preview geometry. Hero calendar now fits its right-hand column
+with five minmax tracks and no horizontal scroll. Below600px an inline five-day agenda replaces the
+unreadably compressed grid. Removed heavy outer borders from hero/task/capacity visuals; keep the
+approved palette and readable inset labels. Actual planner can still scroll seven full day columns.
+
+Footer calendar face uses local --paper-ivory=dark ink, with Moon Tint strokes/grid/wordmark. Explicit
+light footer headings fix invisible dark-on-dark h2. Footer links now form vertical flex lists rather
+than touching inline links, with44px targets; responsive minmax columns, readable labels, restored
+location copy and stacked mobile bottom row.
+
+Planner scale112px/hour (28px per15m) instead of44; timestamps/durations unchanged. Task content
+budget comes from actual pixel height, at most one reason chip, full title/reason in accessible
+selection details. Meetings/tasks share overlap lanes; meetings dashed, tasks solid. Short meetings
+omit metadata that physically cannot fit. Standard chip treatment and high-contrast focus rings.
+Arrows inspect neighbours; Ctrl/Command+arrows moves, Shift adds hour steps, Alt up/down resizes.
+Drag preview shows target time and preliminary protected-time flags; server remains authoritative.
+
+Only one input tab is shown at any viewport. Assistant and example prompts collapse by default.
+Unplaced tasks expose working-hours review; eligible tasks allow15-minute chunks and a real rebuild.
+No silent availability extension, deadline shift, scope reduction or calendar write.

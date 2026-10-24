@@ -326,3 +326,9 @@ written outside Git to `/tmp/calendra-browser-check` (`BROWSER_ARTIFACTS` overri
 It checks five viewport widths at DPR2 for actual form geometry, overflow, input validation,
 submission feedback/reset, newsletter and menu behavior. Remote fonts are blocked to exercise
 fallbacks; acceptance/failure delivery responses are mocked. This does not verify a live webhook.
+
+Browser checks also verify the fluid hero has no horizontal overflow, the inverse footer logo and
+headings are visible, and footer links stack with touch-safe spacing. At1280px the test opens the
+planner, builds a real week through the local API, checks tile content bounds, keyboard inspection,
+drop-preview feedback and the collapsed assistant. Planner keyboard: arrows inspect; Ctrl/Command
++ arrows move, Shift adds hour steps, Alt + up/down resizes. Every move is validated by the engine.

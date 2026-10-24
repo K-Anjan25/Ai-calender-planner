@@ -132,7 +132,7 @@ describe('the workspace renders a real week', () => {
       { wrapper: Wrapper },
     )
 
-    assert.equal(screen.queryByText(/Unrolling the paper/i), null, 'the grid never left its skeleton')
+    assert.equal(screen.queryByText(/Preparing your week/i), null, 'the grid never left its skeleton')
     for (const block of proposal.blocks.filter((item) => item.kind === 'task')) {
       tileFor(block)
     }
@@ -143,7 +143,9 @@ describe('the workspace renders a real week', () => {
 
   it('protects lunch and the blackouts on the sheet', async () => {
     const proposal = await buildDemoWeek()
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     assert.ok(screen.getAllByText(/Lunch/i).length > 0, 'the protected lunch band is missing')
     for (const blackout of proposal.preferences.blackouts.filter((item) => item.weekday)) {
       const days = proposal.preferences.workingHours[blackout.weekday as 'mon']
@@ -155,7 +157,9 @@ describe('the workspace renders a real week', () => {
 
   it('keeps the week inside a scroller instead of squeezing it, and puts the gutter on top', async () => {
     const proposal = await buildDemoWeek()
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
 
     const stripElement = document.querySelector('[data-day-strip]')
     assert.ok(stripElement, 'the day strip is missing')
@@ -179,7 +183,9 @@ describe('the workspace renders a real week', () => {
     const proposal = await buildDemoWeek()
     const block = proposal.blocks.find((item) => item.kind === 'task' && item.reasons.length > 0)
     assert.ok(block)
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     const label = tileFor(block).getAttribute('aria-label') ?? ''
     assert.match(label, /mon|tue|wed|thu|fri|sat|sun/i)
     assert.match(label, /\d{1,2}:\d{2}/, 'the tile does not state a time')
@@ -190,10 +196,14 @@ describe('the workspace renders a real week', () => {
 describe('drag and drop', () => {
   it('turns a drop into a pin, and the server replans around it', async () => {
     const proposal = await buildDemoWeek()
-    const target = proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90)
+    const target = proposal.blocks.find(
+      (block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90,
+    )
     assert.ok(target, 'no Monday block to drag')
 
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     strip()
     const tile = tileFor(target)
     const from = blockRect(0, target.startMin, target.minutes, windowOf(target.date))
@@ -224,16 +234,23 @@ describe('drag and drop', () => {
       const moved = refreshed.blocks.find((block) => block.taskId === target.taskId && block.startMin === 13 * 60 + 30)
       assert.ok(moved, 'the server did not honour the pin')
       assert.equal(moved?.pinned, true)
-      assert.equal(refreshed.report.warnings.some((warning) => warning.code === 'pin-ignored'), false)
+      assert.equal(
+        refreshed.report.warnings.some((warning) => warning.code === 'pin-ignored'),
+        false,
+      )
     })
   })
 
   it('does not throw away a drag when the user then asks the agent something (N-9)', async () => {
     const proposal = await buildDemoWeek()
-    const target = proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90)
+    const target = proposal.blocks.find(
+      (block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90,
+    )
     assert.ok(target, 'no Monday block to drag')
 
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     strip()
     const tile = tileFor(target)
     const from = blockRect(0, target.startMin, target.minutes, windowOf(target.date))
@@ -256,20 +273,26 @@ describe('drag and drop', () => {
     assert.ok(pin, 'the refinement erased the pin the user made by dragging')
     assert.equal(pin.date, wednesday)
     assert.equal(pin.startMin, 13 * 60 + 30)
-    const block = usePlanner.getState().proposal?.blocks.find((item) => item.taskId === target.taskId && item.date === wednesday)
+    const block = usePlanner
+      .getState()
+      .proposal?.blocks.find((item) => item.taskId === target.taskId && item.date === wednesday)
     assert.equal(block?.startMin, 13 * 60 + 30, 'the block left the spot the user put it in')
   })
 
   it('refuses a drop onto a meeting, and says so instead of quietly moving it elsewhere', async () => {
     const proposal = await buildDemoWeek()
-    const target = proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90)
+    const target = proposal.blocks.find(
+      (block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes <= 90,
+    )
     assert.ok(target)
     const wednesday = addDaysISO(proposal.weekStart, 2)
     // Wednesday 15:00 is the “Hiring panel”. Dropping there is a request the engine cannot grant.
     const meeting = proposal.busy.find((event) => event.date === wednesday && event.startMin === 15 * 60)
     assert.ok(meeting, 'the demo week no longer has a Wednesday meeting to collide with')
 
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     strip()
     const tile = tileFor(target)
     const from = blockRect(0, target.startMin, target.minutes, windowOf(target.date))
@@ -284,7 +307,11 @@ describe('drag and drop', () => {
       assert.ok(refreshed)
       // The block is not sitting on the meeting…
       const onTopOfMeeting = refreshed.blocks.some(
-        (block) => block.taskId === target.taskId && block.date === wednesday && block.startMin < meeting.endMin && meeting.startMin < block.endMin,
+        (block) =>
+          block.taskId === target.taskId &&
+          block.date === wednesday &&
+          block.startMin < meeting.endMin &&
+          meeting.startMin < block.endMin,
       )
       assert.equal(onTopOfMeeting, false, 'the engine wrote a block over a meeting')
       // …and the refusal is reported rather than silently swallowed (D-014).
@@ -299,7 +326,9 @@ describe('drag and drop', () => {
     const proposal = await buildDemoWeek()
     const target = proposal.blocks.find((block) => block.kind === 'task')
     assert.ok(target)
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     strip()
     const tile = tileFor(target)
     const from = blockRect(0, target.startMin, target.minutes, windowOf(target.date))
@@ -316,22 +345,36 @@ describe('drag and drop', () => {
     const proposal = await buildDemoWeek()
     // A single-chunk Monday block, so there is exactly one grip with that name.
     const target =
-      proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.chunkCount === 1 && block.minutes >= 30) ??
-      proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes >= 30)
+      proposal.blocks.find(
+        (block) => block.kind === 'task' && block.weekday === 'mon' && block.chunkCount === 1 && block.minutes >= 30,
+      ) ?? proposal.blocks.find((block) => block.kind === 'task' && block.weekday === 'mon' && block.minutes >= 30)
     assert.ok(target)
 
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     strip()
     // The grip is a `role="separator"` inside the tile, not a button. A repeated task has one per
     // occurrence, and they are rendered in day order, so the Monday one comes first.
-    const handle = screen.getAllByRole('separator', { name: `Resize ${target.title}` })[0] as HTMLElement
+    const handle = screen.getAllByRole('separator', {
+      name: `Resize ${target.title}`,
+    })[0] as HTMLElement
 
     // A tile of `minutes` occupies `minutes / 60 * HOUR_HEIGHT` pixels; pull its base down 30 minutes.
     const top = blockRect(0, target.startMin, target.minutes, windowOf(target.date)).top
     const bottom = top + (target.minutes / 60) * HOUR_HEIGHT
-    applyRect(handle, { left: 56, top: bottom - 6, width: 140, height: 12, right: 196, bottom: bottom + 6, x: 56, y: bottom - 6 })
+    applyRect(handle, {
+      left: 56,
+      top: bottom - 6,
+      width: 140,
+      height: 12,
+      right: 196,
+      bottom: bottom + 6,
+      x: 56,
+      y: bottom - 6,
+    })
 
-    const to = { x: xForDay(0), y: bottom + (HOUR_HEIGHT / 2) }
+    const to = { x: xForDay(0), y: bottom + HOUR_HEIGHT / 2 }
     await act(async () => pointerDown(handle, { x: xForDay(0), y: bottom - 3 }))
     await act(async () => pointerMove(to))
     await act(async () => pointerUp(to))
@@ -349,7 +392,9 @@ describe('drag and drop', () => {
     const proposal = await buildDemoWeek()
     const target = proposal.blocks.find((block) => block.kind === 'task')
     assert.ok(target)
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     const tile = tileFor(target)
     await act(async () => {
       fireEvent.click(tile)
@@ -368,7 +413,9 @@ describe('keyboard parity', () => {
     const SHIFT = 15
     const taken = (block: PlacedBlock, start: number, end: number) =>
       proposal.busy.some((event) => event.date === block.date && event.startMin < end && start < event.endMin) ||
-      proposal.blocks.some((other) => other.id !== block.id && other.date === block.date && other.startMin < end && start < other.endMin)
+      proposal.blocks.some(
+        (other) => other.id !== block.id && other.date === block.date && other.startMin < end && start < other.endMin,
+      )
     return proposal.blocks.find((block) => {
       if (block.kind !== 'task') return false
       const hours = proposal.preferences.workingHours[block.weekday]
@@ -381,13 +428,15 @@ describe('keyboard parity', () => {
     const proposal = await buildDemoWeek()
     const target = movableBlock(proposal)
     assert.ok(target)
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     const tile = tileFor(target)
     tile.focus()
     assert.equal(document.activeElement, tile, 'the tile is not focusable')
 
     await act(async () => {
-      fireEvent.keyDown(tile, { key: 'ArrowDown' })
+      fireEvent.keyDown(tile, { key: 'ArrowDown', ctrlKey: true })
     })
 
     await waitFor(() => {
@@ -403,7 +452,9 @@ describe('keyboard parity', () => {
     const proposal = await buildDemoWeek()
     const target = proposal.blocks.find((block) => block.kind === 'task' && block.minutes >= 45)
     assert.ok(target, 'no block long enough to resize')
-    render(React.createElement(WeekGrid, gridProps(proposal)), { wrapper: Wrapper })
+    render(React.createElement(WeekGrid, gridProps(proposal)), {
+      wrapper: Wrapper,
+    })
     const tile = tileFor(target)
 
     await act(async () => {
@@ -430,7 +481,9 @@ describe('free-text intake', () => {
 
     const brief = screen.getByLabelText(/what your week holds/i)
     fireEvent.change(brief, {
-      target: { value: 'Finish the board deck by Thursday 5pm (4 hours). Gym three times this week for 45 minutes.' },
+      target: {
+        value: 'Finish the board deck by Thursday 5pm (4 hours). Gym three times this week for 45 minutes.',
+      },
     })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /build my week/i }))
@@ -479,7 +532,10 @@ describe('conversation', () => {
     render(React.createElement(AgentChat), { wrapper: Wrapper })
     const state = usePlanner.getState()
     assert.ok(state.trace.length > 0, 'no tool trace was recorded')
-    assert.ok(state.trace.some((step) => step.tool === 'build_schedule'), 'the engine step is missing from the trace')
+    assert.ok(
+      state.trace.some((step) => step.tool === 'build_schedule'),
+      'the engine step is missing from the trace',
+    )
   })
 })
 
@@ -589,7 +645,11 @@ describe('the planner page', () => {
     // Nothing is planned until the user asks: the page renders an empty week and a call to action.
     assert.equal(usePlanner.getState().proposal, null)
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /build my week/i })[0] as HTMLElement)
+      fireEvent.click(
+        screen.getAllByRole('button', {
+          name: /build my week/i,
+        })[0] as HTMLElement,
+      )
     })
     await waitFor(() => assert.ok(usePlanner.getState().proposal, 'the page never planned a week'))
     assert.ok(screen.getAllByText(/Plan report/i).length > 0)
@@ -630,4 +690,67 @@ describe('demo data', () => {
     assert.equal(demoBusy(WEEK_START).length, state.busy.length)
     assert.ok(demoTasks(WEEK_START).length <= state.tasks.length + 2)
   })
+})
+
+it('uses plain arrows to inspect neighbouring blocks without changing timestamps', async () => {
+  const proposal = await buildDemoWeek()
+  render(React.createElement(WeekGrid, gridProps(proposal)), {
+    wrapper: Wrapper,
+  })
+  const tiles = [...document.querySelectorAll<HTMLButtonElement>('[data-block-id]')]
+  assert.ok(tiles.length > 1)
+  const previous = usePlanner.getState().pins.length
+  await act(async () => {
+    tiles[0].focus()
+    fireEvent.keyDown(tiles[0], { key: 'ArrowDown' })
+  })
+  assert.equal(document.activeElement, tiles[1])
+  assert.equal(usePlanner.getState().pins.length, previous)
+  assert.equal(usePlanner.getState().selectedBlockId, tiles[1].dataset.blockId)
+})
+
+it('provides a working-hours action for each task that does not fit', async () => {
+  await buildDemoWeek()
+  await act(async () => {
+    usePlanner.getState().loadDemoSet('overloaded')
+    await usePlanner.getState().buildWeek()
+  })
+  const proposal = usePlanner.getState().proposal!
+  assert.ok(proposal.report.unscheduled.length > 0)
+  render(React.createElement(PlanReportPanel), { wrapper: Wrapper })
+  const actions = screen.getAllByRole('button', {
+    name: 'Review working hours',
+  })
+  assert.equal(actions.length, proposal.report.unscheduled.length)
+  await act(async () => {
+    fireEvent.click(actions[0])
+  })
+  assert.equal(usePlanner.getState().railTab, 'prefs')
+})
+
+it('applies the inline smaller-chunks fix and really rebuilds the plan', async () => {
+  await buildDemoWeek()
+  await act(async () => {
+    usePlanner.getState().loadDemoSet('overloaded')
+    await usePlanner.getState().buildWeek()
+  })
+  const state = usePlanner.getState()
+  const item = state.proposal!.report.unscheduled.find((item) =>
+    state.tasks.some(
+      (task) => task.id === item.taskId && task.estimateMinutes > 15 && (!task.splittable || task.minChunkMinutes > 15),
+    ),
+  )
+  assert.ok(item)
+  render(React.createElement(PlanReportPanel), { wrapper: Wrapper })
+  await act(async () => {
+    fireEvent.click(
+      screen.getAllByRole('button', {
+        name: 'Allow 15-minute chunks & re-plan',
+      })[0],
+    )
+  })
+  await waitFor(() => assert.equal(usePlanner.getState().status, 'ready'))
+  const task = usePlanner.getState().tasks.find((task) => task.id === item.taskId)!
+  assert.equal(task.splittable, true)
+  assert.equal(task.minChunkMinutes, 15)
 })

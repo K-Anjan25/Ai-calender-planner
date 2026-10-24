@@ -467,3 +467,28 @@ checking pricing child containment/overflow, equal desktop card top/height/butto
 uniform borders/padding, visible mockups and side-by-side placement, hero note static, FAQ clearance.
 Pricing screenshots hide fixed header/skip link only during element-sized capture to avoid repeated
 fixed UI artifacts; app styles unaffected. All checks against local production, not Vercel promotion.
+
+### Latest hero/footer/planner corrections
+
+User rejects horizontal hero scroll (supersedes old fixed112px columns). Week width100%/min0,
+five fluid tracks; <=600 compact agenda. No tabindex scroll trap. Hero/task/capacity outer borders
+removed. Hero remains right at desktop, stacked agenda mobile. footer CalendraMark was light-on-light
+inside icon and h2 dark-on-dark: local --paper-ivory dark plus explicit light headings fixes both.
+Footer logo now home link; footer lists flex-column prevent touching inline links. Minmax columns
+break1100/600; readable14px labels/body; mobile bottom stacked. Screenshot review verified corrected
+390px footer and1280px hero. Browser checks computed icon face/heading colors and list separation.
+
+Planner HOUR_HEIGHT44->112; harness scale matches. 15m tasks26px visible with2px gap instead of22px
+minimum overlapping11px time slots. Metadata budget uses style.height, reasons limited1, full aria
+reason/duration/chunks via described-by text and full selected title. Selected detail first in report.
+Busy/task shared layoutColumns with generic interval picks; meetings dashed and focusable, omit small
+metadata that won't fit. Plain arrows navigate/select without mutating, Ctrl/Command moves, Shift hour,
+Alt resize; non-task arrows cannot mutate protected blocks. Drag preview label/border marks working
+hours, meetings, lunch, blackouts, pins conservatively; server validates all drops.
+
+Tabs no longer reveal all editor panels on XL. Assistant is details-collapsed with examples collapsed
+and trace initially off. Unplaced cards Review working hours selects/focuses Rules; eligible tasks
+Allow15-minute chunks & re-plan sets splittable/minChunk15 then real engine rebuild (not guaranteed fit).
+No automatic extension/deferral/shrinking or external calendar write. Removed stale visible material
+copy from loading/sample-task title.177 tests (incl new navigation/remedy/rebuild tests), lint,
+typecheck/native smoke/build and Chromium7 landing widths/DPR2 + real planner1280 checks passed.

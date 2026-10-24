@@ -8,7 +8,7 @@
  *
  * Geometry is shimmed because jsdom has no layout engine: `getBoundingClientRect()` returns zeros
  * and `clientWidth` is 0. `layoutFor()` hands each element the same rect the browser would compute
- * from tailwind classes (`HOUR_HEIGHT=44`, an hour gutter, seven equal day columns), which is what
+ * from tailwind classes (`HOUR_HEIGHT=112`, an hour gutter, seven equal day columns), which is what
  * makes the drag maths testable rather than imaginary.
  */
 import assert from 'node:assert/strict'
@@ -16,7 +16,7 @@ import { JSDOM } from 'jsdom'
 
 /** Pixels per hour, mirroring `WeekGrid`'s export. Asserted against the real component in
  *  `ui.test.ts`, so a change to the grid's scale fails loudly instead of silently. */
-export const HOUR_HEIGHT = 44
+export const HOUR_HEIGHT = 112
 
 const DAY_GUTTER = 56
 const DAY_WIDTH = 140

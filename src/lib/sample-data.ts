@@ -163,7 +163,7 @@ export function demoTasks(weekStart: string): Task[] {
     },
     {
       id: 't_sideproject',
-      title: 'Side project: paper textures',
+      title: 'Side project: interface polish',
       estimateMinutes: 120,
       priority: 'P3',
       energy: 'light',

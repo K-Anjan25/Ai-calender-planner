@@ -423,3 +423,20 @@ clearance, no CTA overlay, click and Enter toggling, plus existing form/menu/pal
   320/390/768/900/1024/1280/1440px. Verifies same card height/top/CTA baselines on desktop, all child
   containment, no overflow, matching borders/padding, visible previews alongside text and FAQ clearance.
 - Verification is local production build; supplied Vercel snapshot was not promoted or verified.
+
+## Hero scroll / side visuals / footer / dense planner feedback
+
+- Hero stays right on desktop and fits without horizontal scrolling; compact mobile agenda.
+- Removed heavy blue outer visual borders; maintained inline illustrative product mockups.
+- Fixed inverse footer logo and dark-on-dark headings; stacked/separated links, newsletter readability,
+  responsive columns/location/bottom row. All existing form/link/a11y behavior retained.
+- Increased calendar hour scale to112px, adaptive pixel-based metadata, shared meeting/task overlap
+  lanes, uniform reason chips and full accessible details. No timestamps changed by layout.
+- Arrows inspect without mutation; Ctrl/Command+arrows moves, Alt resizes. Visible drag preview flags
+  protected time and is validated by server. Existing pointer/keyboard API round-trips still pass.
+- Editor tabs now show only one pane; assistant/example prompts collapsed. Unplaced cards have real
+  working-hours review and eligible smaller-chunk/re-plan actions, no fabricated scheduling fix.
+-177 tests, lint/typecheck/native smoke/build passed. Real Chromium at seven landing widths/DPR2
+  checks no hero scroll, footer logo fill/heading colors/separate44px links plus previous regression
+  cases. At1280px it builds a real planner week, checks tile content bounds/minimum heights, keyboard
+  focus, visible drop preview and collapsed assistant. Local build only, not Vercel promotion.

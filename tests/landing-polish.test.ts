@@ -11,14 +11,15 @@ it('groups the brand and tagline without adding visible desktop navigation', () 
   assert.match(source, /aria-controls="navigation-dialog"/)
 })
 
-it('preserves integer calendar columns with local scroll instead of scaling the preview', () => {
-  assert.match(css, /width:\s*602px/)
-  assert.match(css, /grid-template-columns:\s*repeat\(5,\s*112px\)/)
-  assert.equal((602 - 20 * 2 - 2) / 5, 112)
-  assert.match(css, /overflow-x:\s*auto/)
+it('fits the hero preview without horizontal scroll and offers a compact mobile agenda', () => {
+  assert.match(
+    css,
+    /grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/,
+  )
+  assert.match(css, /\.calendarScroll\s*\{[^}]*overflow:\s*visible/s)
+  assert.ok(!css.includes('min-width: 602px'))
+  assert.match(source, /className=\{s\.weekAgenda\}/)
   assert.ok(!source.includes('data-depth'))
-  assert.ok(!source.includes('translateY(${Math.min'))
-  assert.match(source, /Math\.round\(top \* 3\.2\)/)
 })
 
 it('uses the shared primary CTA for the floating action and a consistent control radius', () => {

@@ -54,7 +54,7 @@ export default function PlannerWorkspace() {
   const blocks = proposal?.blocks ?? []
   const filtersActive = filters.energy.length > 0 || filters.categories.length > 0 || filters.pinnedOnly
 
-  const show = (tab: typeof railTab) => clsx('min-w-0', railTab === tab ? 'block' : 'hidden xl:block')
+  const show = (tab: typeof railTab) => clsx('min-w-0', railTab === tab ? 'block' : 'hidden')
 
   const statusLine = useMemo(() => {
     if (status === 'planning') return 'Building your week…'
@@ -121,9 +121,22 @@ export default function PlannerWorkspace() {
               value={railTab}
               onChange={setRailTab}
               tabs={[
-                { id: 'tasks', label: 'Tasks', icon: <ListChecks size={12} aria-hidden="true" />, badge: tasks.length },
-                { id: 'prefs', label: 'Rules', icon: <Settings2 size={12} aria-hidden="true" /> },
-                { id: 'calendar', label: 'Calendar', icon: <CalendarRange size={12} aria-hidden="true" /> },
+                {
+                  id: 'tasks',
+                  label: 'Tasks',
+                  icon: <ListChecks size={12} aria-hidden="true" />,
+                  badge: tasks.length,
+                },
+                {
+                  id: 'prefs',
+                  label: 'Rules',
+                  icon: <Settings2 size={12} aria-hidden="true" />,
+                },
+                {
+                  id: 'calendar',
+                  label: 'Calendar',
+                  icon: <CalendarRange size={12} aria-hidden="true" />,
+                },
               ]}
             />
           </PaperSheet>
@@ -133,7 +146,7 @@ export default function PlannerWorkspace() {
           <div className={show('tasks')}>
             <TaskInbox />
           </div>
-          <div className={show('prefs')}>
+          <div className={show('prefs')} id="planner-rules" tabIndex={-1}>
             <PreferencePanel />
           </div>
           <div className={show('calendar')}>
@@ -178,7 +191,17 @@ export default function PlannerWorkspace() {
                 pinned
               </PaperButton>
               {filtersActive ? (
-                <PaperButton size="sm" variant="flat" onClick={() => setFilters({ energy: [], categories: [], pinnedOnly: false })}>
+                <PaperButton
+                  size="sm"
+                  variant="flat"
+                  onClick={() =>
+                    setFilters({
+                      energy: [],
+                      categories: [],
+                      pinnedOnly: false,
+                    })
+                  }
+                >
                   clear
                 </PaperButton>
               ) : null}
@@ -196,13 +219,21 @@ export default function PlannerWorkspace() {
           {demoSet === 'overloaded' ? (
             <PaperSheet tone="sand" className="p-3">
               <p className="text-[11.5px] leading-relaxed text-ink-soft">
-                You are looking at the <strong>overbooked</strong> demo set — it deliberately asks for more than a week can hold,
-                so you can see the report tell the truth and offer ranked trade-offs.
+                You are looking at the <strong>overbooked</strong> demo set — it deliberately asks for more than a week
+                can hold, so you can see the report tell the truth and offer ranked trade-offs.
               </p>
             </PaperSheet>
           ) : null}
 
-          <AgentChat />
+          <details className="paper-sheet p-3">
+            <summary className="cursor-pointer py-2 font-semibold">Adjust the plan with words</summary>
+            <p className="my-2 text-sm text-ink">
+              Use Tasks to edit estimates, Rules to change availability, or open this assistant for language-based
+              changes. Select a block for its full details; arrows inspect blocks, Ctrl/Command + arrows move them, and
+              Alt + up/down resizes.
+            </p>
+            <AgentChat />
+          </details>
         </div>
 
         {/* ── right rail ────────────────────────────────────────────── */}
@@ -213,10 +244,9 @@ export default function PlannerWorkspace() {
       </div>
 
       <footer className="mx-auto mt-8 max-w-[1440px] px-4 text-[11px] leading-relaxed text-ink-faint sm:px-6">
-        The deterministic engine owns every timestamp. The agent chooses strategy, reads language, and explains itself — it never
-        invents a time. Nothing reaches your calendar until you approve it.
+        The deterministic engine owns every timestamp. The agent chooses strategy, reads language, and explains itself —
+        it never invents a time. Nothing reaches your calendar until you approve it.
       </footer>
     </main>
   )
 }
-

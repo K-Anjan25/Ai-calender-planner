@@ -63,6 +63,35 @@ try {
       route.abort(),
     )
     await page.goto(base, { waitUntil: 'networkidle' })
+    const hero = page.locator('main section').first()
+    const preview = page.getByRole('region', {
+      name: 'Illustrative weekly calendar',
+      exact: true,
+    })
+    assert.ok(
+      await preview.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `${width}: hero preview scrolls horizontally`,
+    )
+    const footerLogo = page.locator('footer svg[aria-label="Calendra"]')
+    assert.ok(await footerLogo.isVisible(), `${width}: footer logo missing`)
+    assert.equal(
+      await footerLogo
+        .locator('path')
+        .first()
+        .evaluate((el) => getComputedStyle(el).fill),
+      'rgb(16, 44, 80)',
+    )
+    assert.equal(
+      await page
+        .locator('footer h2')
+        .evaluate((el) => getComputedStyle(el).color),
+      'rgb(243, 246, 255)',
+    )
+    await hero.screenshot({
+      path: join(artifacts, `hero-${width}.png`),
+      style:
+        'header, a[href="#main-content"] { visibility: hidden !important; }',
+    })
     const attention = await page
       .locator('a[data-attention]')
       .first()
@@ -252,13 +281,11 @@ try {
           `${width}: pricing ${key} misaligned`,
         )
     }
-    await page
-      .locator('#plans')
-      .screenshot({
-        path: join(artifacts, `pricing-${width}.png`),
-        style:
-          'header, a[href="#main-content"] { visibility: hidden !important; }',
-      })
+    await page.locator('#plans').screenshot({
+      path: join(artifacts, `pricing-${width}.png`),
+      style:
+        'header, a[href="#main-content"] { visibility: hidden !important; }',
+    })
     for (const label of [
       'Illustrative task intake',
       'Illustrative capacity report',
@@ -323,6 +350,20 @@ try {
         railPlacement.nextTop >= railPlacement.bottom,
       'Action bar must reserve its own space between main content and footer',
     )
+    for (const [first, second] of [
+      ['The planner', 'Pricing'],
+      ['Privacy', 'Terms'],
+    ]) {
+      const a = await page
+        .locator('footer')
+        .getByRole('link', { name: first, exact: true })
+        .boundingBox()
+      const b = await page
+        .locator('footer')
+        .getByRole('link', { name: second, exact: true })
+        .boundingBox()
+      assert.ok(b.y >= a.y + a.height, `${width}: footer links run together`)
+    }
     const footerLinks = page.locator('footer a')
     for (const link of await footerLinks.all()) {
       const box = await link.boundingBox()
@@ -462,6 +503,11 @@ try {
       .getByRole('status')
       .filter({ hasText: 'subscribed' })
       .waitFor()
+    await page.locator('footer').screenshot({
+      path: join(artifacts, `footer-${width}.png`),
+      style:
+        'header, a[href="#main-content"] { visibility: hidden !important; }',
+    })
     await page.getByRole('button', { name: 'MENU', exact: true }).click()
     await page
       .getByRole('dialog')
@@ -470,6 +516,53 @@ try {
     assert.ok(!(await page.getByRole('dialog').isVisible()))
     await form.scrollIntoViewIfNeeded()
     await page.screenshot({ path: join(artifacts, `contact-${width}.png`) })
+    if (width === 1280) {
+      await page.goto(`${base}/planner`, { waitUntil: 'networkidle' })
+      await page
+        .getByRole('button', { name: 'Build my week', exact: true })
+        .first()
+        .click()
+      await page.locator('[data-block-id]').first().waitFor({ timeout: 30000 })
+      const geometry = await page
+        .locator('[data-block-id]')
+        .evaluateAll((nodes) =>
+          nodes.map((el) => {
+            const box = el.getBoundingClientRect(),
+              content = el.children[2].getBoundingClientRect()
+            return {
+              height: box.height,
+              contentFits:
+                content.bottom <= box.bottom && content.top >= box.top,
+            }
+          }),
+        )
+      assert.ok(
+        geometry.every((item) => item.height >= 26 && item.contentFits),
+        'Planner tile content clips vertically',
+      )
+      const first = page.locator('[data-block-id]').first()
+      await first.focus()
+      await first.press('ArrowDown')
+      assert.ok(
+        await page.locator('[data-block-id]:focus').count(),
+        'Arrow navigation lost keyboard focus',
+      )
+      const next = page.locator('[data-block-id]:focus')
+      await next.scrollIntoViewIfNeeded()
+      const box = await next.boundingBox()
+      await page.mouse.move(box.x + box.width / 2, box.y + 10)
+      await page.mouse.down()
+      await page.mouse.move(box.x + box.width / 2, box.y + 38, { steps: 4 })
+      await page.locator('[data-drop-preview]').first().waitFor()
+      await page.mouse.up()
+      assert.ok(
+        !(await page
+          .getByPlaceholder('Tell me what changed…')
+          .isVisible()
+          .catch(() => false)),
+        'Assistant must be collapsed by default',
+      )
+    }
     assert.deepEqual(errors, [], `${width}: runtime errors`)
     process.stdout.write(
       `PASS ${width}px / DPR 2: visible fields, no overflow, validation, delivery states, newsletter, menu and unobstructed FAQs/pricing\n`,

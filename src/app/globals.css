@@ -300,3 +300,10 @@ button[data-accent='terracotta'] { font-size: 19px; font-weight: 700; min-height
 
 /* Approved fifth swatch: dark blue text for AAA contrast on the brand surfaces. */
 html { scroll-padding-top: 110px; }
+
+/* Uniform dense-calendar affordances; full detail is available on selection. */
+[data-block-id] { border: 1px solid var(--color-ink); background: var(--color-paper-cream); overflow: hidden; }
+[data-block-id]:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; z-index: 25; }
+.planner-status-chip { display: inline-block; border: 1px solid var(--color-paper-edge); border-radius: 4px; background: var(--color-paper-cream); padding: 1px 4px; font-size: 10px; font-weight: 600; color: var(--color-ink); }
+
+.planner-meeting:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; z-index: 25; }

@@ -60,10 +60,10 @@ export function ScheduleBlock({
    * the sheet, it silently lost its last line. Content is therefore chosen by available height:
    * a title needs ~26px, a time row ~14px, a chip row ~18px.
    */
-  const minutes = block.minutes
-  const titleClamp = minutes < 75 ? 'line-clamp-1' : 'line-clamp-2'
-  const showTime = !compact && minutes >= 45
-  const chipBudget = compact || minutes < 90 ? 0 : minutes < 150 ? 1 : 2
+  const pixels = typeof style.height === 'number' ? style.height : 0
+  const titleClamp = pixels >= 72 ? 'line-clamp-2' : 'line-clamp-1'
+  const showTime = pixels >= 50
+  const chipBudget = pixels >= 130 ? 1 : 0
   const reasons = block.reasons.filter((reason) => reason.code !== 'pinned').slice(0, chipBudget)
   const hiddenReasons = block.reasons.filter((reason) => reason.code !== 'pinned').length - reasons.length
 
@@ -71,8 +71,12 @@ export function ScheduleBlock({
     <button
       type="button"
       data-block-id={block.id}
+      title={`${block.title} · ${fmtClock(block.startMin)}–${fmtClock(block.endMin)} · ${block.reasonText}`}
+      aria-expanded={selected}
+      aria-describedby={`block-description-${block.id}`}
       style={style}
       onClick={onSelect}
+      onFocus={onSelect}
       onPointerDown={onPointerDown}
       onKeyDown={onKeyDown}
       aria-label={`${block.title}, ${block.weekday} ${fmtClock(block.startMin)} to ${fmtClock(block.endMin)}, ${
@@ -84,10 +88,12 @@ export function ScheduleBlock({
         // it the browser claims the touch for scrolling and `pointermove` never fires on the tile.
         'touch-none select-none',
         'focus-visible:outline-2 focus-visible:outline-teal-deep',
-        dragging ? 'paper-lifted cursor-grabbing' : 'hover:-translate-y-px hover:shadow-[var(--shadow-lift)] cursor-grab',
+        dragging
+          ? 'paper-lifted cursor-grabbing'
+          : 'hover:-translate-y-px hover:shadow-[var(--shadow-lift)] cursor-grab',
         selected && 'ring-2 ring-teal-deep/70 ring-offset-1 ring-offset-paper-ivory',
         block.conflict === 'deadline-risk' && 'border-dashed border-rose',
-        isSpecial && 'opacity-80',
+        isSpecial && 'border-dashed',
       )}
     >
       {/* dyed paper edge — colour is semantic (energy), always */}
@@ -96,7 +102,13 @@ export function ScheduleBlock({
 
       <span className={clsx('block pl-2.5 pr-1.5 pt-1', compact ? 'pb-0.5' : 'pb-1.5')}>
         <span className="flex items-start justify-between gap-1">
-          <span className={clsx(titleClamp, 'min-w-0 font-semibold text-ink', compact ? 'text-[10.5px] leading-[1.25]' : 'text-[12px] leading-tight')}>
+          <span
+            className={clsx(
+              titleClamp,
+              'min-w-0 font-semibold text-ink',
+              compact ? 'text-[10.5px] leading-[1.25]' : 'text-[12px] leading-tight',
+            )}
+          >
             {block.title}
           </span>
           <span className="mt-[1px] flex shrink-0 items-center gap-1">
@@ -120,10 +132,7 @@ export function ScheduleBlock({
         {reasons.length > 0 && !isSpecial ? (
           <span className="mt-1 flex flex-wrap gap-1 overflow-hidden">
             {reasons.map((reason) => (
-              <span
-                key={reason.code}
-                className="truncate rounded-[var(--radius-cut-xs)] bg-paper-sand/90 px-1 py-[1px] text-[9.5px] font-bold text-ink-soft"
-              >
+              <span key={reason.code} className="truncate rounded-[var(--radius-cut-xs)] planner-status-chip">
                 {reason.label}
               </span>
             ))}
@@ -141,28 +150,46 @@ export function ScheduleBlock({
           aria-label={`Resize ${block.title}`}
           onPointerDown={onResizePointerDown}
           className="absolute inset-x-1 bottom-0 h-1.5 cursor-ns-resize rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-          style={{ backgroundImage: 'repeating-linear-gradient(90deg, rgba(55,112,191,.35) 0 3px, transparent 3px 6px)' }}
+          style={{
+            backgroundImage: 'repeating-linear-gradient(90deg, rgba(55,112,191,.35) 0 3px, transparent 3px 6px)',
+          }}
         />
       ) : null}
+      <span id={`block-description-${block.id}`} className="sr-only">
+        {`${fmtDuration(block.minutes)}${block.chunkCount > 1 ? `, session ${block.chunkIndex + 1} of ${block.chunkCount}` : ''}. ${block.reasonText}. Arrows inspect; Control or Command with arrows moves; Alt with up or down resizes.`}{' '}
+      </span>
     </button>
   )
 }
 
 /** Busy events are the printed layer everything else must sit around: flat, matte, immovable. */
-export function BusyBlock({ block, style }: { block: { title: string; startMin: number; endMin: number }; style: React.CSSProperties }) {
+export function BusyBlock({
+  block,
+  style,
+}: {
+  block: { title: string; startMin: number; endMin: number }
+  style: React.CSSProperties
+}) {
   return (
     <div
       style={style}
-      className="absolute overflow-hidden rounded-[var(--radius-cut-xs)] border border-frost-deep/25 bg-frost-light/60 px-1.5 py-1"
+      className="planner-meeting absolute overflow-hidden rounded-[var(--radius-cut-xs)] border border-dashed border-ink bg-paper-cream px-1.5 py-1"
+      tabIndex={0}
+      role="note"
+      aria-label={`Meeting: ${block.title}, ${fmtClock(block.startMin)}–${fmtClock(block.endMin)}`}
       title={`${block.title} · ${fmtClock(block.startMin)}–${fmtClock(block.endMin)}`}
     >
-      <div className="flex min-w-0 items-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] text-frost-deep/90">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-frost-deep/60" aria-hidden="true" />
-        <span className="min-w-0 truncate">{block.title}</span>
-      </div>
-      <p className="tnum text-[10px] font-semibold text-frost-deep/70">
-        {fmtClock(block.startMin)}–{fmtClock(block.endMin)}
-      </p>
+      {Number(style.height) >= 24 && (
+        <div className="flex min-w-0 items-center gap-1 text-[10px] font-bold uppercase tracking-[0.06em] text-ink">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-frost-deep/60" aria-hidden="true" />
+          <span className="min-w-0 truncate">{block.title}</span>
+        </div>
+      )}
+      {Number(style.height) >= 44 && (
+        <p className="tnum text-[10px] font-semibold text-ink">
+          {fmtClock(block.startMin)}–{fmtClock(block.endMin)}
+        </p>
+      )}
     </div>
   )
 }

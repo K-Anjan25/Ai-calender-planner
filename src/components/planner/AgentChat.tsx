@@ -26,7 +26,7 @@ const SUGGESTIONS = [
 export function AgentChat() {
   const { chat, chatBusy, sendMessage, capability, mode, setMode, status } = usePlanner()
   const [message, setMessage] = useState('')
-  const [showTrace, setShowTrace] = useState(true)
+  const [showTrace, setShowTrace] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -79,28 +79,33 @@ export function AgentChat() {
         {chat.length === 0 ? (
           <div className="space-y-2 text-[12px] leading-relaxed text-ink-soft">
             <p>
-              Tell me what changed, in your own words — a meeting moved, you are out on Friday, a deadline slipped, something new
-              landed. I read it, update the plan, and show you exactly what moved.
+              Tell me what changed, in your own words — a meeting moved, you are out on Friday, a deadline slipped,
+              something new landed. I read it, update the plan, and show you exactly what moved.
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => send(suggestion)}
-                  className="paper-tile px-2 py-1 text-[11px] font-semibold text-ink-soft transition-transform duration-150 hover:-translate-y-px"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
+            <details>
+              <summary className="cursor-pointer py-2">Example changes</summary>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTIONS.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => send(suggestion)}
+                    className="paper-tile px-2 py-1 text-[11px] font-semibold text-ink-soft transition-transform duration-150 hover:-translate-y-px"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </details>
           </div>
         ) : null}
 
         {chat.map((entry) => (
           <div key={entry.id} className={clsx('animate-paper-slide', entry.role === 'user' ? 'flex justify-end' : '')}>
             {entry.role === 'user' ? (
-              <p className="paper-tile max-w-[85%] bg-paper-sand px-2.5 py-1.5 text-[12px] font-semibold text-ink">{entry.text}</p>
+              <p className="paper-tile max-w-[85%] bg-paper-sand px-2.5 py-1.5 text-[12px] font-semibold text-ink">
+                {entry.text}
+              </p>
             ) : (
               <div className="max-w-[92%] space-y-1.5">
                 <p className="text-[12.5px] leading-relaxed text-ink">{entry.text}</p>
@@ -114,9 +119,7 @@ export function AgentChat() {
                     ))}
                   </ul>
                 ) : null}
-                {showTrace && entry.trace && entry.trace.length > 0 ? (
-                  <TraceList trace={entry.trace} />
-                ) : null}
+                {showTrace && entry.trace && entry.trace.length > 0 ? <TraceList trace={entry.trace} /> : null}
               </div>
             )}
           </div>
@@ -143,7 +146,13 @@ export function AgentChat() {
           aria-label="Message the planner agent"
           disabled={chatBusy}
         />
-        <PaperButton type="submit" tone="teal" size="sm" disabled={chatBusy || message.trim().length === 0} aria-label="Send">
+        <PaperButton
+          type="submit"
+          tone="teal"
+          size="sm"
+          disabled={chatBusy || message.trim().length === 0}
+          aria-label="Send"
+        >
           <Send size={13} aria-hidden="true" />
         </PaperButton>
       </form>

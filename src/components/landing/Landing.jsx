@@ -160,6 +160,23 @@ function Week({ compact = false }) {
           </div>
         ))}
       </div>
+      <div className={s.weekAgenda} aria-label="Week overview">
+        {['MON', 'TUE', 'WED', 'THU', 'FRI'].map((day, index) => (
+          <div key={day}>
+            <strong>{day}</strong>
+            <div>
+              {blocks
+                .filter((block) => block[2] === index)
+                .map(([title, time]) => (
+                  <p key={title}>
+                    <b>{title}</b>
+                    <span>{time}</span>
+                  </p>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
       <div className={s.weekBottom}>
         <span>
           <i /> A realistic plan. Not a perfect fiction.
@@ -307,7 +324,6 @@ function Home() {
               className={s.calendarScroll}
               role="region"
               aria-label="Illustrative weekly calendar"
-              tabIndex={0}
             >
               <Week />
             </div>
@@ -695,7 +711,7 @@ function Form({ newsletter = false }) {
             type="email"
             name="email"
             autoComplete="email"
-            placeholder={newsletter ? 'you@somewhere.good' : 'you@example.com'}
+            placeholder="you@example.com"
             required
             maxLength={254}
             aria-invalid={!!errors.email}
@@ -823,7 +839,9 @@ function Footer() {
     <footer className={s.footer}>
       <div className={s.footerTop}>
         <div>
-          <Mark />
+          <Link href="#top" aria-label="Calendra home">
+            <Mark />
+          </Link>
           <h2>
             A better week.
             <br />A note now and then.

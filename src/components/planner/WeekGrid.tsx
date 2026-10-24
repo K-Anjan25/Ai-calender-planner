@@ -3,14 +3,21 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { Sun, Coffee } from 'lucide-react'
-import { SNAP_MINUTES, WEEKDAY_SHORT, type BusyEvent, type PlacedBlock, type Preferences, type Weekday } from '@/lib/types'
-import { fmtClock, fmtDuration, weekendHours } from '@/lib/scheduler/slots'
+import {
+  SNAP_MINUTES,
+  WEEKDAY_SHORT,
+  type BusyEvent,
+  type PlacedBlock,
+  type Preferences,
+  type Weekday,
+} from '@/lib/types'
+import { fmtClock, fmtDuration, weekendHours, workingHoursFor } from '@/lib/scheduler/slots'
 import { usePlanner } from '@/lib/store/planner-store'
 import { ScheduleBlock, BusyBlock } from '@/components/planner/ScheduleBlock'
 import { PaperWell } from '@/components/paper/PaperSheet'
 
 /**
- * The week as a diorama: seven day sheets standing in a cut recess.
+ * The weekly calendar: timestamp-aligned columns with accessible task details.
  *
  * Interaction model (D-009): dragging never mutates a plan locally. It produces a *pin request*, the
  * server re-runs the engine, and the resulting plan comes back. The optimistic move is a courtesy,
@@ -18,11 +25,16 @@ import { PaperWell } from '@/components/paper/PaperSheet'
  */
 
 /** Pixels per hour. The drag maths, the ghost, and the test harness all measure against this. */
-export const HOUR_HEIGHT = 44
+export const HOUR_HEIGHT = 112
 const SNAP = SNAP_MINUTES
 
 /** Where a dragged tile currently wants to land, before the server agrees. */
-type Ghost = { blockId: string; date: string; startMin: number; minutes: number }
+type Ghost = {
+  blockId: string
+  date: string
+  startMin: number
+  minutes: number
+}
 
 /** Shared empties: `memo` compares by identity, so a fresh `[]` per render would defeat it. */
 const NO_BLOCKS: PlacedBlock[] = []
@@ -114,7 +126,11 @@ export function WeekGrid({
    * A gesture cannot scroll the page, and `clientX/clientY` are viewport-relative exactly like
    * `getBoundingClientRect()`, so the measurement stays valid for the whole drag.
    */
-  const geometryRef = useRef<{ left: number; top: number; dayWidth: number } | null>(null)
+  const geometryRef = useRef<{
+    left: number
+    top: number
+    dayWidth: number
+  } | null>(null)
 
   const visible = useMemo(() => {
     const energy = filters.energy
@@ -190,7 +206,12 @@ export function WeekGrid({
 
     const day = days.find((d) => d.date === current.date)
     if (!day) return
-    if (current.date === drag.originDate && current.startMin === drag.originStart && current.minutes === drag.originMinutes) return
+    if (
+      current.date === drag.originDate &&
+      current.startMin === drag.originStart &&
+      current.minutes === drag.originMinutes
+    )
+      return
     void pinBlock(drag.blockId, current.date, current.startMin, current.minutes)
   }, [days, onPointerMove, pinBlock, setGhost])
 
@@ -206,7 +227,11 @@ export function WeekGrid({
       // One measurement for the whole gesture — see `geometryRef`. The tile's own rect is read here
       // too, because the grab offset is relative to it and this runs once per drag, not per move.
       const stripRect = strip.getBoundingClientRect()
-      geometryRef.current = { left: stripRect.left, top: stripRect.top, dayWidth: strip.clientWidth / 7 }
+      geometryRef.current = {
+        left: stripRect.left,
+        top: stripRect.top,
+        dayWidth: strip.clientWidth / 7,
+      }
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
       // An offset *within the block*, in minutes. Adding `day.windowStart` here makes the drop land
       // at the start of the day instead of under the cursor, because the move handler subtracts this
@@ -225,7 +250,12 @@ export function WeekGrid({
         moved: false,
       }
       setDraggingId(block.id)
-      setGhost({ blockId: block.id, date: block.date, startMin: block.startMin, minutes: block.minutes })
+      setGhost({
+        blockId: block.id,
+        date: block.date,
+        startMin: block.startMin,
+        minutes: block.minutes,
+      })
       window.addEventListener('pointermove', onPointerMove)
       window.addEventListener('pointerup', endDrag)
     },
@@ -240,6 +270,20 @@ export function WeekGrid({
     (event: React.KeyboardEvent<HTMLButtonElement>, block: PlacedBlock) => {
       const day = days.find((d) => d.date === block.date)
       if (!day) return
+      if (event.key.startsWith('Arrow') && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault()
+        const nodes = [...(columnsRef.current?.querySelectorAll<HTMLButtonElement>('[data-block-id]') ?? [])]
+        const index = nodes.indexOf(event.currentTarget)
+        const direction = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1
+        const next = nodes[Math.max(0, Math.min(nodes.length - 1, index + direction))]
+        next?.focus()
+        if (next?.dataset.blockId) selectBlock(next.dataset.blockId)
+        return
+      }
+      if (block.kind !== 'task' && event.key.startsWith('Arrow')) {
+        event.preventDefault()
+        return
+      }
       const step = event.shiftKey ? 60 : SNAP
       let nextDate = block.date
       let nextStart = block.startMin
@@ -287,7 +331,6 @@ export function WeekGrid({
   // Every hook above this line; the skeleton is a pure early return.
   if (!resolvedStart || days.length === 0) return <WeekGridSkeleton label={weekLabel} />
 
-
   return (
     <div className="relative">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
@@ -313,14 +356,18 @@ export function WeekGrid({
             <span className="h-2.5 w-2.5 rounded-[3px] bg-terracotta" aria-hidden="true" /> physical
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-[3px] bg-frost-light ring-1 ring-frost-deep/30" aria-hidden="true" /> meeting
+            <span className="h-2.5 w-2.5 rounded-[3px] bg-frost-light ring-1 ring-frost-deep/30" aria-hidden="true" />{' '}
+            meeting
           </span>
         </div>
       </div>
 
       <PaperWell className="p-2 sm:p-3">
         {status === 'planning' ? (
-          <div className="pointer-events-none absolute inset-0 z-30 rounded-[var(--radius-well)] bg-paper-cream/45" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute inset-0 z-30 rounded-[var(--radius-well)] bg-paper-cream/45"
+            aria-hidden="true"
+          />
         ) : null}
 
         {/*
@@ -356,7 +403,9 @@ export function WeekGrid({
 
             <div
               className="relative flex"
-              style={{ height: days[0] ? ((days[0].windowEnd - days[0].windowStart) / 60) * HOUR_HEIGHT : 600 }}
+              style={{
+                height: days[0] ? ((days[0].windowEnd - days[0].windowStart) / 60) * HOUR_HEIGHT : 600,
+              }}
             >
               {/* hour gutter: printed onto the well, outside the drop-target strip, stuck to the left */}
               <div className="sticky left-0 z-20 w-12 shrink-0 bg-paper-sand sm:w-14" aria-hidden="true">
@@ -374,7 +423,9 @@ export function WeekGrid({
                         'tnum absolute right-2 text-[10px] font-semibold text-ink-faint',
                         atStart ? 'translate-y-0' : atEnd ? '-translate-y-full' : '-translate-y-1/2',
                       )}
-                      style={{ top: ((mark.minute - (days[0]?.windowStart ?? 0)) / 60) * HOUR_HEIGHT }}
+                      style={{
+                        top: ((mark.minute - (days[0]?.windowStart ?? 0)) / 60) * HOUR_HEIGHT,
+                      }}
                     >
                       {fmtClock(mark.minute)}
                     </span>
@@ -408,8 +459,9 @@ export function WeekGrid({
       </PaperWell>
 
       <p className="mt-2 px-1 text-[11px] text-ink-faint">
-        Drag a block to move it, or use the arrows once it is focused. Anything you place yourself is pinned and survives a
-        rebuild. On a narrow window the week scrolls sideways rather than squeezing seven days into a sliver.
+        Arrows inspect blocks; Ctrl/Command + arrows move by 15 minutes (Shift for an hour); Alt + up/down resizes. Drag
+        to move. Anything you place yourself is pinned and survives a rebuild. On a narrow window the week scrolls
+        sideways rather than squeezing seven days into a sliver.
       </p>
     </div>
   )
@@ -431,14 +483,18 @@ function WeekGridSkeleton({ label }: { label: string }) {
               <div className="mx-auto mb-2 h-3 w-10 rounded-[var(--radius-cut-xs)] bg-paper-kraft/70" />
               <div className="space-y-1.5">
                 {[0, 1, 2].map((row) => (
-                  <div key={row} className="h-4 rounded-[var(--radius-cut-xs)] bg-paper-kraft/45" style={{ width: `${72 - row * 16}%` }} />
+                  <div
+                    key={row}
+                    className="h-4 rounded-[var(--radius-cut-xs)] bg-paper-kraft/45"
+                    style={{ width: `${72 - row * 16}%` }}
+                  />
                 ))}
               </div>
             </div>
           ))}
         </div>
       </PaperWell>
-      <p className="mt-2 px-1 text-[11px] text-ink-faint">Unrolling the paper…</p>
+      <p className="mt-2 px-1 text-[11px] text-ink-faint">Preparing your week…</p>
     </div>
   )
 }
@@ -448,7 +504,10 @@ function DayLoadPip({ planned, capacity }: { planned: number; capacity: number }
   const ratio = Math.min(1.15, planned / capacity)
   const tone = ratio > 1 ? 'bg-rose' : ratio > 0.85 ? 'bg-terracotta' : 'bg-olive'
   return (
-    <span className="flex min-w-0 items-center gap-1" title={`${fmtDuration(planned)} planned of ${fmtDuration(capacity)} usable`}>
+    <span
+      className="flex min-w-0 items-center gap-1"
+      title={`${fmtDuration(planned)} planned of ${fmtDuration(capacity)} usable`}
+    >
       <span className="h-1 w-6 shrink-0 overflow-hidden rounded-full bg-paper-kraft" aria-hidden="true">
         <span className={clsx('block h-full rounded-full', tone)} style={{ width: `${Math.min(100, ratio * 100)}%` }} />
       </span>
@@ -457,7 +516,13 @@ function DayLoadPip({ planned, capacity }: { planned: number; capacity: number }
   )
 }
 
-type DayMeta = { weekday: Weekday; date: string; windowStart: number; windowEnd: number; capacity: number }
+type DayMeta = {
+  weekday: Weekday
+  date: string
+  windowStart: number
+  windowEnd: number
+  capacity: number
+}
 
 function weekDays(
   workingHours: Preferences['workingHours'],
@@ -539,7 +604,12 @@ const DayColumn = memo(function DayColumn({
   day: DayMeta
   blocks: PlacedBlock[]
   meetings: BusyEvent[]
-  ghost: { blockId: string; date: string; startMin: number; minutes: number } | null
+  ghost: {
+    blockId: string
+    date: string
+    startMin: number
+    minutes: number
+  } | null
   draggingId: string | null
   selectedBlockId: string | null
   minuteToY(minute: number, day: DayMeta): number
@@ -549,7 +619,36 @@ const DayColumn = memo(function DayColumn({
 }) {
   const off = day.capacity === 0
   const ghostHere = ghost && ghost.date === day.date ? ghost : null
-  const overlapping = useMemo(() => layoutColumns(blocks), [blocks])
+  const preferences = usePlanner((state) => state.preferences)
+  const overlapping = useMemo(
+    () =>
+      layoutColumns([
+        ...blocks,
+        ...meetings.map((event) => ({
+          ...event,
+          minutes: event.endMin - event.startMin,
+        })),
+      ]),
+    [blocks, meetings],
+  )
+  const overlapsGhost = (start: number, end: number) =>
+    Boolean(ghostHere && start < ghostHere.startMin + ghostHere.minutes && ghostHere.startMin < end)
+  const lunch = preferences.lunch
+  const working = workingHoursFor(preferences, day.weekday)
+  const ghostBlocked =
+    ghostHere &&
+    (day.capacity === 0 ||
+      !working ||
+      ghostHere.startMin < working.start ||
+      ghostHere.startMin + ghostHere.minutes > working.end ||
+      meetings.some((event) => overlapsGhost(event.startMin, event.endMin)) ||
+      blocks.some(
+        (block) => block.pinned && block.id !== ghostHere.blockId && overlapsGhost(block.startMin, block.endMin),
+      ) ||
+      (lunch && overlapsGhost(lunch.start, Math.max(lunch.end, lunch.start + lunch.minutes))) ||
+      preferences.blackouts.some(
+        (window) => (!window.weekday || window.weekday === day.weekday) && overlapsGhost(window.start, window.end),
+      ))
 
   return (
     <div
@@ -573,6 +672,28 @@ const DayColumn = memo(function DayColumn({
         />
       ))}
 
+      {ghostHere && (
+        <div
+          data-drop-preview
+          data-blocked={Boolean(ghostBlocked)}
+          role="status"
+          className={clsx(
+            'pointer-events-none absolute inset-x-0 z-20 overflow-hidden border-2 px-1 text-[11px] font-bold text-ink',
+            ghostBlocked ? 'border-dashed border-ink bg-terracotta' : 'border-ink bg-frost/70',
+          )}
+          style={{
+            top: minuteToY(ghostHere.startMin, day),
+            height: Math.max(24, (ghostHere.minutes / 60) * HOUR_HEIGHT - 2),
+          }}
+          title={
+            ghostBlocked
+              ? 'Unavailable: overlaps protected time or a pinned event. The server validates every drop.'
+              : 'Drop preview. The server validates the resulting plan.'
+          }
+        >
+          {ghostBlocked ? 'Unavailable' : 'Drop preview'} · {fmtClock(ghostHere.startMin)}
+        </div>
+      )}
       {/* protected windows: lunch and blackouts are the paper the tiles cannot cover */}
       <ProtectedBands day={day} />
 
@@ -582,9 +703,9 @@ const DayColumn = memo(function DayColumn({
           block={event}
           style={{
             top: minuteToY(event.startMin, day),
-            height: Math.max(14, ((event.endMin - event.startMin) / 60) * HOUR_HEIGHT),
-            left: 2,
-            right: 2,
+            height: Math.max(2, ((event.endMin - event.startMin) / 60) * HOUR_HEIGHT - 2),
+            left: `calc(${((overlapping.get(event.id)?.index ?? 0) * 100) / (overlapping.get(event.id)?.columns ?? 1)}% + 2px)`,
+            width: `calc(${100 / (overlapping.get(event.id)?.columns ?? 1)}% - 4px)`,
           }}
         />
       ))}
@@ -599,19 +720,24 @@ const DayColumn = memo(function DayColumn({
         return (
           <ScheduleBlock
             key={block.id}
-              block={{ ...block, startMin: start, endMin: start + minutes, minutes }}
-              compact={compact}
-              selected={selectedBlockId === block.id}
-              dragging={draggingId === block.id}
-              style={{
-                top: minuteToY(start, day),
-                height: Math.max(22, (minutes / 60) * HOUR_HEIGHT - 2),
-                left: `calc(${leftPct}% + 2px)`,
-                width: `calc(${slotWidth}% - 4px)`,
-              }}
-              onSelect={() => onSelect(block.id)}
-              onPointerDown={(event) => onBeginDrag(event, block, 'move')}
-              onResizePointerDown={(event) => onBeginDrag(event, block, 'resize')}
+            block={{
+              ...block,
+              startMin: start,
+              endMin: start + minutes,
+              minutes,
+            }}
+            compact={compact}
+            selected={selectedBlockId === block.id}
+            dragging={draggingId === block.id}
+            style={{
+              top: minuteToY(start, day),
+              height: Math.max(22, (minutes / 60) * HOUR_HEIGHT - 2),
+              left: `calc(${leftPct}% + 2px)`,
+              width: `calc(${slotWidth}% - 4px)`,
+            }}
+            onSelect={() => onSelect(block.id)}
+            onPointerDown={(event) => onBeginDrag(event, block, 'move')}
+            onResizePointerDown={(event) => onBeginDrag(event, block, 'resize')}
             onKeyDown={(event) => onKeyDown(event, block)}
           />
         )
@@ -624,7 +750,13 @@ const DayColumn = memo(function DayColumn({
 function ProtectedBands({ day }: { day: DayMeta }) {
   const preferences = usePlanner((state) => state.preferences)
   const lunch = preferences.lunch
-  const bands: { label: string; start: number; end: number; icon: React.ReactNode; tone: string }[] = []
+  const bands: {
+    label: string
+    start: number
+    end: number
+    icon: React.ReactNode
+    tone: string
+  }[] = []
   if (lunch && day.capacity > 0) {
     bands.push({
       label: 'Lunch',
@@ -636,7 +768,13 @@ function ProtectedBands({ day }: { day: DayMeta }) {
   }
   for (const blackout of preferences.blackouts) {
     if (blackout.weekday && blackout.weekday !== day.weekday) continue
-    bands.push({ label: blackout.label, start: blackout.start, end: blackout.end, icon: <Sun size={9} aria-hidden="true" />, tone: 'bg-paper-kraft/45' })
+    bands.push({
+      label: blackout.label,
+      start: blackout.start,
+      end: blackout.end,
+      icon: <Sun size={9} aria-hidden="true" />,
+      tone: 'bg-paper-kraft/45',
+    })
   }
   return (
     <>
@@ -652,7 +790,10 @@ function ProtectedBands({ day }: { day: DayMeta }) {
             'pointer-events-none absolute inset-x-0 overflow-hidden border-y border-dashed border-[color:rgba(55,112,191,0.18)]',
             band.tone,
           )}
-          style={{ top: ((band.start - day.windowStart) / 60) * HOUR_HEIGHT, height: Math.max(8, ((band.end - band.start) / 60) * HOUR_HEIGHT) }}
+          style={{
+            top: ((band.start - day.windowStart) / 60) * HOUR_HEIGHT,
+            height: Math.max(8, ((band.end - band.start) / 60) * HOUR_HEIGHT),
+          }}
         >
           <span className="mt-0.5 ml-1 flex min-w-0 items-center gap-1 text-[9px] font-bold uppercase tracking-[0.06em] whitespace-nowrap text-ink-faint">
             <span className="shrink-0">{band.icon}</span>
@@ -678,12 +819,17 @@ function ProtectedBands({ day }: { day: DayMeta }) {
  * order and give each tile the first column whose last tile has already *ended*. Every tile then has
  * its own column, and a cluster's width is the number of columns it needed.
  */
-export function layoutColumns(blocks: PlacedBlock[]): Map<string, { index: number; columns: number }> {
+export function layoutColumns(
+  blocks: Pick<PlacedBlock, 'id' | 'startMin' | 'endMin' | 'minutes'>[],
+): Map<string, { index: number; columns: number }> {
   const result = new Map<string, { index: number; columns: number }>()
   const sorted = [...blocks].sort((a, b) => a.startMin - b.startMin || b.minutes - a.minutes)
 
   /** A run of tiles connected by overlap: nothing outside it can share columns with anything inside. */
-  const cluster: { block: PlacedBlock; index: number }[] = []
+  const cluster: {
+    block: Pick<PlacedBlock, 'id' | 'startMin' | 'endMin' | 'minutes'>
+    index: number
+  }[] = []
   let clusterEnd = Number.NEGATIVE_INFINITY
 
   const flush = () => {
@@ -713,4 +859,3 @@ export function layoutColumns(blocks: PlacedBlock[]): Map<string, { index: numbe
 
   return result
 }
-

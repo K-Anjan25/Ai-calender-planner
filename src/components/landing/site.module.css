@@ -1827,21 +1827,20 @@
   min-width: 44px;
   flex-shrink: 0;
 }
-/* A 602px border-box minus two 20px insets and two 1px borders gives five exact
-   112px columns. Local scrolling preserves that geometry on smaller screens. */
+/* The preview shares available width across five fluid weekday columns. */
 .calendarScroll {
   max-width: 100%;
   overscroll-behavior-x: contain;
   scrollbar-gutter: stable;
 }
 .calendarScroll .week {
-  width: 602px;
-  min-width: 602px;
+  width: 100%;
+  min-width: 0;
   padding: 20px 20px 0;
 }
 .weekDays,
 .weekBody {
-  grid-template-columns: repeat(5, 112px);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .weekBody {
   margin-top: 0;
@@ -2378,5 +2377,173 @@
 @media (max-width: 760px) {
   .split {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The marketing preview fits its column; only the real planner may scroll in time. */
+.heroVisual,
+.calendarScroll {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+.calendarScroll {
+  overflow: visible;
+  scrollbar-gutter: auto;
+}
+.heroVisual .week {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border: 0;
+  padding: 16px 12px 0;
+}
+.heroVisual .weekDays,
+.heroVisual .weekBody {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.heroVisual .block {
+  padding: 6px 3px;
+  border-width: 0 0 0 3px;
+}
+.heroVisual .block span {
+  font-size: 10px;
+  line-height: 1.35;
+}
+.heroVisual .block small {
+  font-size: 8px;
+  margin-top: 4px;
+}
+.heroVisual .weekBottom {
+  flex-wrap: wrap;
+  font-size: 10px;
+}
+.weekAgenda {
+  display: none;
+}
+.intake,
+.capacity {
+  border: 0;
+  padding: clamp(20px, 3vw, 36px);
+}
+.intake > * {
+  padding: 8px 10px;
+}
+@media (max-width: 600px) {
+  .heroVisual .weekDays,
+  .heroVisual .weekBody {
+    display: none;
+  }
+  .weekAgenda {
+    display: grid;
+    gap: 12px;
+  }
+  .weekAgenda > div {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px;
+    border-bottom: 1px solid var(--color-frost);
+    padding: 8px 0;
+  }
+  .weekAgenda strong {
+    font-size: 11px;
+  }
+  .weekAgenda p {
+    margin: 0 0 6px;
+    font-size: 13px;
+  }
+  .weekAgenda b,
+  .weekAgenda span {
+    display: block;
+  }
+  .weekAgenda span {
+    font-size: 11px;
+  }
+}
+/* Explicit inverse logo: a light mark on a dark calendar face, never light-on-light. */
+.footer {
+  --paper-ivory: var(--color-ink);
+}
+.footer .brand {
+  color: var(--color-paper-cream);
+}
+.footer .brand svg {
+  display: block;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+}
+.footer h2,
+.footer h3 {
+  color: var(--color-paper-cream);
+}
+.footerTop {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.7fr);
+  gap: clamp(24px, 4vw, 56px);
+}
+.footerTop > *,
+.footerLinks > * {
+  min-width: 0;
+}
+.footer p,
+.footerLinks a,
+.footerBottom {
+  font-size: 14px;
+}
+.footer h2 {
+  font-size: clamp(28px, 3vw, 36px);
+}
+.footerBottom {
+  padding-bottom: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.footer .tinyMap {
+  background: transparent;
+  color: var(--color-paper-cream);
+  border: 1px solid var(--color-frost);
+}
+@media (max-width: 1100px) {
+  .footerTop {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .footerLocation {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px) {
+  .footerTop {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .footerLocation {
+    display: block;
+  }
+  .footer .tinyMap {
+    display: none;
+  }
+}
+.footerLinks > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.footerLinks h3 {
+  margin-bottom: 16px;
+}
+.footerLinks a {
+  margin: 0;
+}
+.footer .newsletterForm label {
+  font-size: 14px;
+}
+.footerLocation p {
+  display: block;
+}
+@media (max-width: 600px) {
+  .footerBottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }

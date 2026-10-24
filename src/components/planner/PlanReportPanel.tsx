@@ -19,13 +19,26 @@ import { PaperSkeleton } from '@/components/planner/AgentChat'
  */
 
 const VERDICT_STYLE: Record<PlanReport['fits'], { tone: string; icon: React.ReactNode; label: string }> = {
-  fits: { tone: 'bg-olive-light text-olive-deep', icon: <Check size={13} aria-hidden="true" />, label: 'Fits' },
-  tight: { tone: 'bg-terracotta-light text-terracotta-deep', icon: <Gauge size={13} aria-hidden="true" />, label: 'Tight' },
-  overbooked: { tone: 'bg-rose-light text-rose-deep', icon: <ShieldAlert size={13} aria-hidden="true" />, label: 'Overbooked' },
+  fits: {
+    tone: 'bg-olive-light text-olive-deep',
+    icon: <Check size={13} aria-hidden="true" />,
+    label: 'Fits',
+  },
+  tight: {
+    tone: 'bg-terracotta-light text-terracotta-deep',
+    icon: <Gauge size={13} aria-hidden="true" />,
+    label: 'Tight',
+  },
+  overbooked: {
+    tone: 'bg-rose-light text-rose-deep',
+    icon: <ShieldAlert size={13} aria-hidden="true" />,
+    label: 'Overbooked',
+  },
 }
 
 export function PlanReportPanel() {
-  const { proposal, status, error, selectBlock, applyTradeoff, notes } = usePlanner()
+  const { proposal, status, error, selectBlock, applyTradeoff, notes, tasks, updateTask, buildWeek, setRailTab } =
+    usePlanner()
 
   if (!proposal) {
     return (
@@ -43,8 +56,8 @@ export function PlanReportPanel() {
           </div>
         ) : (
           <p className="text-[12px] leading-relaxed text-ink-soft">
-            Nothing planned yet. Press <strong>Build my week</strong> and this panel will tell you exactly what fits — and what
-            does not.
+            Nothing planned yet. Press <strong>Build my week</strong> and this panel will tell you exactly what fits —
+            and what does not.
           </p>
         )}
       </PaperSheet>
@@ -57,10 +70,16 @@ export function PlanReportPanel() {
 
   return (
     <div className="flex flex-col gap-3">
+      <SelectedBlockCard onSelect={selectBlock} />
       <PaperSheet className="p-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-[15px]">Plan report</h3>
-          <span className={clsx('paper-fibre inline-flex items-center gap-1 rounded-[var(--radius-cut-xs)] px-2 py-1 text-[11px] font-bold', verdict.tone)}>
+          <span
+            className={clsx(
+              'paper-fibre inline-flex items-center gap-1 rounded-[var(--radius-cut-xs)] px-2 py-1 text-[11px] font-bold',
+              verdict.tone,
+            )}
+          >
             {verdict.icon}
             {verdict.label}
           </span>
@@ -79,9 +98,16 @@ export function PlanReportPanel() {
             <span>Utilisation of usable time</span>
             <span className="tnum">{Math.round(report.utilisation * 100)}%</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-paper-kraft" role="img" aria-label={`${Math.round(report.utilisation * 100)} percent of usable time is booked`}>
+          <div
+            className="h-2 overflow-hidden rounded-full bg-paper-kraft"
+            role="img"
+            aria-label={`${Math.round(report.utilisation * 100)} percent of usable time is booked`}
+          >
             <div
-              className={clsx('h-full rounded-full', report.utilisation > 1 ? 'bg-rose' : report.utilisation > 0.9 ? 'bg-terracotta' : 'bg-teal')}
+              className={clsx(
+                'h-full rounded-full',
+                report.utilisation > 1 ? 'bg-rose' : report.utilisation > 0.9 ? 'bg-terracotta' : 'bg-teal',
+              )}
               style={{ width: `${Math.min(100, report.utilisation * 100)}%` }}
             />
           </div>
@@ -144,9 +170,47 @@ export function PlanReportPanel() {
               <li key={item.taskId} className="paper-well p-2.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="text-[12.5px] font-semibold text-ink">{item.title}</p>
-                  <span className="tnum shrink-0 text-[11px] font-bold text-rose-deep">{fmtDuration(item.minutes)}</span>
+                  <span className="tnum shrink-0 text-[11px] font-bold text-rose-deep">
+                    {fmtDuration(item.minutes)}
+                  </span>
                 </div>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">{item.why}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {tasks.some(
+                    (task) =>
+                      task.id === item.taskId &&
+                      task.estimateMinutes > 15 &&
+                      (!task.splittable || task.minChunkMinutes > 15),
+                  ) && (
+                    <PaperButton
+                      size="sm"
+                      disabled={status === 'planning'}
+                      onClick={() => {
+                        updateTask(item.taskId, {
+                          splittable: true,
+                          minChunkMinutes: 15,
+                        })
+                        void buildWeek()
+                      }}
+                    >
+                      Allow 15-minute chunks &amp; re-plan
+                    </PaperButton>
+                  )}
+                  <PaperButton
+                    size="sm"
+                    disabled={status === 'planning'}
+                    onClick={() => {
+                      setRailTab('prefs')
+                      setTimeout(() => {
+                        const panel = document.getElementById('planner-rules')
+                        panel?.scrollIntoView({ block: 'start' })
+                        panel?.focus()
+                      }, 0)
+                    }}
+                  >
+                    Review working hours
+                  </PaperButton>
+                </div>
               </li>
             ))}
           </ul>
@@ -175,9 +239,7 @@ export function PlanReportPanel() {
       ) : null}
 
       {/* trade-offs */}
-      {report.tradeoffs.length > 0 ? (
-        <TradeoffPanel options={report.tradeoffs} onApply={applyTradeoff} />
-      ) : null}
+      {report.tradeoffs.length > 0 ? <TradeoffPanel options={report.tradeoffs} onApply={applyTradeoff} /> : null}
 
       {/* structural warnings */}
       {report.warnings.length > 0 ? (
@@ -185,11 +247,18 @@ export function PlanReportPanel() {
           <h3 className="mb-2 text-[15px]">What the plan is doing to you</h3>
           <ul className="space-y-1.5">
             {report.warnings.map((warning) => (
-              <li key={`${warning.code}_${warning.weekday ?? 'all'}_${warning.message.slice(0, 12)}`} className="flex items-start gap-2">
+              <li
+                key={`${warning.code}_${warning.weekday ?? 'all'}_${warning.message.slice(0, 12)}`}
+                className="flex items-start gap-2"
+              >
                 <span
                   className={clsx(
                     'mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full',
-                    warning.severity === 'critical' ? 'bg-rose' : warning.severity === 'warn' ? 'bg-terracotta' : 'bg-ink-ghost',
+                    warning.severity === 'critical'
+                      ? 'bg-rose'
+                      : warning.severity === 'warn'
+                        ? 'bg-terracotta'
+                        : 'bg-ink-ghost',
                   )}
                   aria-hidden="true"
                 />
@@ -199,8 +268,6 @@ export function PlanReportPanel() {
           </ul>
         </PaperSheet>
       ) : null}
-
-      <SelectedBlockCard onSelect={selectBlock} />
 
       {notes.length > 0 ? (
         <PaperSheet tone="sand" className="p-3.5">
@@ -230,7 +297,13 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function TradeoffPanel({ options, onApply }: { options: TradeoffOption[]; onApply(kind: string, taskId: string): void }) {
+function TradeoffPanel({
+  options,
+  onApply,
+}: {
+  options: TradeoffOption[]
+  onApply(kind: string, taskId: string): void
+}) {
   return (
     <PaperSheet className="p-4">
       <h3 className="mb-1.5 flex items-center gap-1.5 text-[15px]">
@@ -238,14 +311,17 @@ function TradeoffPanel({ options, onApply }: { options: TradeoffOption[]; onAppl
         Ways to make it fit
       </h3>
       <p className="mb-2.5 text-[11.5px] leading-relaxed text-ink-soft">
-        Ranked by how little they cost you. Apply one and the engine rebuilds the week around it — nothing happens silently.
+        Ranked by how little they cost you. Apply one and the engine rebuilds the week around it — nothing happens
+        silently.
       </p>
       <ul className="space-y-2">
         {options.map((option) => (
           <li key={option.id} className="paper-well p-2.5">
             <div className="flex items-start justify-between gap-2">
               <p className="text-[12.5px] font-semibold text-ink">{option.label}</p>
-              <span className="tnum shrink-0 text-[11px] font-bold text-olive-deep">+{fmtDuration(option.minutesRecovered)}</span>
+              <span className="tnum shrink-0 text-[11px] font-bold text-olive-deep">
+                +{fmtDuration(option.minutesRecovered)}
+              </span>
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{option.consequence}</p>
             <div className="mt-2">
@@ -270,7 +346,7 @@ function SelectedBlockCard({ onSelect }: { onSelect(id: string | null): void }) 
     <PaperSheet className="p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="truncate text-[15px]">{block.title}</h3>
+          <h3 className="break-words text-[15px]">{block.title}</h3>
           <p className="tnum text-[11.5px] font-semibold text-ink-soft">
             {block.weekday} {String(Math.floor(block.startMin / 60)).padStart(2, '0')}:
             {String(block.startMin % 60).padStart(2, '0')} – {String(Math.floor(block.endMin / 60)).padStart(2, '0')}:
@@ -278,7 +354,12 @@ function SelectedBlockCard({ onSelect }: { onSelect(id: string | null): void }) 
             {block.chunkCount > 1 ? ` · session ${block.chunkIndex + 1} of ${block.chunkCount}` : ''}
           </p>
         </div>
-        <button type="button" aria-label="Close block details" className="text-ink-faint hover:text-ink" onClick={() => onSelect(null)}>
+        <button
+          type="button"
+          aria-label="Close block details"
+          className="min-h-11 min-w-11 grid place-items-center text-ink-faint hover:text-ink"
+          onClick={() => onSelect(null)}
+        >
           <X size={14} aria-hidden="true" />
         </button>
       </div>
@@ -311,7 +392,9 @@ function SelectedBlockCard({ onSelect }: { onSelect(id: string | null): void }) 
             Unpin and re-plan
           </PaperButton>
         ) : (
-          <span className="text-[11px] text-ink-faint">Drag the block, or focus it and use the arrow keys, to pin it somewhere yourself.</span>
+          <span className="text-[11px] text-ink-faint">
+            Drag the block, or focus it and use the arrow keys, to pin it somewhere yourself.
+          </span>
         )}
       </div>
     </PaperSheet>
