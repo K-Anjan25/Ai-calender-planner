@@ -37,5 +37,13 @@ it('gives contact and newsletter inputs explicit visible geometry and contrast',
   assert.match(css, /font-size:\s*16px/)
   assert.match(css, /\.inputRow input\s*\{[^}]*width:\s*100%/s)
   assert.match(source, /aria-busy=\{busy\}/)
-  assert.match(source, /!formInView/)
+  assert.match(source, /!interactiveInView/)
+})
+
+it('protects FAQs and pricing from floating controls and gives question text its own wrap track', () => {
+  assert.match(source, /querySelectorAll\('form, #questions, #plans'\)/)
+  assert.match(source, /className=\{s\.faqQuestion\}/)
+  assert.match(css, /grid-template-columns:\s*minmax\(0,\s*1fr\) 20px/)
+  assert.match(css, /\.faqQuestion\s*\{[^}]*overflow-wrap:\s*anywhere/s)
+  assert.match(css, /padding-block:\s*clamp\(56px,\s*7vw,\s*88px\)/)
 })

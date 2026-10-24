@@ -377,3 +377,11 @@ Final verification: 169 tests, lint/typecheck, native interaction check and prod
 Real Chromium checks passed at 320/390/768/1024/1440px (DPR2), including computed Sunny Herb CTA fill,
 Blue Harbor text/large bold geometry, form visibility, no page overflow and mocked delivery states.
 Production HTTP landing/signin/signup/planner/icon v9 endpoints returned200. No PR created.
+
+## FAQ overlap/truncation feedback
+
+Fixed floating-action overlap by extending form protection to FAQ/pricing sections. Long question
+text wraps separately from the fixed18px plus/minus; no clipping or icon shrink. Consistent56–88px
+responsive padding for pricing/FAQs. Verified170 tests, lint/typecheck, native interactions and
+production build. Real Chromium DPR2 checks all FAQ rows at320/390/768/1024/1440px for label/icon
+clearance, no CTA overlay, click and Enter toggling, plus existing form/menu/palette checks.

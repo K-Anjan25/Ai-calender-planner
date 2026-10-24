@@ -235,7 +235,7 @@ function Counter({ value, label, suffix = '' }) {
 function FAQs() {
   const [open, setOpen] = useState(0)
   return (
-    <section className={s.section} id="questions">
+    <section className={`${s.section} ${s.faqSection}`} id="questions">
       <Reveal>
         <div className={s.sectionHeading}>
           <span className={s.eyebrow}>GOOD QUESTIONS</span>
@@ -254,8 +254,12 @@ function FAQs() {
                   aria-controls={`answer-${i}`}
                   onClick={() => setOpen(open === i ? null : i)}
                 >
-                  {q}
-                  {open === i ? <Minus size={18} /> : <Plus size={18} />}
+                  <span className={s.faqQuestion}>{q}</span>
+                  {open === i ? (
+                    <Minus size={18} aria-hidden="true" />
+                  ) : (
+                    <Plus size={18} aria-hidden="true" />
+                  )}
                 </button>
               </h3>
               <div id={`answer-${i}`} hidden={open !== i}>
@@ -864,7 +868,7 @@ function Footer() {
   )
 }
 export default function Landing() {
-  const [formInView, setFormInView] = useState(false)
+  const [interactiveInView, setInteractiveInView] = useState(true)
   const [menu, setMenu] = useState(false),
     [scrolled, setScrolled] = useState(false),
     [showTop, setShowTop] = useState(false)
@@ -920,21 +924,23 @@ export default function Landing() {
       document.body.style.overflow = ''
     }
   }, [menu])
-  // Floating actions must never cover a form's fields, submit control or live status.
+  // Suppress floating actions around interactive sections instead of layering over their content.
   useEffect(() => {
     if (!('IntersectionObserver' in window)) return
-    const visibleForms = new Set()
+    const visibleSections = new Set()
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) visibleForms.add(entry.target)
-          else visibleForms.delete(entry.target)
+          if (entry.isIntersecting) visibleSections.add(entry.target)
+          else visibleSections.delete(entry.target)
         }
-        setFormInView(visibleForms.size > 0)
+        setInteractiveInView(visibleSections.size > 0)
       },
       { rootMargin: '0px 0px 64px 0px' },
     )
-    document.querySelectorAll('form').forEach((form) => observer.observe(form))
+    document
+      .querySelectorAll('form, #questions, #plans')
+      .forEach((section) => observer.observe(section))
     return () => observer.disconnect()
   }, [])
   function close() {
@@ -1004,12 +1010,12 @@ export default function Landing() {
         <Home />
       </main>
       <Footer />
-      {scrolled && !menu && !formInView && (
+      {scrolled && !menu && !interactiveInView && (
         <LinkButton className={s.stickyCTA} data-sticky-cta>
           Build my week
         </LinkButton>
       )}
-      {showTop && !menu && !formInView && (
+      {showTop && !menu && !interactiveInView && (
         <button
           className={s.backTop}
           aria-label="Back to top"

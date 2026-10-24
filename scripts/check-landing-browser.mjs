@@ -89,6 +89,46 @@ try {
       attention.size >= 19 && attention.weight >= 700,
       'Blue on lime requires large bold type',
     )
+    // Scroll the final question near the old floating-CTA collision zone.
+    const faq = page.locator('#questions')
+    const questions = faq.getByRole('button')
+    for (const question of await questions.all()) {
+      await question.scrollIntoViewIfNeeded()
+      await page.waitForFunction(
+        () => !document.querySelector('[data-sticky-cta]'),
+      )
+      const geometry = await question.evaluate((el) => {
+        const label = el.querySelector('span'),
+          icon = el.querySelector('svg')
+        const a = label.getBoundingClientRect(),
+          b = icon.getBoundingClientRect()
+        return {
+          right: a.right,
+          iconLeft: b.left,
+          iconWidth: b.width,
+          textFits: label.scrollWidth <= label.clientWidth,
+          height: a.height,
+        }
+      })
+      assert.ok(
+        geometry.textFits && geometry.right + 10 <= geometry.iconLeft,
+        `${width}: FAQ text collides with icon`,
+      )
+      assert.equal(geometry.iconWidth, 18, `${width}: FAQ icon shrinks`)
+      const expanded = await question.getAttribute('aria-expanded')
+      await question.click()
+      assert.notEqual(await question.getAttribute('aria-expanded'), expanded)
+      // Keyboard users must be able to reverse the toggle as well.
+      await question.press('Enter')
+      assert.equal(await question.getAttribute('aria-expanded'), expanded)
+    }
+    await page
+      .locator('#questions')
+      .screenshot({ path: join(artifacts, `faq-${width}.png`) })
+    await page.locator('#plans').scrollIntoViewIfNeeded()
+    await page.waitForFunction(
+      () => !document.querySelector('[data-sticky-cta]'),
+    )
     const form = page.getByRole('form', { name: 'Contact Calendra' })
     await form.scrollIntoViewIfNeeded()
     await page.waitForFunction(
@@ -202,7 +242,7 @@ try {
     await page.screenshot({ path: join(artifacts, `contact-${width}.png`) })
     assert.deepEqual(errors, [], `${width}: runtime errors`)
     process.stdout.write(
-      `PASS ${width}px / DPR 2: visible fields, no overflow, validation, delivery states, newsletter and menu\n`,
+      `PASS ${width}px / DPR 2: visible fields, no overflow, validation, delivery states, newsletter, menu and unobstructed FAQs/pricing\n`,
     )
     await browser.close()
   }

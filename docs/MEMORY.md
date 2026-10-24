@@ -405,3 +405,13 @@ Exact bases now F3F6FF Moon Tint canvas, 3770BF Blue Harbor type/structure/ordin
 Blue on Moon 4.59:1; blue on Sunny 3.91:1 so attention labels must be >=19px bold. Ice Blue
 small labels get Moon Tint inset surfaces (blue-on-ice only2.67:1). No fifth/darker color added.
 Contact/newsletter fixes retained. Icon cache v9. Existing browser test covers five widths/DPR2.
+
+### FAQ floating overlap and long-question wrapping
+
+Latest fix extends viewport suppression from forms to 'form, #questions, #plans'. State renamed
+interactiveInView, defaults true as safe no-observer fallback. Both floating controls hidden in
+protected sections, with64px approach margin. FAQ question span + minmax(0,1fr)/20px grid, fixed18px
+icon; wraps normal/overflow-wrap:anywhere. Pricing/FAQs clamp56/7vw/88px vertical padding.
+170 tests + lint/typecheck/native smoke/build passed. Browser suite now tests every FAQ for geometry,
+click/Enter toggles and absent sticky CTA, and pricing suppression at five widths/DPR2. Screenshot
+review confirms Google Calendar question wraps to two lines on390px without icon collision.

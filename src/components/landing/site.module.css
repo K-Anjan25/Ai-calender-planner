@@ -2108,3 +2108,38 @@
   border: 2px solid var(--color-frost);
   padding: 2px 4px;
 }
+
+/* Interactive sections need breathing room and must not share space with a fixed CTA. */
+.pricing,
+.faqSection {
+  padding-block: clamp(56px, 7vw, 88px);
+  scroll-margin-top: 100px;
+}
+.faq,
+.faqItem,
+.faqItem h3 {
+  min-width: 0;
+  max-width: 100%;
+}
+.faqItem h3 {
+  margin: 0;
+}
+.faqItem button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  column-gap: clamp(12px, 3vw, 24px);
+  align-items: center;
+  min-height: 56px;
+  white-space: normal;
+}
+.faqQuestion {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-overflow: clip;
+}
+.faqItem button > svg {
+  width: 18px;
+  height: 18px;
+  justify-self: end;
+}

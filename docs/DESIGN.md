@@ -392,3 +392,11 @@ Measured Blue Harbor contrast: Moon Tint 4.59:1, Sunny Herb 3.91:1, Ice Blue 2.6
 Therefore Sunny Herb attention text is 19px/700 (large text threshold), not small body text;
 Ice Blue panels use Moon Tint inset text surfaces. No extra dark color introduced.
 Form borders, responsive constraints, error handling and floating-action avoidance are preserved.
+
+## 2026-10-24 — interactive-section clearance and FAQ wrapping
+
+Floating CTA/back-to-top are suppressed while FAQs, pricing or forms intersect the viewport (64px
+advance margin), rather than adding blur/z-index over readable text. Default suppression is safe if
+IntersectionObserver is unavailable. FAQ buttons now use minmax(0,1fr)/20px grid tracks: an explicit
+wrapping question span and a fixed-size decorative icon. Pricing/FAQ padding scales56–88px and
+anchor offsets account for the sticky header. No palette or typography-family change.
