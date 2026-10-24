@@ -47,15 +47,22 @@ export function AuthPanel({
   const { status, user, capabilities, startDemo, signOut } = useSession()
   const router = useRouter()
   const [busy, setBusy] = useState(false)
+  const [demoError, setDemoError] = useState('')
+  const privateDeployment = capabilities.required
+  const canContinue = user && (!privateDeployment || user.provider === 'google')
 
   const isSignUp = mode === 'signup'
   const query = `?next=${encodeURIComponent(next)}`
-  const errorMessage = error ? (ERROR_COPY[error] ?? 'Something went wrong. Please try again.') : null
+  const errorMessage = error === 'not_configured' && privateDeployment ? 'Google sign-in is not configured on this private deployment. The deployment owner must finish authentication setup.' : error ? (ERROR_COPY[error] ?? 'Something went wrong. Please try again.') : null
   const enterDemo = async () => {
     setBusy(true)
+    setDemoError('')
     try {
       await startDemo()
       router.push(next)
+      router.refresh()
+    } catch (error) {
+      setDemoError(error instanceof Error ? error.message : 'Could not start the demo. Please retry.')
     } finally {
       setBusy(false)
     }
@@ -92,7 +99,7 @@ export function AuthPanel({
       </div>
 
       <PaperSheet className="p-6 sm:p-7">
-        {user ? (
+        {canContinue && user ? (
           <div>
             <PaperChip tone="olive">Already signed in</PaperChip>
             <h2 className="mt-3 text-[20px] leading-tight">{user.name}</h2>
@@ -149,7 +156,8 @@ export function AuthPanel({
 
               {status === 'ready' && !capabilities.googleSignIn ? (
                 <p className="text-[11.5px] leading-relaxed text-ink-faint">
-                  Google sign-in is temporarily unavailable. Try the demo instead.
+                  {privateDeployment ? 'Google sign-in is not configured for this private deployment. Contact the deployment owner.' : 'Google sign-in is temporarily unavailable. You can still use the planner without signing in.'}
+                  {capabilities.googleMissing.includes('AUTH_SECRET') ? ' The deployment is missing its session signing secret (AUTH_SECRET).' : ''}
                 </p>
               ) : null}
 
@@ -159,10 +167,13 @@ export function AuthPanel({
                 <span className="h-px flex-1 bg-[color:rgba(55,112,191,0.2)]" />
               </div>
 
-              <PaperButton variant="flat" className="w-full" disabled={busy} onClick={() => void enterDemo()}>
-                {busy ? 'Starting…' : 'Continue with a demo session'}
+              <PaperButton variant="flat" className="w-full" disabled={busy || status === 'loading' || privateDeployment} onClick={() => void enterDemo()}>
+                {busy ? 'Starting…' : privateDeployment ? 'Demo unavailable on this private deployment' : 'Continue with a demo session'}
                 {busy ? null : <ArrowRight size={14} aria-hidden="true" />}
               </PaperButton>
+              {demoError ? <p role="alert" className="text-sm text-ink">{demoError}</p> : null}
+              {status === 'ready' && !privateDeployment ? <PaperLink href={next} className="w-full">Use planner without signing in<ArrowRight size={14} aria-hidden="true" /></PaperLink> : null}
+              {privateDeployment ? <p role="status" className="text-sm text-ink-soft">This planner requires a verified Google account. Demo sessions cannot open it.{user?.provider === 'demo' ? ' Your current session is a demo; continue with Google above.' : ''}</p> : null}
 
             </div>
 

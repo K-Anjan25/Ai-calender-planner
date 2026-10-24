@@ -74,7 +74,9 @@ export function useSession() {
 
   /** The zero-configuration path: a real session for a clearly-labelled demo identity. */
   const startDemo = useCallback(async () => {
-    await fetch('/api/auth/demo', { method: 'POST' })
+    const response = await fetch('/api/auth/demo', { method: 'POST' })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok || payload?.ok !== true) throw new Error(payload?.error?.message || 'Could not start the demo session. Please retry.')
     await refresh()
   }, [refresh])
 
