@@ -405,7 +405,7 @@
   font-size: 7px;
   letter-spacing: 1.3px;
 }
-.weekTop h3 {
+.weekTitle {
   font-family: var(--serif);
   font-size: 25px;
   font-weight: 400;
@@ -1302,7 +1302,7 @@
   .block small {
     font-size: 9px;
   }
-  .weekTop h3 {
+  .weekTitle {
     font-size: 21px;
   }
   .floatingNote {
@@ -1607,7 +1607,7 @@
   .weekTop .eyebrow {
     font-size: 6px;
   }
-  .weekTop h3 {
+  .weekTitle {
     font-size: 22px;
   }
 }
@@ -1634,7 +1634,7 @@
     display: block;
     font-size: 9px;
   }
-  .weekTop h3 {
+  .weekTitle {
     font-size: 20px;
   }
   .pill {
@@ -2260,4 +2260,41 @@
   .app .button {
     transition: none;
   }
+}
+
+/* Keep the lime action distinguishable from Moon Tint without changing brand hues. */
+.app .button[data-attention] {
+  border: 2px solid var(--color-ink);
+}
+.inquiryHint {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-ink);
+}
+.field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius-cut-sm);
+  padding: 12px;
+  font-size: 16px;
+  background: var(--color-paper-cream);
+  color: var(--color-ink);
+}
+.app select:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
+}
+.app :global(a:focus-visible),
+.app :global(button:focus-visible),
+.app :global(input:focus-visible),
+.app :global(textarea:focus-visible) {
+  outline-color: var(--color-ink);
+}
+.footer a:focus-visible,
+.footer button:focus-visible,
+.footer input:focus-visible {
+  outline-color: var(--color-terracotta);
 }

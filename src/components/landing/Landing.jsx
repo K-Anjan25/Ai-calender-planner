@@ -99,20 +99,6 @@ function LinkButton({
       href={href}
       data-attention={!secondary && href === '/planner' ? true : undefined}
       className={`${s.button} ${secondary ? s.secondary : ''} ${className}`}
-      onClick={
-        href === '#contact'
-          ? () => {
-              // Leave scrolling to Next's anchor handling, then put keyboard focus in the form.
-              setTimeout(
-                () =>
-                  document
-                    .getElementById('contact-message')
-                    ?.focus({ preventScroll: true }),
-                0,
-              )
-            }
-          : undefined
-      }
       {...rest}
     >
       {children}
@@ -141,7 +127,7 @@ function Week({ compact = false }) {
       <div className={s.weekTop}>
         <div>
           <span className={s.eyebrow}>YOUR WEEK, WITH ROOM TO BREATHE</span>
-          <h3>A little more possible.</h3>
+          <p className={s.weekTitle}>A little more possible.</p>
         </div>
         <CalendarDays size={20} />
       </div>
@@ -314,7 +300,7 @@ function Home() {
           </Reveal>
           <div className={s.heroVisual}>
             <div className={s.visualLabel}>
-              <span>THE AI CALENDAR PLANNER</span>
+              <span>YOUR WEEK, AT A GLANCE</span>
             </div>
             <div
               className={s.calendarScroll}
@@ -454,7 +440,6 @@ function Home() {
       <section id="contact">
         <Contact />
       </section>
-      <EndCTA />
     </>
   )
 }
@@ -474,27 +459,29 @@ const plans = [
   },
   {
     name: 'Pro',
-    price: 'Let’s talk',
+    price: 'Enquiry only',
     desc: 'For a bigger planning horizon.',
     features: [
       'Share your planning requirements',
       'Discuss history and longer horizons',
       'Help shape the next chapter',
     ],
-    cta: 'Discuss Pro',
+    cta: 'Ask about Pro',
+    inquiry: 'pro',
     href: '#contact',
     tag: 'REGISTER YOUR INTEREST',
   },
   {
     name: 'Teams',
-    price: 'Custom',
+    price: 'Enquiry only',
     desc: 'For people doing meaningful work together.',
     features: [
       'Discuss your team’s workflow',
       'Explore shared planning needs',
       'Talk through privacy requirements',
     ],
-    cta: 'Talk to us',
+    cta: 'Ask about Teams',
+    inquiry: 'teams',
     href: '#contact',
   },
 ]
@@ -520,8 +507,8 @@ function Pricing({ preview = false }) {
             )}
           </h2>
           <p>
-            Use the free planner today. Pro and Teams enquiries are expressions
-            of interest, not purchases.
+            Start with Personal for free. Pro and Teams are enquiries only; no
+            checkout or payment is taken.
           </p>
         </div>
         <div className={s.plans}>
@@ -545,9 +532,22 @@ function Pricing({ preview = false }) {
                   </li>
                 ))}
               </ul>
-              <LinkButton href={p.href} secondary={i !== 0}>
+              <LinkButton
+                href={p.href}
+                secondary={i !== 0}
+                data-inquiry={p.inquiry}
+                aria-describedby={
+                  p.inquiry ? `${p.inquiry}-inquiry-help` : undefined
+                }
+              >
                 {p.cta}
               </LinkButton>
+              {p.inquiry && (
+                <p id={`${p.inquiry}-inquiry-help`} className={s.inquiryHint}>
+                  Opens the contact form below with {p.name} selected. No
+                  payment required.
+                </p>
+              )}
             </article>
           ))}
         </div>
@@ -636,6 +636,22 @@ function Form({ newsletter = false }) {
       className={newsletter ? s.newsletterForm : s.contactForm}
       aria-label={newsletter ? 'Newsletter subscription' : 'Contact Calendra'}
     >
+      {!newsletter && (
+        <div className={s.field}>
+          <label htmlFor="contact-inquiry">
+            What would you like to discuss?
+          </label>
+          <select id="contact-inquiry" name="inquiry" defaultValue="general">
+            <option value="general">General question</option>
+            <option value="pro">Pro enquiry</option>
+            <option value="teams">Teams enquiry</option>
+          </select>
+          <p className={s.inquiryHint}>
+            Your selection is included with your message. This form does not
+            take payment.
+          </p>
+        </div>
+      )}
       {!newsletter && (
         <div className={s.field}>
           <label htmlFor={`${id}-name`}>Your name</label>
@@ -789,21 +805,6 @@ function Contact() {
     </>
   )
 }
-function EndCTA() {
-  return (
-    <section className={`${s.section} ${s.endCTA}`}>
-      <Reveal>
-        <span className={s.eyebrow}>MAKE ROOM FOR WHAT MATTERS</span>
-        <h2>
-          A good week isn’t packed.
-          <br />
-          <em>It’s possible.</em>
-        </h2>
-        <LinkButton>Find my breathing room</LinkButton>
-      </Reveal>
-    </section>
-  )
-}
 function Footer() {
   return (
     <footer className={s.footer}>
@@ -952,7 +953,13 @@ export default function Landing() {
       })
       if (!target.hasAttribute('tabindex'))
         target.setAttribute('tabindex', '-1')
-      target.focus({ preventScroll: true })
+      const inquiry = link.dataset.inquiry
+      const selector = document.getElementById('contact-inquiry')
+      if (selector && ['pro', 'teams'].includes(inquiry)) {
+        selector.value = inquiry
+        selector.dispatchEvent(new Event('input', { bubbles: true }))
+        selector.focus({ preventScroll: true })
+      } else target.focus({ preventScroll: true })
       if (window.location.hash !== hash)
         window.history.pushState(null, '', hash)
     }, 0)

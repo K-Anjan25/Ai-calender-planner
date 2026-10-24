@@ -63,7 +63,7 @@ assert.ok(
   document.querySelector('nav a[href="#questions"]'),
   'Menu must include FAQs',
 )
-for (const label of ['Discuss Pro', 'Talk to us']) {
+for (const label of ['Ask about Pro', 'Ask about Teams']) {
   const link = [...document.querySelectorAll('a')].find((a) =>
     a.textContent.includes(label),
   )

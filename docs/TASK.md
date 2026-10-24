@@ -397,3 +397,16 @@ clearance, no CTA overlay, click and Enter toggling, plus existing form/menu/pal
 -172 tests, lint/typecheck/native smoke and production build passed. Chromium tests at five widths/
   DPR2 passed geometry/no overlaps, footer target sizing, FAQ padding/click/keyboard and both motion
   preferences. Form submission states remain mocked, not proof of live webhook delivery.
+
+## Link/routing, pricing intent and conversion review
+
+- Verified relative routes/anchors are valid, not template placeholders. No rendered raw Markdown URLs.
+- Explicit Pro/Teams enquiry selection, focus and submitted context; schema validates and forwards it.
+  Cards clearly explain in-page form action and no payment. Existing general-contact clients work.
+- Removed repeated EndCTA; repaired heading progression by making decorative preview title a paragraph.
+- Strong dark CTA boundary/focus states; kept approved AAA dark text and four brand surfaces.
+-173 tests + lint/typecheck/native smoke/build passed. Real Chromium five-width/DPR2 suite verifies
+  all anchors/routes, heading progression, Pro/Teams prefill/focus, pending disabled/busy state,
+  retained values on failure, selected tier in outgoing JSON and success reset. API test verifies
+  tier survives relay parsing/forwarding. Delivery tests mocked; real webhook delivery not claimed.
+- Checks use local production build; supplied immutable Vercel deployment was not tested/promoted.

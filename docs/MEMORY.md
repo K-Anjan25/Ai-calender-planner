@@ -431,3 +431,22 @@ uses auto for reduced motion. Existing html smooth CSS retained. Native jsdom ha
 172 tests + lint/typecheck/native smoke/build passed. Browser suite tests static bar position AND
 separate main/bar/footer bounds, every footer link44x44, expanded FAQ padding, both normal/reduced
 scroll behavior at five widths/DPR2 alongside existing palette/form/menu cases.
+
+### Latest review — valid links, explicit tier enquiries, leaner conversion flow
+
+Raw Markdown URL syntax/url?id placeholders not present in live rendered content. Browser suite
+checks href targets exist and all same-origin routes return success (local production build only).
+Week preview h3 -> styled p eliminates h1-to-h3 skip. Removed Home EndCTA/function to reduce repeats;
+conversion remains hero/free tier/in-flow rail. Main lime action dark2px outline; dark focus on light,
+lime focus on dark footer. No palette expansion beyond approved#102C50.
+
+Pro/Teams Ask about buttons remain real #contact anchors, data-inquiry pro/teams preselects/focuses
+uncontrolled contact-inquiry select in root followAnchor. Helper text explicitly says form below,
+no payment. contactSchema optional enum general/pro/teams, forwarded to relay with message. Existing
+clients omitting field still accepted. Removed old competing contact-message-focus handler.
+
+173 tests, lint/typecheck/native smoke/build and real Chromium five widths/DPR2 passed. Tests now
+cover heading levels, raw Markdown absence, all anchors/routes, both tier prefill/focus, held pending
+request verifies aria-busy/disabled Sending, failed delivery retains tier/text, outgoing JSON has teams,
+server relay retains teams. No real external delivery verification. Active preview running updated
+build; no claim supplied Vercel immutable URL was updated.

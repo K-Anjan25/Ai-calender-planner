@@ -8,6 +8,7 @@ export const contactSchema = z.object({
   email,
   message: z.string().trim().min(15).max(4000),
   consent: z.literal('on'),
+  inquiry: z.enum(['general', 'pro', 'teams']).optional(),
 })
 export const newsletterSchema = z.object({ email })
 

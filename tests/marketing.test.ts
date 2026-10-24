@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { it } from 'node:test'
-import { submitMarketing } from '@/lib/marketing'
+import { contactSchema, submitMarketing } from '@/lib/marketing'
 
 let index = 0
 function request(payload: unknown, headers: Record<string, string> = {}) {
@@ -87,13 +87,25 @@ it('reports acceptance only after the configured receiver accepts; keeps credent
       )
       assert.equal(init?.redirect, 'error')
       assert.equal(JSON.parse(String(init?.body)).kind, 'contact')
+      assert.equal(JSON.parse(String(init?.body)).inquiry, 'teams')
       return new Response(null, { status: reject ? 500 : 202 })
     }
-    const response = await submitMarketing(request(valid), 'contact')
+    const response = await submitMarketing(
+      request({ ...valid, inquiry: 'teams' }),
+      'contact',
+    )
     assert.equal(response.status, 202)
     assert.deepEqual(await response.json(), { ok: true })
     reject = true
-    assert.equal((await submitMarketing(request(valid), 'contact')).status, 502)
+    assert.equal(
+      (
+        await submitMarketing(
+          request({ ...valid, inquiry: 'teams' }),
+          'contact',
+        )
+      ).status,
+      502,
+    )
   } finally {
     globalThis.fetch = originalFetch
     if (old === undefined) delete process.env.CONTACT_WEBHOOK_URL
@@ -101,4 +113,14 @@ it('reports acceptance only after the configured receiver accepts; keeps credent
     if (token === undefined) delete process.env.MARKETING_WEBHOOK_TOKEN
     else process.env.MARKETING_WEBHOOK_TOKEN = token
   }
+})
+
+it('validates enquiry context without breaking existing contact clients', () => {
+  assert.equal(contactSchema.parse(valid).inquiry, undefined)
+  for (const inquiry of ['general', 'pro', 'teams'])
+    assert.equal(contactSchema.parse({ ...valid, inquiry }).inquiry, inquiry)
+  assert.equal(
+    contactSchema.safeParse({ ...valid, inquiry: 'checkout' }).success,
+    false,
+  )
 })

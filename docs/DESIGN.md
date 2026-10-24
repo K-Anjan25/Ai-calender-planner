@@ -415,3 +415,19 @@ and safe-area bottom inset. Header identity/menu share a max1120px bordered Moon
 FAQ answer padding is12–16px horizontal/24px bottom, text16px; question icons keep dedicated tracks.
 Footer links44px minimum width/height; section padding64–96px. Internal anchors use explicit smooth
 scroll plus destination focus, with automatic motion for reduced-motion users and usable hash URLs.
+
+## 2026-10-24 — audited links and explicit enquiry flow
+
+No raw Markdown URLs or url?id placeholders found in live page content. Preserve valid relative
+routes and real hash anchors; browser tests now verify every hash target, all same-origin route
+statuses, no rendered Markdown URL syntax, and no heading-level jumps. Decorative weekly-preview
+caption is a styled paragraph rather than an h3 before the first h2.
+
+Pro/Teams cards say Enquiry only, use Ask about Pro/Teams and explain inline that the contact form
+opens with the tier selected and takes no payment. Same semantic #contact destination is intentional;
+data-inquiry selects/focuses the visible enquiry control. Selection is included in JSON and validated
+as optional general/pro/teams server-side (compatible with existing contact clients).
+
+Removed redundant closing conversion section; hero, Personal card and the in-flow action rail remain.
+Lime CTA has a2px dark boundary; dark-on-lime text remains11.04:1. Focus outlines use high-contrast
+ink on light surfaces and lime in the dark footer. Current five-swatch approval remains in effect.

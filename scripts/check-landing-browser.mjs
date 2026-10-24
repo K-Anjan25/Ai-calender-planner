@@ -110,6 +110,40 @@ try {
     await page.locator('main a[href="#product"]').first().click()
     await page.waitForFunction(() => window.__anchorBehavior === 'smooth')
     await page.emulateMedia({ reducedMotion: 'reduce' })
+    const links = await page
+      .locator('a')
+      .evaluateAll((nodes) => nodes.map((el) => el.getAttribute('href')))
+    for (const href of links) {
+      assert.ok(href && !href.includes('url?id='), `Malformed target: ${href}`)
+      if (href.startsWith('#'))
+        assert.ok(
+          await page.locator(`[id="${href.slice(1)}"]`).count(),
+          `Missing anchor ${href}`,
+        )
+    }
+    if (width === 390) {
+      const paths = [
+        ...new Set(
+          links
+            .filter((href) => href.startsWith('/') && !href.startsWith('//'))
+            .map((href) => href.split('#')[0]),
+        ),
+      ]
+      for (const path of paths)
+        assert.ok(
+          (await context.request.get(`${base}${path}`)).ok(),
+          `Broken route ${path}`,
+        )
+    }
+    assert.ok(
+      !/\[https?:\/\//.test(await page.locator('body').innerText()),
+      'Raw Markdown URL rendered',
+    )
+    const levels = await page
+      .locator('h1,h2,h3,h4,h5,h6')
+      .evaluateAll((nodes) => nodes.map((el) => Number(el.tagName.slice(1))))
+    for (let index = 1; index < levels.length; index++)
+      assert.ok(levels[index] <= levels[index - 1] + 1, 'Heading level skipped')
     // Scroll the final question near the old floating-CTA collision zone.
     const faq = page.locator('#questions')
     const questions = faq.getByRole('button')
@@ -193,6 +227,21 @@ try {
         `${width}: footer link tap target too small`,
       )
     }
+    for (const tier of ['Pro', 'Teams']) {
+      await page
+        .getByRole('link', { name: `Ask about ${tier}`, exact: true })
+        .click()
+      await page.waitForFunction(
+        (value) => document.querySelector('#contact-inquiry').value === value,
+        tier.toLowerCase(),
+      )
+      assert.equal(
+        await page
+          .locator('#contact-inquiry')
+          .evaluate((el) => el === document.activeElement),
+        true,
+      )
+    }
     const form = page.getByRole('form', { name: 'Contact Calendra' })
     await form.scrollIntoViewIfNeeded()
     await page.waitForFunction(
@@ -245,14 +294,25 @@ try {
       .locator('#contact-message')
       .fill('I would like help planning a realistic week.')
     await form.getByRole('checkbox').check()
-    await page.route('**/api/contact', (route) =>
-      route.fulfill({
+    let releaseSubmission
+    const submissionGate = new Promise((resolve) => {
+      releaseSubmission = resolve
+    })
+    await page.route('**/api/contact', async (route) => {
+      await submissionGate
+      await route.fulfill({
         status: 503,
         contentType: 'application/json',
         body: '{"ok":false}',
-      }),
-    )
+      })
+    })
     await form.getByRole('button', { name: 'Send message' }).click()
+    assert.equal(await form.getAttribute('aria-busy'), 'true')
+    assert.equal(
+      await form.getByRole('button', { name: 'Sending…' }).isDisabled(),
+      true,
+    )
+    releaseSubmission()
     await form
       .getByRole('status')
       .filter({ hasText: 'couldn’t send' })
@@ -262,13 +322,15 @@ try {
       'Test Planner',
     )
     await page.unroute('**/api/contact')
-    await page.route('**/api/contact', (route) =>
-      route.fulfill({
+    assert.equal(await page.locator('#contact-inquiry').inputValue(), 'teams')
+    await page.route('**/api/contact', (route) => {
+      assert.equal(route.request().postDataJSON().inquiry, 'teams')
+      return route.fulfill({
         status: 202,
         contentType: 'application/json',
         body: '{"ok":true}',
-      }),
-    )
+      })
+    })
     await form.getByRole('button', { name: 'Send message' }).click()
     await form
       .getByRole('status')
