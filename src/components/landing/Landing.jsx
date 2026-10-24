@@ -819,7 +819,7 @@ function Contact() {
           <figure className={s.map} aria-label="Hyderabad location map">
             <iframe
               title="Map of Hyderabad, India"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=78.36%2C17.30%2C78.60%2C17.48&layer=mapnik&marker=17.3850%2C78.4867"
+              src="https://www.google.com/maps?q=Hyderabad%2C%20India&z=12&output=embed"
               loading="lazy"
               referrerPolicy="no-referrer"
               allowFullScreen
@@ -827,7 +827,7 @@ function Contact() {
             <figcaption>
               <span>Hyderabad, India · City view</span>
               <a
-                href="https://www.openstreetmap.org/?mlat=17.3850&mlon=78.4867#map=12/17.3850/78.4867"
+                href="https://www.google.com/maps/search/?api=1&query=Hyderabad%2C%20India"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -894,12 +894,18 @@ function Footer() {
           </div>
         </div>
         <div className={s.footerLocation}>
-          <div className={s.tinyMap} aria-hidden="true">
-            <MapPin size={24} />
+          <div className={s.tinyMap}>
+            <iframe
+              title="Map of Hyderabad in the footer"
+              src="https://www.google.com/maps?q=Hyderabad%2C%20India&z=12&output=embed"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+            />
           </div>
           <span>
             <a
-              href="https://www.openstreetmap.org/?mlat=17.3850&mlon=78.4867#map=12/17.3850/78.4867"
+              href="https://www.google.com/maps/search/?api=1&query=Hyderabad%2C%20India"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Open Hyderabad location map (new tab)"

@@ -74,9 +74,18 @@ it('uses uniform pricing cards with shared tracks and in-flow product visuals', 
 
 it('embeds a real Hyderabad map and keeps direct map links available', () => {
   assert.match(source, /<iframe\s+title="Map of Hyderabad, India"/)
-  assert.match(source, /src="https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?bbox=/)
+  assert.match(source, /src="https:\/\/www\.google\.com\/maps\?q=/)
   assert.match(source, /loading="lazy"\s+referrerPolicy="no-referrer"/)
   assert.match(source, /aria-label="Open Hyderabad location map \(new tab\)"/)
   assert.ok(!source.includes('Decorative location illustration'))
   assert.match(css, /\.map iframe\s*\{[^}]*width:\s*100%/s)
+})
+
+
+it('replaces the footer pin placeholder with a map without cropping attribution', () => {
+  assert.match(source, /title="Map of Hyderabad in the footer"/)
+  assert.equal((source.match(/output=embed/g) ?? []).length, 2)
+  assert.ok(!source.includes('openstreetmap.org'))
+  assert.match(css, /\.tinyMap iframe\s*\{[^}]*height:\s*100%/s)
+  assert.match(css, /\.footer \.tinyMap\s*\{\s*display:\s*block;\s*width:\s*100%;\s*height:\s*220px/s)
 })

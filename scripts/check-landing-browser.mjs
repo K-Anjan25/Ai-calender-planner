@@ -63,7 +63,7 @@ try {
       route.abort(),
     )
     // External map delivery is not available in the sandbox; verify embed geometry/wiring, not tiles.
-    await page.route('https://www.openstreetmap.org/export/embed.html**', route =>
+    await page.route('https://www.google.com/maps?**', route =>
       route.fulfill({ contentType: 'text/html', body: '<p>Map provider test fixture</p>' }),
     )
     await page.goto(base, { waitUntil: 'networkidle' })
@@ -394,9 +394,16 @@ try {
     const form = page.getByRole('form', { name: 'Contact Calendra' })
     const locationMap = page.getByTitle('Map of Hyderabad, India', { exact: true })
     assert.ok(await locationMap.isVisible(), `${width}: location map is missing`)
-    assert.ok((await locationMap.getAttribute('src')).startsWith('https://www.openstreetmap.org/export/embed.html?'))
+    assert.ok((await locationMap.getAttribute('src')).startsWith('https://www.google.com/maps?'))
     assert.ok(await locationMap.evaluate(el => el.getBoundingClientRect().width <= el.parentElement.clientWidth + 1))
     assert.ok(await page.getByRole('link', { name: 'Open map', exact: true }).isVisible())
+    const footerMap = page.getByTitle('Map of Hyderabad in the footer', { exact: true })
+    assert.ok(await footerMap.isVisible(), `${width}: footer map is missing`)
+    assert.ok(await footerMap.evaluate(el => {
+      const box = el.getBoundingClientRect()
+      return box.height >= 200 && box.width <= el.parentElement.clientWidth + 1
+    }), `${width}: footer map is clipped`)
+
     await form.scrollIntoViewIfNeeded()
     await page.waitForFunction(
       () => !document.querySelector('[data-sticky-cta]'),

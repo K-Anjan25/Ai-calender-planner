@@ -521,3 +521,13 @@ Open map link and the footer location text open the same location independently 
 No API key required. Removed placeholder road CSS. Verified lint/typecheck, 181 tests, production
 build and seven-width DPR2 browser regression. External map delivery is stubbed in browser tests
 because sandbox networking excludes the map host; actual third-party tile delivery is not verified.
+
+## Contact/footer map follow-up — 2026-10-24
+
+User requested removal of the OpenStreetMap report/donation strip and a real map in the footer’s
+pin placeholder. Switched both map frames/direct links to Google Maps city views (no API key).
+Kept the entire provider frame/required attribution intact, rather than masking/cropping it. Footer
+map is now visible at every viewport, full column width and 220px tall. Contact map remains 260px.
+Verified lint/typecheck, 182 tests, production build and seven-width DPR2 browser tests, including
+footer-map visibility/dimensions. External map delivery is stubbed; real Google tile delivery is not
+verified in the network-restricted sandbox. No PR.
