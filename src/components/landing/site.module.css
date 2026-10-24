@@ -748,14 +748,6 @@
   font-size: 11px;
   gap: 15px;
 }
-.featured {
-  background: var(--color-teal-light);
-  color: var(--ink);
-  border-color: var(--color-teal-deep);
-}
-.featured p {
-  color: var(--muted);
-}
 .faq {
   max-width: 800px;
   margin: auto;
@@ -1771,8 +1763,7 @@
   background: var(--color-teal-light);
 }
 .intake blockquote,
-.intakeLine,
-.featured p {
+.intakeLine {
   color: var(--color-ink);
 }
 .softSection {
@@ -1942,10 +1933,6 @@
 .app .endCTA .button:hover {
   color: var(--color-paper-cream);
 }
-.featured {
-  border: 2px solid var(--color-frost);
-  border-top-width: 6px;
-}
 .pill span,
 .noteIcon {
   background: var(--color-frost);
@@ -2077,9 +2064,6 @@
 
 /* Ice Blue panels frame Moon Tint text surfaces: Blue Harbor on Ice Blue
    alone is only 2.67:1, so small labels always retain their Moon Tint fill. */
-.featured {
-  border-width: 6px;
-}
 .sage,
 .clay,
 .cream {
@@ -2297,4 +2281,102 @@
 .footer button:focus-visible,
 .footer input:focus-visible {
   outline-color: var(--color-terracotta);
+}
+
+/* Comparison cards share all seven content tracks and the same border/padding. */
+.plans {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 24px;
+  max-width: none;
+}
+.plan {
+  min-width: 0;
+  padding: 28px;
+  border: 2px solid var(--color-paper-edge);
+  border-radius: var(--radius-cut-sm);
+  background: var(--color-paper-cream);
+  transform: none;
+}
+.plan > * {
+  min-width: 0;
+}
+.plan h3,
+.plan > p,
+.plan .price,
+.plan ul {
+  margin: 0;
+}
+.plan {
+  gap: 20px;
+}
+.plan ul {
+  flex: 1;
+}
+.plan li svg,
+.plan .button svg {
+  flex-shrink: 0;
+}
+.plan .button {
+  width: 100%;
+  max-width: 100%;
+  justify-content: space-between;
+  padding: 14px 16px;
+  gap: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.plan .inquiryHint {
+  font-size: 14px;
+  line-height: 1.65;
+}
+@supports (grid-template-rows: subgrid) {
+  .plan {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: span 7;
+    row-gap: 20px;
+  }
+}
+@media (max-width: 1099px) {
+  .plans {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 560px;
+    margin-inline: auto;
+  }
+  .plan {
+    padding: 24px;
+  }
+}
+/* Product previews remain real DOM illustrations, not missing remote image assets. */
+.split {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(32px, 6vw, 80px);
+}
+.split > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.intake,
+.capacity {
+  margin: 0;
+  border: 2px solid var(--color-paper-edge);
+  border-radius: var(--radius-cut-sm);
+}
+.floatingNote {
+  position: static;
+  inset: auto;
+  margin: 16px 0 0;
+  transform: none;
+}
+.faqSection {
+  padding-top: clamp(80px, 8vw, 112px);
+}
+.faqSection .sectionHeading {
+  margin-bottom: clamp(48px, 5vw, 72px);
+}
+@media (max-width: 760px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

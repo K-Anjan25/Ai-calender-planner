@@ -450,3 +450,20 @@ cover heading levels, raw Markdown absence, all anchors/routes, both tier prefil
 request verifies aria-busy/disabled Sending, failed delivery retains tier/text, outgoing JSON has teams,
 server relay retains teams. No real external delivery verification. Active preview running updated
 build; no claim supplied Vercel immutable URL was updated.
+
+### Latest layout review: pricing grid/side previews/FAQ transition
+
+Concrete source mismatch: Personal-only featured6px border and no action hint versus thinner peers
+with hints. Removed featured class/styles. Every article data-plan and aria-label, seven children;
+uniform2px borders/28px desktop padding. Grid subgrid row-span7 aligns whole desktop row including
+CTA baseline. Flex fallback. Pricing stacks max560px below1100, padding24. Icons shrink0, CTAwidth100.
+
+Existing intake/capacity/weekly illustrations are HTML, not absent images. Added figure roles/labels,
+framed surfaces and minmax(0,1fr) split columns (stack<=760). Hero note nowstatic margin16px, no overlap.
+FAQ top80–112px, heading gap48–72. Brand/text palette and enquiry relay unchanged.
+
+174 tests + lint/typecheck/native smoke/build passed. Browser suite expanded from5 to7 widths/DPR2,
+checking pricing child containment/overflow, equal desktop card top/height/buttonTop/buttonBottom,
+uniform borders/padding, visible mockups and side-by-side placement, hero note static, FAQ clearance.
+Pricing screenshots hide fixed header/skip link only during element-sized capture to avoid repeated
+fixed UI artifacts; app styles unaffected. All checks against local production, not Vercel promotion.

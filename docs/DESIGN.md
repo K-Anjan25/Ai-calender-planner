@@ -431,3 +431,16 @@ as optional general/pro/teams server-side (compatible with existing contact clie
 Removed redundant closing conversion section; hero, Personal card and the in-flow action rail remain.
 Lime CTA has a2px dark boundary; dark-on-lime text remains11.04:1. Focus outlines use high-contrast
 ink on light surfaces and lime in the dark footer. Current five-swatch approval remains in effect.
+
+## 2026-10-24 — uniform comparison grid and visible product previews
+
+Removed Personal-only featured styling (6px border versus1px peers). All pricing articles have
+uniform2px Blue Harbor borders and24–28px padding. All seven content rows exist on every card,
+including the Personal action explanation. Grid subgrid shares row heights across desktop cards so
+headings, prices, actions and footers align; flex remains the fallback. Below1100px cards stack at
+max560px instead of squeezing three narrow columns. Actions fill the card with shrink-safe icons.
+
+Task intake/capacity mockups are inline DOM figures with explicit illustrative labels, framed surfaces
+and shrink-safe alternating columns, stacking at760px. No missing image URLs or invented screenshots.
+Hero note is now static with16px separation, not an overlapping absolute widget. FAQ top spacing
+80–112px and heading-to-list spacing48–72px. Palette, enquiry behavior and contrast remain unchanged.

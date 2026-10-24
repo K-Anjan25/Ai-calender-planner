@@ -47,7 +47,7 @@ const launchBrowser = () =>
     headless: true,
     env,
   })
-const widths = [320, 390, 768, 1024, 1440]
+const widths = [320, 390, 768, 900, 1024, 1280, 1440]
 try {
   for (const width of widths) {
     browser = await launchBrowser()
@@ -201,6 +201,110 @@ try {
     await page.waitForFunction(
       () => !document.querySelector('[data-sticky-cta]'),
     )
+    const cards = await page.locator('[data-plan]').evaluateAll((nodes) =>
+      nodes.map((el) => {
+        const r = el.getBoundingClientRect(),
+          button = el.querySelector('a'),
+          b = button.getBoundingClientRect(),
+          style = getComputedStyle(el)
+        return {
+          top: r.top,
+          bottom: r.bottom,
+          height: r.height,
+          width: r.width,
+          border: style.borderWidth,
+          padding: style.padding,
+          buttonTop: b.top,
+          buttonBottom: b.bottom,
+          contained: [...el.children].every((child) => {
+            const c = child.getBoundingClientRect()
+            return (
+              c.left >= r.left &&
+              c.right <= r.right &&
+              c.top >= r.top &&
+              c.bottom <= r.bottom
+            )
+          }),
+          noOverflow:
+            el.scrollWidth <= el.clientWidth &&
+            el.scrollHeight <= el.clientHeight,
+        }
+      }),
+    )
+    assert.equal(cards.length, 3)
+    assert.ok(
+      cards.every((card) => card.contained && card.noOverflow),
+      `${width}: pricing content clips`,
+    )
+    assert.ok(
+      cards.every(
+        (card) =>
+          card.border === cards[0].border && card.padding === cards[0].padding,
+      ),
+      `${width}: unequal pricing borders or padding`,
+    )
+    if (width >= 1100) {
+      for (const key of ['top', 'height', 'buttonTop', 'buttonBottom'])
+        assert.ok(
+          Math.max(...cards.map((card) => card[key])) -
+            Math.min(...cards.map((card) => card[key])) <
+            2,
+          `${width}: pricing ${key} misaligned`,
+        )
+    }
+    await page
+      .locator('#plans')
+      .screenshot({
+        path: join(artifacts, `pricing-${width}.png`),
+        style:
+          'header, a[href="#main-content"] { visibility: hidden !important; }',
+      })
+    for (const label of [
+      'Illustrative task intake',
+      'Illustrative capacity report',
+    ]) {
+      const visual = page.getByRole('figure', { name: label, exact: true })
+      assert.ok(await visual.isVisible(), `${width}: product visual missing`)
+      const box = await visual.boundingBox()
+      assert.ok(
+        box.width >= 200 && box.height >= 200,
+        `${width}: product visual collapsed`,
+      )
+    }
+    assert.equal(
+      await page
+        .locator('main')
+        .getByText('Enough space for the work.', { exact: true })
+        .evaluate(
+          (el) => getComputedStyle(el.closest('div').parentElement).position,
+        ),
+      'static',
+      'Hero note must not float over content',
+    )
+    if (width > 760) {
+      for (const label of [
+        'Illustrative task intake',
+        'Illustrative capacity report',
+      ]) {
+        const separation = await page
+          .getByRole('figure', { name: label, exact: true })
+          .evaluate((el) => {
+            const sibling = [...el.parentElement.children].find(
+              (node) => node !== el,
+            )
+            const a = el.getBoundingClientRect(),
+              b = sibling.getBoundingClientRect()
+            return a.right <= b.left || b.right <= a.left
+          })
+        assert.ok(separation, `${width}: visual should sit beside its text`)
+      }
+    }
+    const faqClearance = await page.locator('#questions').evaluate((el) => {
+      const heading = el.querySelector('h2').getBoundingClientRect(),
+        firstQuestion = el.querySelector('button').getBoundingClientRect()
+      return firstQuestion.top - heading.bottom
+    })
+    assert.ok(faqClearance >= 48, `${width}: FAQ heading crowded`)
     const rail = page.getByRole('navigation', { name: 'Planner actions' })
     assert.equal(
       await rail

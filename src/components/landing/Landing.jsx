@@ -122,6 +122,7 @@ function Week({ compact = false }) {
   return (
     <div
       className={`${s.week} ${compact ? s.compact : ''}`}
+      role="figure"
       aria-label="Illustrative weekly schedule, not a live calendar"
     >
       <div className={s.weekTop}>
@@ -360,7 +361,11 @@ function Home() {
               See how it works <ArrowUpRight size={17} />
             </Link>
           </Reveal>
-          <Reveal className={s.intake}>
+          <Reveal
+            className={s.intake}
+            role="figure"
+            aria-label="Illustrative task intake"
+          >
             <span className={s.eyebrow}>ON YOUR MIND</span>
             <blockquote>
               “Finish the proposal by Thursday. Three runs this week. Keep my
@@ -382,7 +387,11 @@ function Home() {
       </section>
       <section className={`${s.section} ${s.softSection}`} id="features">
         <div className={`${s.split} ${s.reverse}`}>
-          <Reveal className={s.capacity}>
+          <Reveal
+            className={s.capacity}
+            role="figure"
+            aria-label="Illustrative capacity report"
+          >
             <div className={s.capacityTop}>
               <Clock3 size={20} />
               <span>THE HONEST ANSWER</span>
@@ -514,7 +523,9 @@ function Pricing({ preview = false }) {
         <div className={s.plans}>
           {plans.map((p, i) => (
             <article
-              className={`${s.plan} ${i === 0 ? s.featured : ''}`}
+              className={s.plan}
+              data-plan={p.name}
+              aria-label={`${p.name} plan`}
               key={p.name}
             >
               <span className={s.eyebrow}>
@@ -542,12 +553,14 @@ function Pricing({ preview = false }) {
               >
                 {p.cta}
               </LinkButton>
-              {p.inquiry && (
-                <p id={`${p.inquiry}-inquiry-help`} className={s.inquiryHint}>
-                  Opens the contact form below with {p.name} selected. No
-                  payment required.
-                </p>
-              )}
+              <p
+                id={p.inquiry ? `${p.inquiry}-inquiry-help` : undefined}
+                className={s.inquiryHint}
+              >
+                {p.inquiry
+                  ? `Opens the contact form below with ${p.name} selected. No payment required.`
+                  : 'Opens the free planner. No payment required.'}
+              </p>
             </article>
           ))}
         </div>

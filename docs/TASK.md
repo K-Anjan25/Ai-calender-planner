@@ -410,3 +410,16 @@ clearance, no CTA overlay, click and Enter toggling, plus existing form/menu/pal
   retained values on failure, selected tier in outgoing JSON and success reset. API test verifies
   tier survives relay parsing/forwarding. Delivery tests mocked; real webhook delivery not claimed.
 - Checks use local production build; supplied immutable Vercel deployment was not tested/promoted.
+
+## Card alignment / missing side visuals / FAQ pacing review
+
+- Uniform pricing borders/padding; seven shared tracks align desktop card heights/prices/CTA baselines.
+  Personal now has an action explanation just like enquiry cards; no false active-selection border.
+- Responsive single-column pricing below1100px avoids cramped actions/clipping.
+- Existing task/capacity previews remain inline DOM mockups, now labelled figures with framed surfaces
+  and shrink-safe alternating layout; hero note no longer overlaps the calendar.
+- Increased FAQ top and heading/list whitespace; bottom actions remain in-flow, not floating.
+-174 tests, lint/typecheck/native smoke/build passed. Chromium DPR2 checks seven widths:
+  320/390/768/900/1024/1280/1440px. Verifies same card height/top/CTA baselines on desktop, all child
+  containment, no overflow, matching borders/padding, visible previews alongside text and FAQ clearance.
+- Verification is local production build; supplied Vercel snapshot was not promoted or verified.

@@ -59,3 +59,13 @@ it('keeps the bottom action bar in flow and anchors the header inside a bounded 
   assert.match(source, /target\.scrollIntoView/)
   assert.match(css, /\.footer a\s*\{[^}]*min-height:\s*44px/s)
 })
+
+it('uses uniform pricing cards with shared tracks and in-flow product visuals', () => {
+  assert.ok(!source.includes('s.featured'))
+  assert.match(css, /grid-template-rows:\s*subgrid/)
+  assert.match(css, /grid-row:\s*span 7/)
+  assert.match(source, /data-plan=\{p.name\}/)
+  assert.match(css, /\.floatingNote\s*\{[^}]*position:\s*static/s)
+  assert.match(source, /role="figure"\s+aria-label="Illustrative task intake"/)
+  assert.match(css, /margin-bottom:\s*clamp\(48px,\s*5vw,\s*72px\)/)
+})
