@@ -271,7 +271,9 @@ function pushTrace(trace: AgentStep[], tool: ToolName, label: string, detail: st
   trace.push({ tool, label, detail: detail?.slice(0, 180), ms: Math.max(1, Date.now() - startedAt) })
 }
 
-export function createToolkit(input: { context: ScheduleContext; interpreter: Interpreter; traces?: AgentStep[] }): Toolkit {
+export function createToolkit(input: { context: ScheduleContext; interpreter: Interpreter; traces?: AgentStep[]; onStep?: (step: AgentStep) => void }): Toolkit {
+  const record: typeof pushTrace = (...args) => { pushTrace(...args); const last = args[0].at(-1); if (last) input.onStep?.(last) }
+
   const traces = input.traces ?? []
   let context: ScheduleContext = { ...input.context }
   let proposal: PlanProposal | null = null
@@ -295,7 +297,7 @@ export function createToolkit(input: { context: ScheduleContext; interpreter: In
         generatedAt: context.nowISO,
       }),
     )
-    pushTrace(
+    record(
       traces,
       tool,
       label,
@@ -329,7 +331,7 @@ export function createToolkit(input: { context: ScheduleContext; interpreter: In
       context = { ...context, tasks: mergeTasks(context.tasks, normalised.tasks) }
       const notes = [...(args.notes ?? []), ...normalised.notes]
       outcome = { kind: 'parse', tasks: context.tasks, notes }
-      pushTrace(
+      record(
         traces,
         'parse_tasks',
         `Read ${normalised.tasks.length} task${normalised.tasks.length === 1 ? '' : 's'}`,
@@ -351,7 +353,7 @@ export function createToolkit(input: { context: ScheduleContext; interpreter: In
       const current = requireProposal(proposal)
       const { report } = current
       const problems = report.unplacedCount + report.deadlineRisks.length
-      pushTrace(
+      record(
         traces,
         'critique_plan',
         problems === 0 ? 'Week holds together' : `Found ${problems} problem${problems === 1 ? '' : 's'}`,
@@ -393,12 +395,12 @@ export function createToolkit(input: { context: ScheduleContext; interpreter: In
       const current = requireProposal(proposal)
       const block = current.blocks.find((b) => b.id === args.blockId)
       if (!block) {
-        pushTrace(traces, 'explain_block', 'Block not found', args.blockId, started)
+        record(traces, 'explain_block', 'Block not found', args.blockId, started)
         outcome = { kind: 'explanation', reply: 'That block is not in the current plan.' }
         return outcome
       }
       const explanation = await input.interpreter.explainBlock(formatBlockContext(block, current.blocks))
-      pushTrace(traces, 'explain_block', `Explained \u201c${block.title}\u201d`, undefined, started)
+      record(traces, 'explain_block', `Explained \u201c${block.title}\u201d`, undefined, started)
       outcome = { kind: 'explanation', reply: explanation }
       return outcome
     },
@@ -406,7 +408,7 @@ export function createToolkit(input: { context: ScheduleContext; interpreter: In
     async estimate_duration(args) {
       const started = Date.now()
       const minutes = estimateDurationMinutes(args.title, args.energy, args.category)
-      pushTrace(traces, 'estimate_duration', `Estimated ${fmtDuration(minutes)}`, args.title, started)
+      record(traces, 'estimate_duration', `Estimated ${fmtDuration(minutes)}`, args.title, started)
       outcome = { kind: 'explanation', reply: `${args.title}: about ${fmtDuration(minutes)}.` }
       return outcome
     },

@@ -487,9 +487,12 @@ describe('free-text intake', () => {
       },
     })
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /plan this brief/i }))
+      fireEvent.click(screen.getByRole('button', { name: /preview tasks/i }))
     })
 
+    await waitFor(() => assert.ok(screen.getByRole('region', { name: 'Review extracted tasks' })))
+    assert.equal(usePlanner.getState().tasks.length, 0, 'preview committed records before confirmation')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Confirm tasks & plan' })) })
     await waitFor(() => assert.ok(usePlanner.getState().tasks.length >= 2, 'the brief produced no tasks'))
     const tasks = usePlanner.getState().tasks
     assert.ok(tasks.some((task) => /deck/i.test(task.title)))

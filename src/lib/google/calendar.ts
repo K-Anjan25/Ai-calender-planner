@@ -8,6 +8,7 @@ import {
   calendarConfig,
 } from '@/lib/google/scopes'
 import { authorisedClient } from '@/lib/google/oauth'
+import { zonedMidnight, zonedParts, zonedWallInstant } from '@/lib/timezone'
 import { addDaysISO, parseDate } from '@/lib/scheduler/slots'
 
 /**
@@ -48,74 +49,57 @@ const freeBusyResponseSchema = z.object({
   calendars: z.record(
     z.string(),
     z.object({
-      busy: z.array(z.object({ start: z.string().optional(), end: z.string().optional() })).optional(),
+      busy: z.array(z.object({ start: z.string().datetime({ offset: true }), end: z.string().datetime({ offset: true }) })).optional(),
+      errors: z.array(z.unknown()).optional(),
     }),
   ),
 })
 
+/** Missing calendars and per-calendar errors are not evidence of availability. */
+export function parsePrimaryBusy(data: unknown) {
+  const parsed = freeBusyResponseSchema.safeParse(data)
+  const primary = parsed.success ? parsed.data.calendars.primary : undefined
+  if (!primary || primary.errors?.length || !primary.busy) return null
+  return primary.busy
+}
+
 /** Ranges are clamped to the planning week, and an event crossing midnight blocks both days. */
 export function busyEventsFromFreeBusy(
-  periods: { start?: string; end?: string }[],
-  weekStart: string,
+  periods: { start?: string; end?: string }[], weekStart: string, timeZone = 'UTC',
 ): BusyEvent[] {
-  const weekEnd = addDaysISO(weekStart, 7)
   const events: BusyEvent[] = []
-  let index = 0
   for (const period of periods) {
     if (!period.start || !period.end) continue
-    const start = new Date(period.start)
-    const end = new Date(period.end)
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue
-    if (end <= start) continue
-
-    let cursor = new Date(start)
-    // All-day and overnight spans block each day they touch (D-011).
-    while (cursor < end) {
-      const date = toLocalDateKey(cursor)
-      if (date >= weekStart && date < weekEnd) {
-        const isFirst = toLocalDateKey(cursor) === toLocalDateKey(start)
-        const dayStart = isFirst ? cursor.getHours() * 60 + cursor.getMinutes() : 0
-        const isLast = toLocalDateKey(addDays(new Date(cursor), 1)) >= toLocalDateKey(end) || sameDay(addDays(cursor, 1), end)
-        const dayEnd = isLast ? end.getHours() * 60 + end.getMinutes() : 24 * 60
-        events.push({
-          id: `gcal_${index}`,
-          title: 'Busy',
-          date,
-          startMin: Math.max(0, Math.min(24 * 60, dayStart)),
-          endMin: Math.max(0, Math.min(24 * 60, dayEnd === 0 ? 24 * 60 : dayEnd)),
-          source: 'google',
-        })
-        index += 1
+    const start = Date.parse(period.start), end = Date.parse(period.end)
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue
+    for (let index = 0; index < 7; index++) {
+      const date = addDaysISO(weekStart, index)
+      const dayStart = zonedMidnight(date, timeZone).getTime()
+      const dayEnd = zonedMidnight(addDaysISO(date, 1), timeZone).getTime()
+      const from = Math.max(start, dayStart), to = Math.min(end, dayEnd)
+      if (from >= to) continue
+      const a = zonedParts(new Date(from), timeZone), b = zonedParts(new Date(to), timeZone)
+      let startMin = from === dayStart ? 0 : a.hour * 60 + a.minute
+      let endMin = to === dayEnd ? 1440 : Math.min(1440, b.hour * 60 + b.minute + (b.second > 0 ? 1 : 0))
+      // Wall-clock scheduling cannot distinguish both copies of a DST fall-back hour.
+      // Conservatively reserve that hour rather than emit an inverted or under-blocked range.
+      if ((to - from) / 60000 > endMin - startMin + 1) {
+        const lower = Math.min(startMin, endMin), upper = Math.max(startMin, endMin)
+        startMin = Math.floor(lower / 60) * 60
+        endMin = Math.min(1440, Math.ceil(upper / 60) * 60)
+        if (endMin === startMin) endMin = Math.min(1440, startMin + 60)
       }
-      cursor = addDays(cursor, 1)
-      cursor.setHours(0, 0, 0, 0)
+      events.push({ id: `gcal_${events.length}`, title: 'Busy', date, startMin, endMin, source: 'google' })
     }
   }
   return events
 }
 
-function toLocalDateKey(date: Date): string {
-  const y = date.getFullYear()
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-function sameDay(a: Date, b: Date): boolean {
-  return toLocalDateKey(a) === toLocalDateKey(b)
-}
-
 export async function fetchBusyEvents(weekStart: string, timeZone: string): Promise<{ ok: true; events: BusyEvent[] } | { ok: false; code: string }> {
   const result = await calendarClient()
   if ('error' in result) return { ok: false, code: result.error }
-  const timeMin = new Date(`${weekStart}T00:00:00`).toISOString()
-  const timeMax = new Date(`${addDaysISO(weekStart, 7)}T00:00:00`).toISOString()
+  const timeMin = zonedMidnight(weekStart, timeZone).toISOString()
+  const timeMax = zonedMidnight(addDaysISO(weekStart, 7), timeZone).toISOString()
   try {
     const response = await result.client.freebusy.query({
       requestBody: {
@@ -126,10 +110,9 @@ export async function fetchBusyEvents(weekStart: string, timeZone: string): Prom
       },
       timeout: OUTBOUND_TIMEOUT_MS,
     })
-    const parsed = freeBusyResponseSchema.safeParse((response as { data?: unknown }).data)
-    if (!parsed.success) return { ok: false, code: 'CALENDAR_BAD_RESPONSE' }
-    const primary = parsed.data.calendars.primary ?? Object.values(parsed.data.calendars)[0]
-    return { ok: true, events: busyEventsFromFreeBusy(primary?.busy ?? [], weekStart) }
+    const busy = parsePrimaryBusy((response as { data?: unknown }).data)
+    if (!busy) return { ok: false, code: 'CALENDAR_BAD_RESPONSE' }
+    return { ok: true, events: busyEventsFromFreeBusy(busy, weekStart, timeZone) }
   } catch {
     return { ok: false, code: 'CALENDAR_UNAVAILABLE' }
   }
@@ -196,24 +179,21 @@ export async function detectDrift(
 ): Promise<Drift[]> {
   if (!blocks.length) return []
   const dates = [...new Set(blocks.map((b) => b.date))].sort()
-  const timeMin = new Date(`${dates[0]}T00:00:00`).toISOString()
-  const timeMax = new Date(`${addDaysISO(dates[dates.length - 1] ?? dates[0] ?? '2026-01-01', 1)}T00:00:00`).toISOString()
+  const timeMin = zonedMidnight(dates[0], timeZone).toISOString()
+  const timeMax = zonedMidnight(addDaysISO(dates[dates.length - 1] ?? dates[0], 1), timeZone).toISOString()
   try {
     const response = await client.freebusy.query({
       requestBody: { timeMin, timeMax, timeZone, items: [{ id: 'primary' }] },
       timeout: OUTBOUND_TIMEOUT_MS,
     })
-    const parsed = freeBusyResponseSchema.safeParse((response as { data?: unknown }).data)
-    if (!parsed.success) return []
-    const primary = parsed.data.calendars.primary ?? Object.values(parsed.data.calendars)[0]
-    const busy = (primary?.busy ?? [])
-      .filter((period) => period.start && period.end)
-      .map((period) => ({ start: new Date(period.start as string).getTime(), end: new Date(period.end as string).getTime() }))
+    const periods = parsePrimaryBusy((response as { data?: unknown }).data)
+    if (!periods) throw new Error('CALENDAR_BAD_RESPONSE')
+    const busy = periods.map(period => ({ start: Date.parse(period.start), end: Date.parse(period.end) }))
 
     const drift: Drift[] = []
     for (const block of blocks) {
-      const start = new Date(`${block.date}T${pad(block.startMin)}:00`).getTime()
-      const end = new Date(`${block.date}T${pad(block.endMin)}:00`).getTime()
+      const start = zonedWallInstant(block.date, block.startMin, timeZone).getTime()
+      const end = zonedWallInstant(block.date, block.endMin, timeZone).getTime()
       const clash = busy.find((period) => start < period.end && period.start < end)
       if (clash) {
         drift.push({
@@ -225,8 +205,8 @@ export async function detectDrift(
     }
     return drift
   } catch {
-    // A failed availability check must not block a legitimate write the user already approved.
-    return []
+    // Approval does not imply current availability. Never write blind after a failed recheck.
+    throw new Error('CALENDAR_UNAVAILABLE')
   }
 }
 
@@ -277,7 +257,9 @@ export async function syncPlan(input: SyncInput): Promise<{ ok: true; data: z.in
   const result = await calendarClient()
   if ('error' in result) return { ok: false, code: result.error }
 
-  const drift = await detectDrift(result.client, approved, timeZone)
+  let drift: Drift[]
+  try { drift = await detectDrift(result.client, approved, timeZone) }
+  catch { return { ok: false, code: 'CALENDAR_UNAVAILABLE', detail: 'Availability could not be checked. Nothing was written; reconnect or retry.' } }
   if (drift.length) {
     return { ok: false, code: 'CALENDAR_DRIFT', detail: JSON.stringify(drift) }
   }

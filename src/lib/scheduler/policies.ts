@@ -214,11 +214,9 @@ export type OrderingContext = {
 
 /** Absolute minute on the week axis for an ISO instant. */
 export function absMinuteOf(iso: string, ctx: OrderingContext): number | null {
-  const date = iso.slice(0, 10)
-  const day = ctx.daysByDate.get(date)
-  if (!day) return null
-  const d = new Date(iso)
-  return day.dayIndex * 1440 + d.getHours() * 60 + d.getMinutes()
+  const days = (Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) - Date.parse(`${ctx.frameStartDate}T00:00:00Z`)) / 86_400_000
+  const minutes = Number(iso.slice(11, 13)) * 60 + Number(iso.slice(14, 16))
+  return Number.isFinite(days + minutes) ? days * 1440 + minutes : null
 }
 
 /**

@@ -106,6 +106,7 @@ export function decodeSession(raw: string | undefined, now = Date.now()): Sessio
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as SessionPayload
     if (typeof payload?.exp !== 'number' || payload.exp * 1000 < now) return null
     if (!payload.user?.id || !payload.user.email) return null
+    if (!readEnv('AUTH_SECRET') && process.env.NODE_ENV === 'production' && (payload.user.provider !== 'demo' || authConfig().required)) return null
     return payload
   } catch {
     return null
@@ -118,6 +119,7 @@ export async function readSession(): Promise<SessionPayload | null> {
 }
 
 export async function writeSession(user: SessionUser) {
+  if (process.env.NODE_ENV === 'production' && !readEnv('AUTH_SECRET') && user.provider !== 'demo') throw new Error('AUTH_SECRET is required for real accounts in production')
   const jar = await cookies()
   jar.set(SESSION_COOKIE, encodeSession(user), {
     httpOnly: true,

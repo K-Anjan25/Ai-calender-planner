@@ -170,6 +170,10 @@ export function plannerLocked(state: Pick<State, 'status' | 'chatBusy' | 'syncSt
   return state.status === 'planning' || state.chatBusy || state.syncState.status === 'syncing'
 }
 
+function calendarConnectionAfterError(capability: Capability | null, error: ApiError): Capability | null {
+  return capability && error.code === 'CALENDAR_NOT_CONNECTED' ? { ...capability, calendar: { ...capability.calendar, connected: false } } : capability
+}
+
 const changedDuringRequest: ApiError = {
   code: 'INPUTS_CHANGED',
   message:
@@ -341,7 +345,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     const id = ++planRequestId
     const source = plannerSnapshotKey(get())
     const { tasks, preferences, busy, pins, mode } = get()
-    set({ status: 'planning', error: null, actionMessage: 'Planning your week…' })
+    set({ status: 'planning', error: null, trace: [], actionMessage: 'Planning your week…' })
     const result = await postPlan({
       tasks,
       preferences,
@@ -350,7 +354,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       mode,
       instruction: freeText && freeText.trim().length > 2 ? freeText : undefined,
       ...request(new Date()),
-    })
+    }, step => { if (id === planRequestId && plannerSnapshotKey(get()) === source) set({ trace: [...get().trace, step], actionMessage: step.label }) })
 
     if (id !== planRequestId) return
     if (plannerSnapshotKey(get()) !== source) {
@@ -386,7 +390,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     const source = plannerSnapshotKey(get())
     const { tasks, preferences, busy, pins, mode, chat, proposal } = get()
     const entry: ChatEntry = { id: `u_${chat.length}_${message.length}`, role: 'user', text: message }
-    set({ chat: [...chat, entry], chatBusy: true, error: null, actionMessage: 'Checking your requested changes…' })
+    set({ chat: [...chat, entry], chatBusy: true, error: null, trace: [], actionMessage: 'Checking your requested changes…' })
 
     const result = await postChat({
       tasks,
@@ -406,7 +410,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
           minutes: block.minutes,
         })),
       ...request(new Date()),
-    })
+    }, step => { if (id === planRequestId && plannerSnapshotKey(get()) === source) set({ trace: [...get().trace, step], actionMessage: step.label }) })
 
     if (id !== planRequestId) return
     if (plannerSnapshotKey(get()) !== source) {
@@ -465,6 +469,9 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     const requested = { taskId: block.taskId, date, startMin: snap(startMin), minutes: snap(minutes ?? block.minutes) }
     if (requested.date === block.date && requested.startMin === block.startMin && requested.minutes === block.minutes)
       return
+    // A deliberate resize beyond the total estimate is an estimate edit, not fabricated work.
+    const nextTasks = tasks.map(task => task.id === block.taskId && requested.minutes > task.estimateMinutes
+      ? { ...task, estimateMinutes: requested.minutes, estimatedByAI: false } : task)
     const nextPins = [
       ...pins.filter((pin) => !(pin.taskId === block.taskId && (pin.date === block.date || pin.date === date))),
       requested,
@@ -477,7 +484,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
       error: null,
       actionMessage: 'Checking the move or resize… Your previous position is kept until confirmed.',
     })
-    const result = await postPlan({ tasks, preferences, busy, pins: nextPins, mode, ...request(new Date()) })
+    const result = await postPlan({ tasks: nextTasks, preferences, busy, pins: nextPins, mode, ...request(new Date()) })
     if (id !== planRequestId) return
     if (plannerSnapshotKey(get()) !== source) {
       set({ status: 'error', error: changedDuringRequest, actionMessage: null })
@@ -579,7 +586,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     } else if (kind === 'use-weekend') {
       get().setPreferences({ weekendMode: 'light', overflowPreference: 'weekend' })
     } else if (kind === 'extend-hours') {
-      get().setPreferences({ overflowPreference: 'shoulder' })
+      get().setPreferences({ overflowPreference: 'shoulder', workingHours: Object.fromEntries(Object.entries(preferences.workingHours).map(([day, hours]) => [day, hours ? { ...hours, start: Math.max(0, hours.start - 60) } : null])) as Preferences['workingHours'] })
     } else if (kind === 'shorten') {
       const cut = Math.max(DEFAULT_MIN_BLOCK, Math.round(task.estimateMinutes / 2 / SNAP_MINUTES) * SNAP_MINUTES)
       get().updateTask(taskId, { estimateMinutes: Math.max(SNAP_MINUTES, task.estimateMinutes - cut) })
@@ -675,7 +682,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     set({ syncState: { status: 'syncing', message: 'Checking what would be written…' } })
     const result = await postSync({ proposal, approvedBlockIds: blockIds, dryRun: true })
     if (!result.ok) {
-      set({ syncState: { status: 'error', message: result.error.message } })
+      set({ syncState: { status: 'error', message: result.error.message }, capability: calendarConnectionAfterError(get().capability, result.error) })
       return
     }
     set({
@@ -745,7 +752,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     set({ syncState: { status: 'syncing', message: 'Writing approved blocks…' } })
     const result = await postSync({ proposal, approvedBlockIds: blockIds, dryRun: false })
     if (!result.ok) {
-      set({ syncState: { status: 'error', message: result.error.message } })
+      set({ syncState: { status: 'error', message: result.error.message }, capability: calendarConnectionAfterError(get().capability, result.error) })
       return
     }
     const { inserted, updated, failed } = result.data
@@ -769,7 +776,7 @@ export const usePlanner = create<State & Actions>((set, get) => ({
     const { deletePlanEvents } = await import('@/lib/api')
     const result = await deletePlanEvents(planId)
     if (!result.ok) {
-      set({ syncState: { status: 'error', message: result.error.message } })
+      set({ syncState: { status: 'error', message: result.error.message }, capability: calendarConnectionAfterError(get().capability, result.error) })
       return
     }
     set({

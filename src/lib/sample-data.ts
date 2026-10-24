@@ -49,6 +49,7 @@ export function defaultPreferences(timezone = DEMO_TIMEZONE): Preferences {
     lunch: { start: 12 * 60 + 30, end: 13 * 60 + 30, minutes: 45 },
     bufferMinutes: 10,
     minBlockMinutes: 30,
+    maxMeetingMinutesPerDay: 240,
     maxDeepWorkMinutesPerDay: 270,
     maxPlannedMinutesPerDay: 420,
     blackouts: [

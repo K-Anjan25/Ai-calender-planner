@@ -1,3 +1,7 @@
+import { planningResponse } from '@/lib/planning-stream'
+import { plannerAccessError } from '@/lib/auth/planner-access'
+import { planningBusy } from '@/lib/google/planning-context'
+import { localWallISO } from '@/lib/timezone'
 import { NextResponse } from 'next/server'
 import { chatRequestSchema, type ChatResponse } from '@/lib/types'
 import { runPlannerAgent } from '@/lib/agent/planner-agent'
@@ -16,6 +20,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
+  const denied = await plannerAccessError()
+  if (denied) return denied
   let body: unknown
   try {
     body = await request.json()
@@ -33,44 +39,49 @@ export async function POST(request: Request) {
 
   const input = parsed.data
   const nowISO = input.now ?? new Date().toISOString()
-  const weekStartDate = input.weekStart ?? weekStartOf(nowISO, input.preferences.weekStartsOn)
+  const weekStartDate = input.weekStart ?? weekStartOf(localWallISO(nowISO, input.preferences.timezone), input.preferences.weekStartsOn)
 
-  try {
-    const result = await runPlannerAgent({
-      tasks: input.tasks,
-      preferences: input.preferences,
-      busy: input.busy,
-      pins: input.pins,
-      weekStartDate,
-      nowISO,
-      message: input.message,
-      explainBlockId: input.explainBlockId,
-      mode: input.mode,
-      provider: input.provider,
-    })
+  return planningResponse(request, async (onStep) => {
+    try {
+      const calendar = await planningBusy(weekStartDate, input.preferences.timezone, input.busy)
+      if (!calendar.ok) return NextResponse.json({ ok: false, error: { code: calendar.code, message: 'Could not refresh your calendar availability. The previous draft is unchanged. Reconnect Google Calendar or try again.' } }, { status: 502 })
+      const result = await runPlannerAgent({
+        onStep,
+        tasks: input.tasks,
+        preferences: input.preferences,
+        busy: calendar.events,
+        pins: input.pins,
+        weekStartDate,
+        nowISO: localWallISO(nowISO, input.preferences.timezone),
+        message: input.message,
+        explainBlockId: input.explainBlockId,
+        mode: input.mode,
+        provider: input.provider,
+      })
 
-    const changes = diffPlans(input.tasks, result.tasks, result.proposal, input.previousPreferences, input.previousBlocks)
-    const data: ChatResponse['data'] = {
-      proposal: result.proposal,
-      reply: result.reply,
-      changes,
-      tasks: result.tasks,
-      preferences: result.preferences,
-      trace: result.trace,
-      provider: result.provider,
-    }
-    return NextResponse.json({ ok: true, data })
-  } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          code: 'CHAT_FAILED',
-          message: 'The agent could not apply that change.',
-          detail: error instanceof Error ? error.message.slice(0, 200) : 'unknown',
+      const changes = diffPlans(input.tasks, result.tasks, result.proposal, input.previousPreferences, input.previousBlocks)
+      const data: ChatResponse['data'] = {
+        proposal: result.proposal,
+        reply: [...calendar.notes, result.reply].join(' '),
+        changes,
+        tasks: result.tasks,
+        preferences: result.preferences,
+        trace: result.trace,
+        provider: result.provider,
+      }
+      return NextResponse.json({ ok: true, data })
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: 'CHAT_FAILED',
+            message: 'The agent could not apply that change.',
+            detail: error instanceof Error ? error.message.slice(0, 200) : 'unknown',
+          },
         },
-      },
-      { status: 500 },
-    )
-  }
+        { status: 500 },
+      )
+    }
+  })
 }

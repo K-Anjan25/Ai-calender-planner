@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Plus, Trash2, Info } from 'lucide-react'
 import { SNAP_MINUTES, WEEKDAYS, WEEKDAY_LABEL, WEEKDAY_SHORT, type Preferences, type Weekday } from '@/lib/types'
 import { fmtClock, fmtDuration } from '@/lib/scheduler/slots'
@@ -35,7 +34,7 @@ function fromTime(value: string): number {
 export function PreferencePanel() {
   const locked = usePlanner(plannerLocked)
   const { preferences, setPreferences } = usePlanner()
-  const [customPeak, setCustomPeak] = useState({ start: 9 * 60, end: 12 * 60 })
+  const customPeak = typeof preferences.focusPeak === 'object' ? preferences.focusPeak : { start: 9 * 60, end: 12 * 60 }
 
   const update = (patch: Partial<Preferences>) => setPreferences(patch)
 
@@ -63,6 +62,16 @@ export function PreferencePanel() {
   return (
     <fieldset disabled={locked} aria-busy={locked} className="flex min-w-0 flex-col gap-3 disabled:opacity-60">
       <legend className="sr-only">Rule editing</legend>
+      <PaperSheet className="p-3.5">
+        <PaperLabel htmlFor="planning-timezone">Planning timezone</PaperLabel>
+        <PaperSelect id="planning-timezone" value={preferences.timezone} onChange={event => update({ timezone: event.target.value })}>
+          {[...new Set(['UTC', 'Asia/Kolkata', preferences.timezone, ...Intl.supportedValuesOf('timeZone')])].sort().map(zone => <option key={zone}>{zone}</option>)}
+        </PaperSelect>
+        <p className="mt-2 text-xs text-ink-soft">Task dates, times and imported availability use this timezone.</p>
+        <PaperLabel htmlFor="meeting-cap" className="mt-3">Daily meeting warning threshold (minutes)</PaperLabel>
+        <PaperInput id="meeting-cap" type="number" min={0} max={1440} step={15} value={preferences.maxMeetingMinutesPerDay} onChange={event => update({ maxMeetingMinutesPerDay: Math.max(0, Math.min(1440, Number(event.target.value))) })} />
+        <p className="mt-2 text-xs text-ink-soft">Existing meetings are never moved or deleted. Days above this threshold are flagged in the report.</p>
+      </PaperSheet>
       <PaperSheet className="p-3.5">
         <h3 className="mb-2 text-[15px]">Working hours</h3>
         <ul className="space-y-1.5">
@@ -141,7 +150,6 @@ export function PreferencePanel() {
                 value={toTime(customPeak.start)}
                 onChange={(event) => {
                   const start = fromTime(event.target.value)
-                  setCustomPeak((current) => ({ ...current, start }))
                   update({ focusPeak: { start, end: customPeak.end } })
                 }}
               />
@@ -153,7 +161,6 @@ export function PreferencePanel() {
                 value={toTime(customPeak.end)}
                 onChange={(event) => {
                   const end = fromTime(event.target.value)
-                  setCustomPeak((current) => ({ ...current, end }))
                   update({ focusPeak: { start: customPeak.start, end } })
                 }}
               />

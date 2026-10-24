@@ -136,7 +136,7 @@ export const blackoutSchema = z.object({
 })
 
 export const preferencesSchema = z.object({
-  timezone: z.string().min(1).default('UTC'),
+  timezone: z.string().min(1).refine(value => { try { new Intl.DateTimeFormat('en', { timeZone: value }); return true } catch { return false } }, 'Use a valid IANA timezone').default('UTC'),
   weekStartsOn: weekdaySchema.default('mon'),
   workingHours: z.record(weekdaySchema, dayHoursSchema),
   focusPeak: focusPeakSchema.default('morning'),
@@ -147,6 +147,7 @@ export const preferencesSchema = z.object({
     .default({ start: 12 * 60 + 30, end: 13 * 60 + 30, minutes: 45 }),
   bufferMinutes: z.number().int().min(0).max(60).default(10),
   minBlockMinutes: z.number().int().min(SNAP_MINUTES).max(180).default(DEFAULT_MIN_BLOCK),
+  maxMeetingMinutesPerDay: z.number().int().min(0).max(1440).default(240),
   maxDeepWorkMinutesPerDay: z.number().int().min(60).max(600).default(300),
   maxPlannedMinutesPerDay: z.number().int().min(60).max(900).default(480),
   blackouts: z.array(blackoutSchema).default([]),
@@ -255,6 +256,7 @@ export const warningSchema = z.object({
     'fragmentation',
     'no-break-day',
     'marathon',
+    'meeting-cap',
     'deadline-cliff',
     'back-to-back',
     'over-capacity',

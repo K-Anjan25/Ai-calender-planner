@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { privatePlannerAllowed } from '@/lib/auth/planner-access'
 import { authConfig, readSession } from '@/lib/auth/session'
 import PlannerWorkspace from '@/app/planner/workspace'
 
@@ -27,11 +28,12 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function PlannerPage() {
-  const { required } = authConfig()
+  const config = authConfig()
+  const { required } = config
 
   if (required) {
     const session = await readSession()
-    if (!session) redirect('/signin?next=%2Fplanner&error=required')
+    if (!privatePlannerAllowed(config, session)) redirect('/signin?next=%2Fplanner&error=required')
   }
 
   return <PlannerWorkspace />

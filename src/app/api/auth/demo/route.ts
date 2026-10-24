@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { demoUser, writeSession } from '@/lib/auth/session'
+import { authConfig, demoUser, writeSession } from '@/lib/auth/session'
 
 /**
  * POST /api/auth/demo — the zero-configuration session.
@@ -12,6 +12,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
+  if (authConfig().required) return NextResponse.json({ ok: false, error: { code: 'AUTH_REQUIRED', message: 'Demo sessions cannot unlock a private planner. Sign in with Google.' } }, { status: 403 })
   await writeSession(demoUser())
   return NextResponse.json({ ok: true, data: { user: demoUser() } })
 }

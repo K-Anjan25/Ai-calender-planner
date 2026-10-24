@@ -47,6 +47,7 @@ export type PlannerInput = {
   message?: string
   /** Explain one block instead of replanning. */
   explainBlockId?: string
+  onStep?: (step: AgentStep) => void
   mode: 'auto' | 'agent' | 'local'
   provider?: string
 }
@@ -372,7 +373,7 @@ export async function runLocalPlanner(
 ): Promise<PlannerResult> {
   const notes: string[] = [...inheritedNotes]
   const traces: AgentStep[] = []
-  const toolkit = createToolkit({ context: baseContext(input, input.tasks), interpreter, traces })
+  const toolkit = createToolkit({ context: baseContext(input, input.tasks), interpreter, traces, onStep: input.onStep })
 
   if (input.freeText && input.freeText.trim().length > 2) {
     const parsed = await interpreter.parseTasks(input.freeText, {
@@ -499,12 +500,14 @@ export async function runPlannerAgent(input: PlannerInput): Promise<PlannerResul
 
   // Live path — if anything at all goes wrong, the deterministic plan ships instead.
   const notes: string[] = []
+  let liveActive = true
   try {
     const interpreter = createLiveInterpreter(await createModel(resolved))
     const traces: AgentStep[] = []
-    const toolkit = createToolkit({ context: baseContext(input, input.tasks), interpreter, traces })
+    const toolkit = createToolkit({ context: baseContext(input, input.tasks), interpreter, traces, onStep: step => { if (liveActive) input.onStep?.(step) } })
 
-    const loop = await runLiveToolLoop(toolkit, resolved, input)
+    const loop = await withinBudget(runLiveToolLoop(toolkit, resolved, input), 18_000)
+    liveActive = false
 
     if (!loop.ok || !toolkit.proposal) {
       const fallback = await runLocalPlanner(input)
@@ -530,6 +533,7 @@ export async function runPlannerAgent(input: PlannerInput): Promise<PlannerResul
       mode: 'agent',
     }
   } catch (error) {
+    liveActive = false
     const fallback = await runLocalPlanner(input)
     return {
       ...fallback,
@@ -544,12 +548,20 @@ export async function runPlannerAgent(input: PlannerInput): Promise<PlannerResul
 async function createModel(provider: Extract<ResolvedProvider, { kind: 'live' }>) {
   if (provider.name === 'openai') {
     const { ChatOpenAI } = await import('@langchain/openai')
-    return new ChatOpenAI({ model: provider.model, temperature: 0.2, timeout: 20_000 })
+    return new ChatOpenAI({ model: provider.model, temperature: 0.2, timeout: 15_000, maxRetries: 0 })
   }
   if (provider.name === 'anthropic') {
     const { ChatAnthropic } = await import('@langchain/anthropic')
-    return new ChatAnthropic({ model: provider.model, temperature: 0.2 })
+    return new ChatAnthropic({ model: provider.model, temperature: 0.2, maxRetries: 0 })
   }
   const { ChatGoogleGenerativeAI } = await import('@langchain/google-genai')
-  return new ChatGoogleGenerativeAI({ model: provider.model, temperature: 0.2 })
+  return new ChatGoogleGenerativeAI({ model: provider.model, temperature: 0.2, maxRetries: 0 })
+}
+
+
+/** A total provider budget; fallback never waits through six independent full SDK timeouts. */
+export async function withinBudget<T>(work: Promise<T>, milliseconds: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try { return await Promise.race([work, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('MODEL_TIME_BUDGET')), milliseconds) })]) }
+  finally { clearTimeout(timer) }
 }

@@ -1,3 +1,4 @@
+import { agentStepSchema, type AgentStep } from '@/lib/types'
 import type { ChatResponse, PlanResponse, SyncResult } from '@/lib/types'
 
 /**
@@ -12,15 +13,35 @@ export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError 
 
 const TIMEOUT_MS = 25_000
 
-async function request<T>(url: string, init: RequestInit, timeout = TIMEOUT_MS): Promise<ApiResult<T>> {
+async function request<T>(url: string, init: RequestInit, timeout = TIMEOUT_MS, onStep?: (step: AgentStep) => void): Promise<ApiResult<T>> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeout)
   try {
     const response = await fetch(url, {
       ...init,
       signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+      headers: { 'Content-Type': 'application/json', ...(onStep ? { Accept: 'application/x-ndjson' } : {}), ...(init.headers ?? {}) },
     })
+    if (response.headers.get('content-type')?.includes('application/x-ndjson') && response.body) {
+      const reader = response.body.getReader(), decoder = new TextDecoder()
+      let buffer = '', result: ApiResult<T> | null = null
+      const accept = (line: string) => {
+        if (!line.trim()) return
+        const event = JSON.parse(line)
+        if (event.type === 'trace') { const step = agentStepSchema.safeParse(event.step); if (step.success) onStep?.(step.data) }
+        if (event.type === 'result') result = event.payload as ApiResult<T>
+      }
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          buffer += done ? decoder.decode() : decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n'); buffer = lines.pop() ?? ''
+          for (const line of lines) accept(line)
+          if (done) { accept(buffer); break }
+        }
+      } finally { reader.releaseLock() }
+      return result ?? { ok: false, error: { code: 'BAD_RESPONSE', message: 'Planning ended without a result. Your draft is unchanged.' } }
+    }
     const payload = (await response.json().catch(() => null)) as ApiResult<T> | null
     if (!payload) {
       return { ok: false, error: { code: 'BAD_RESPONSE', message: 'The server sent something unreadable.' } }
@@ -36,12 +57,12 @@ async function request<T>(url: string, init: RequestInit, timeout = TIMEOUT_MS):
   }
 }
 
-export function postPlan(body: unknown): Promise<ApiResult<PlanResponse['data']>> {
-  return request<PlanResponse['data']>('/api/plan', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+export function postPlan(body: unknown, onStep?: (step: AgentStep) => void): Promise<ApiResult<PlanResponse['data']>> {
+  return request<PlanResponse['data']>('/api/plan', { method: 'POST', body: JSON.stringify(body) }, 30_000, onStep)
 }
 
-export function postChat(body: unknown): Promise<ApiResult<ChatResponse['data']>> {
-  return request<ChatResponse['data']>('/api/chat', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+export function postChat(body: unknown, onStep?: (step: AgentStep) => void): Promise<ApiResult<ChatResponse['data']>> {
+  return request<ChatResponse['data']>('/api/chat', { method: 'POST', body: JSON.stringify(body) }, 30_000, onStep)
 }
 
 export function postSync(body: unknown): Promise<ApiResult<SyncResult['data']>> {

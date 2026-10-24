@@ -16,7 +16,6 @@ import {
   fmtDuration,
   minutesOfIso,
   overlaps,
-  subtractRanges,
   staticOccupancy,
   workingHoursFor,
   type FreeSlot,
@@ -35,6 +34,7 @@ import {
   orderTasks,
   reasonLabel,
   rhythmSignal,
+  totalDemandMinutes,
   scorePlacement,
   type Chunk,
   type OrderingContext,
@@ -75,6 +75,8 @@ export type PlacementContext = {
   ordering: OrderingContext
   droppedPins: string[]
   notices: string[]
+  prerequisiteIds?: Set<string>
+  requiredByTask?: Map<string, number>
 }
 
 /* ------------------------------------------------------------------ *
@@ -102,7 +104,19 @@ function materialisePins(
     const blocked = !hours || start < hours.start || end > hours.end
     const collides = staticOccupancy(day.weekday, day.date, ctx.prefs, ctx.busy).some(event => overlaps(start, end, event.start, event.end)) ||
       blocks.some(block => block.date === pin.date && overlaps(start, end, block.startMin, block.endMin))
-    if (blocked || collides) {
+    const minutes = end - start
+    const abs = (value: string) => (Date.parse(`${value.slice(0, 10)}T00:00:00Z`) - Date.parse(`${ctx.frame.weekStartDate}T00:00:00Z`)) / 60000 + Number(value.slice(11, 13)) * 60 + Number(value.slice(14, 16))
+    const cadence = occurrenceDays(task, ctx.frame.weekStartDate)
+    const repeating = cadence.length > 1
+    const already = blocks.filter(block => block.taskId === task.id && (!repeating || block.date === pin.date)).reduce((sum, block) => sum + block.minutes, 0)
+    const badPin = minutes < ctx.prefs.minBlockMinutes || minutes % SNAP_MINUTES !== 0 ||
+      already + minutes > task.estimateMinutes ||
+      (task.recurrence && !cadence.length) || (cadence.length > 0 && !cadence.includes(day.weekday)) ||
+      (task.deadline && dayIndex * 1440 + end > abs(task.deadline)) ||
+      (task.earliestStart && dayIndex * 1440 + start < abs(task.earliestStart)) ||
+      blocks.filter(block => block.date === pin.date).reduce((sum, block) => sum + block.minutes, 0) + minutes > ctx.prefs.maxPlannedMinutesPerDay ||
+      (task.energy === 'deep' && blocks.filter(block => block.date === pin.date && block.energy === 'deep').reduce((sum, block) => sum + block.minutes, 0) + minutes > ctx.prefs.maxDeepWorkMinutesPerDay)
+    if (blocked || collides || badPin) {
       dropped.push(pin.taskId)
       continue
     }
@@ -208,12 +222,12 @@ function busyOnDate(ctx: PlacementContext, date: string): BusyEvent[] {
  */
 export function dependencyReadyAbs(ctx: PlacementContext, task: Task): number | null {
   if (!task.dependsOn?.length) return null
-  const ids = new Set(task.dependsOn)
-  let ready: number | null = null
-  for (const block of ctx.blocks) {
-    if (block.kind !== 'task' || !ids.has(block.taskId)) continue
-    const endAbs = block.dayIndex * 1440 + block.endMin
-    if (ready === null || endAbs > ready) ready = endAbs
+  let ready = 0
+  for (const id of task.dependsOn) {
+    if (ctx.requiredByTask && !ctx.requiredByTask.has(id)) continue
+    const placed = ctx.blocks.filter(block => block.kind === 'task' && block.taskId === id)
+    if (!placed.length || placed.reduce((sum, block) => sum + block.minutes, 0) < (ctx.requiredByTask?.get(id) ?? 0)) return Infinity
+    ready = Math.max(ready, ...placed.map(block => block.dayIndex * 1440 + block.endMin))
   }
   return ready
 }
@@ -230,7 +244,7 @@ export function isFeasible(ctx: PlacementContext, input: FeasibilityInput): Feas
   if (start < slot.start || end > slot.end) return { ok: false, code: 'OUTSIDE_SLOT' }
 
   // INV-3 deadline
-  if (!input.allowPastDeadline && task.deadline) {
+  if (task.deadline) {
     const deadlineAbs = absMinuteOf(task.deadline, ctx.ordering)
     const dayAbs = slot.dayIndex * 1440
     if (deadlineAbs !== null && dayAbs + end > deadlineAbs) return { ok: false, code: 'PAST_DEADLINE' }
@@ -269,7 +283,7 @@ export function isFeasible(ctx: PlacementContext, input: FeasibilityInput): Feas
   }
 
   // Daily caps are soft: they only hard-fail outside the escalation ladder.
-  if (!input.allowOverCap) {
+  { // Daily limits are never silently relaxed.
     const planned = ctx.plannedByDate.get(input.date) ?? 0
     if (planned + minutes > ctx.prefs.maxPlannedMinutesPerDay) return { ok: false, code: 'DAILY_CAP' }
     if (task.energy === 'deep') {
@@ -424,7 +438,7 @@ export function tryPlaceChunk(
 
       const placement: Placement = {
         slot,
-        score: breakdown.score,
+        score: breakdown.score - (ctx.prerequisiteIds?.has(task.id) ? slot.dayIndex * 0.15 : 0),
         reasons,
         block: {
           id: `blk_${task.id}_${chunk.index}`,
@@ -574,124 +588,10 @@ export function splitToFit(
   return null
 }
 
-/**
- * The escalation ladder (PRD §7), run in a second pass once every chunk has had a clean attempt:
- * join a session → extend into shoulder hours → exceed the daily cap → slip past the deadline → give up.
- * Every rung that costs the user something marks the block so the report can say so.
- */
+/** Hard invariants take precedence over overflow suggestions: never relax hours/caps/deadlines. */
 export function escalateChunk(ctx: PlacementContext, chunk: Chunk): { placement: Placement | null; failure?: string } {
   const extended = extendIntoExistingBlock(ctx, chunk)
-  if (extended) return { placement: extended }
-
-  const tryShoulder = () => {
-    const placement = withShoulderSlots(ctx, (extendedCtx) =>
-      tryPlaceChunk(extendedCtx, chunk, { isShoulder: true }),
-    )
-    if (placement) {
-      placement.block.reasonText = `${placement.block.reasonText} Extended into shoulder hours because the week had nothing left.`
-      placement.block.conflict = 'over-capacity'
-    }
-    return placement
-  }
-
-  const tryOverCap = () => {
-    const placement = tryPlaceChunk(ctx, chunk, { allowOverCap: true })
-    if (placement) {
-      placement.block.reasonText = `${placement.block.reasonText} Placed over your daily cap.`
-      placement.block.conflict = 'over-capacity'
-    }
-    return placement
-  }
-
-  const tryWeekend = () => {
-    const placement = withWeekendSlots(ctx, (extendedCtx) => tryPlaceChunk(extendedCtx, chunk))
-    if (placement) {
-      placement.block.reasonText = `${placement.block.reasonText} Moved onto the weekend because the weekdays could not hold it.`
-      placement.block.conflict = 'over-capacity'
-    }
-    return placement
-  }
-
-  // Order follows the user's stated preference for what should give when the week is full.
-  const rungs: (() => Placement | null)[] =
-    ctx.prefs.overflowPreference === 'longer-days'
-      ? [tryOverCap, tryShoulder, tryWeekend]
-      : ctx.prefs.overflowPreference === 'weekend'
-        ? [tryWeekend, tryShoulder, tryOverCap]
-        : [tryShoulder, tryOverCap, tryWeekend]
-
-  for (const rung of rungs) {
-    const placement = rung()
-    if (placement) return { placement }
-  }
-
-  const pastDeadline = tryPlaceChunk(ctx, chunk, { allowOverCap: true, allowPastDeadline: true })
-  if (pastDeadline) {
-    pastDeadline.block.reasonText = `${pastDeadline.block.reasonText} Does not fit before its deadline.`
-    pastDeadline.block.conflict = 'deadline-risk'
-    return { placement: pastDeadline }
-  }
-
-  return { placement: null, failure: 'no-fit' }
-}
-
-/**
- * Shoulder hours: 06:00–working-start and working-end–22:00. Used only by the escalation ladder,
- * because the plan should always tell the user before it eats their evening (PRD §7).
- */
-function shoulderSlots(ctx: PlacementContext): FreeSlot[] {
-  const out: FreeSlot[] = []
-  for (const day of ctx.frame.days) {
-    const hours = workingHoursFor(ctx.prefs, day.weekday)
-    if (!hours) continue
-    const windows: { start: number; end: number }[] = [
-      { start: Math.max(6 * 60, hours.start - 120), end: hours.start },
-      { start: hours.end, end: Math.min(22 * 60, hours.end + 120) },
-    ]
-    const holes = [
-      ...staticOccupancy(day.weekday, day.date, ctx.prefs, ctx.busy).map((item) => ({ start: item.start, end: item.end })),
-      ...ctx.blocks.filter((b) => b.date === day.date).map((b) => ({ start: b.startMin, end: b.endMin })),
-    ]
-    for (const window of windows) {
-      if (window.end - window.start < SNAP_MINUTES) continue
-      for (const interval of subtractRanges([window], holes)) {
-        const start = Math.ceil(interval.start / SNAP_MINUTES) * SNAP_MINUTES
-        const end = Math.floor(interval.end / SNAP_MINUTES) * SNAP_MINUTES
-        if (end - start < SNAP_MINUTES) continue
-        out.push({
-          id: `slot_shoulder_${day.weekday}_${start}`,
-          weekday: day.weekday,
-          date: day.date,
-          dayIndex: day.dayIndex,
-          start,
-          end,
-          minutes: end - start,
-          profile: 'trough',
-          weekend: day.weekday === 'sat' || day.weekday === 'sun',
-        })
-      }
-    }
-  }
-  return out
-}
-
-function withShoulderSlots<T>(ctx: PlacementContext, run: (extended: PlacementContext) => T): T {
-  return run({ ...ctx, slots: [...ctx.slots, ...shoulderSlots(ctx)] })
-}
-
-/** Weekend morning as the last resort, only when the user asked us to consider it. */
-function withWeekendSlots<T>(ctx: PlacementContext, run: (extended: PlacementContext) => T): T {
-  if (ctx.prefs.weekendMode !== 'off') return run(ctx)
-  const prefs: Preferences = { ...ctx.prefs, weekendMode: 'light' }
-  const extra = buildFreeSlots({
-    frame: ctx.frame,
-    preferences: prefs,
-    busy: ctx.busy,
-    pinnedBlocks: ctx.blocks.filter((b) => b.pinned),
-    minBlockMinutes: Math.min(prefs.minBlockMinutes, 30),
-  }).filter((slot) => slot.weekend)
-  if (!extra.length) return run(ctx)
-  return run({ ...ctx, prefs, slots: [...ctx.slots, ...extra] })
+  return extended ? { placement: extended } : { placement: null, failure: 'no-fit' }
 }
 
 /* ------------------------------------------------------------------ *
@@ -747,6 +647,8 @@ export function generatePlan(input: GenerateInput): PlanProposal {
     ordering: orderingCtx,
     droppedPins: pinnedResult.dropped,
     notices: [],
+    prerequisiteIds: new Set(tasks.flatMap(task => task.dependsOn ?? [])),
+    requiredByTask: new Map(tasks.map(task => [task.id, totalDemandMinutes(task, weekStartDate)])),
   }
 
   const ordered = orderTasks(tasks, orderingCtx)
@@ -755,7 +657,17 @@ export function generatePlan(input: GenerateInput): PlanProposal {
   // Pass 1 — clean placement inside real working hours for every chunk of every task.
   const pending: Chunk[] = []
   for (const task of ordered) {
-    for (const chunk of chunksForTask(task, preferences, frame.weekStartDate)) {
+    const pinned = pinnedBlocks.filter(block => block.taskId === task.id)
+    const repeating = occurrenceDays(task, weekStartDate).length > 1
+    let pinnedRemaining = pinned.reduce((sum, block) => sum + block.minutes, 0)
+    const pinnedByDay = new Map<Weekday, number>()
+    for (const block of pinned) pinnedByDay.set(block.weekday, (pinnedByDay.get(block.weekday) ?? 0) + block.minutes)
+    for (const original of chunksForTask(task, preferences, frame.weekStartDate)) {
+      const accounted = Math.min(original.minutes, repeating && original.weekday ? (pinnedByDay.get(original.weekday) ?? 0) : pinnedRemaining)
+      if (repeating && original.weekday) pinnedByDay.set(original.weekday, (pinnedByDay.get(original.weekday) ?? 0) - accounted)
+      else pinnedRemaining -= accounted
+      const chunk = { ...original, minutes: original.minutes - accounted }
+      if (!chunk.minutes) continue
       const placed = tryPlaceChunk(ctx, chunk)
       if (!placed) pending.push(chunk)
     }
@@ -769,6 +681,7 @@ export function generatePlan(input: GenerateInput): PlanProposal {
     const chunk = queue.shift()
     if (!chunk) break
 
+    if (tryPlaceChunk(ctx, chunk)) continue
     const trimmed = splitToFit(ctx, chunk)
     if (trimmed) {
       if (trimmed.remainder >= Math.max(SNAP_MINUTES, chunk.task.minChunkMinutes)) {
@@ -805,6 +718,31 @@ export function generatePlan(input: GenerateInput): PlanProposal {
     ctx,
     failures,
   })
+
+  // Pins are immovable only when valid. A pin cannot bypass an incomplete prerequisite;
+  // remove invalid dependent work to a visible remainder, cascading through dependency chains.
+  for (let pass = 0; pass < tasks.length; pass++) {
+    const invalid = new Set<string>()
+    for (const task of tasks) {
+      const dependencies = (task.dependsOn ?? []).filter(id => tasks.some(candidate => candidate.id === id))
+      if (!dependencies.length) continue
+      let ready = 0
+      for (const id of dependencies) {
+        const placed = repaired.blocks.filter(block => block.kind === 'task' && block.taskId === id)
+        if (placed.reduce((sum, block) => sum + block.minutes, 0) < (ctx.requiredByTask?.get(id) ?? 0)) { ready = Infinity; break }
+        ready = Math.max(ready, ...placed.map(block => block.dayIndex * 1440 + block.endMin))
+      }
+      for (const block of repaired.blocks.filter(block => block.kind === 'task' && block.taskId === task.id)) {
+        if (block.dayIndex * 1440 + block.startMin < ready) {
+          invalid.add(block.id)
+          if (block.pinned && !ctx.droppedPins.includes(task.id)) ctx.droppedPins.push(task.id)
+          repaired.failures.set(task.id, 'A prerequisite must be fully completed before this task can start')
+        }
+      }
+    }
+    if (!invalid.size) break
+    repaired.blocks = repaired.blocks.filter(block => !invalid.has(block.id))
+  }
 
   return evaluatePlan({
     frame,

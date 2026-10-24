@@ -1,3 +1,4 @@
+import { plannerAccessError } from '@/lib/auth/planner-access'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { planProposalSchema } from '@/lib/types'
@@ -21,6 +22,8 @@ const bodySchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const denied = await plannerAccessError()
+  if (denied) return denied
   let payload: unknown
   try {
     payload = await request.json()

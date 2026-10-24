@@ -1,3 +1,4 @@
+import { plannerAccessError } from '@/lib/auth/planner-access'
 import { NextResponse } from 'next/server'
 import { syncRequestSchema } from '@/lib/types'
 import { deletePlanEvents, syncPlan } from '@/lib/google/calendar'
@@ -38,6 +39,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const denied = await plannerAccessError()
+  if (denied) return denied
   let body: unknown
   try {
     body = await request.json()
@@ -87,6 +90,8 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const denied = await plannerAccessError()
+  if (denied) return denied
   const url = new URL(request.url)
   const planId = url.searchParams.get('planId')
   const calendarId = url.searchParams.get('calendarId') ?? 'primary'

@@ -48,6 +48,7 @@ export function googleAuthConfig(origin?: string): AuthConfig {
   const missing: string[] = []
   if (!clientId) missing.push('GOOGLE_CLIENT_ID')
   if (!clientSecret) missing.push('GOOGLE_CLIENT_SECRET')
+  if (process.env.NODE_ENV === 'production' && !readEnv('AUTH_SECRET')) missing.push('AUTH_SECRET')
   return { configured: missing.length === 0, missing, redirectUri: authRedirectUri(origin) }
 }
 

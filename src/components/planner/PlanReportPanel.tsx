@@ -505,7 +505,7 @@ function BlockPositionEditor({ block, weekStart }: { block: PlacedBlock; weekSta
           Apply move or resize
         </PaperButton>
         <p className="text-xs text-ink-soft">
-          The engine checks this change before applying it. Other draft work may move; nothing is published.
+          The engine checks this change before applying it. Other draft work may move. A session longer than the task estimate increases that estimate. Nothing is published.
         </p>
       </fieldset>
     </form>

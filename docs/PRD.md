@@ -205,7 +205,9 @@ The engine is deterministic and is the single source of truth for time. Full alg
 | Context batching | group same-location / same-category work |
 
 **Escalation ladder when a task cannot be fully placed**
-`shift within the week` → `reduce chunk count by merging` → `allow adjacent-day spillover` → `extend into shoulder hours (with warning)` → `flag as WILL-NOT-FIT with quantified deficit` → `offer trade-offs`.
+`shift within the week` → `reduce chunk count by merging` → `split into valid smaller chunks` → `flag as WILL-NOT-FIT with quantified deficit` → `offer trade-offs`.
+
+Safety clarification (2026-10-24): INV-1–8 take precedence. No automatic outside-hours, deadline, protected-time or daily-cap relaxation. Extending working hours requires an explicit user trade-off; invalid pins are rejected and reported, not silently moved. Imported meetings remain immovable even if they exceed a meeting warning threshold.
 
 ## 8. Non-functional requirements
 
@@ -234,17 +236,17 @@ The engine is deterministic and is the single source of truth for time. Full alg
 ## 10. Release scope
 
 **MVP (this repository)**
-Structured + free-text intake · preference model · deterministic week scheduler with explanations · agent with tools, structured output, and demo fallback · layered week grid with drag-to-adjust · Plan Report with trade-offs · Google Calendar OAuth + free/busy + approved push · insights rail · responsive paper-diorama UI.
+Structured + free-text intake · preference model · deterministic week scheduler with explanations · agent with tools, structured output, and demo fallback · layered week grid with drag-to-adjust · Plan Report with trade-offs · Google Calendar OAuth + free/busy + approved push · insights rail · responsive Calendra UI.
 
 **Post-MVP, shipped (see `TASK.md`)**
 Recurring task engine with per-occurrence estimates (FR-1.4, T-601) · dependency enforcement with an
 ordering gate, an `after-dependency` reason and a `dependency-unmet` audit (FR-1.5, T-602) ·
-credential-free `.ics` export (FR-5.7–5.8, T-604) · the public site (landing, pricing, docs) ·
+credential-free `.ics` export (FR-5.7–5.8, T-604) · the public site (landing and pricing; Markdown docs remain internal) ·
 signed-cookie authentication with a Google identity grant and a labelled demo session (FR-7.1–7.8, T-701
 … T-707) · a responsive-containment pass with an asserted overflow guard (T-708).
 
 **v1.1**
-Calendar *import* (and `.ics` as a sync target), multi-week horizon, plan templates, "what changed"
+Additional calendar-file import (`.ics` as a sync target), multi-week horizon, plan templates, "what changed"
 diff view, persistence + accounts.
 
 **v2**
@@ -270,3 +272,107 @@ Team availability, focus-time defence against external invites, mobile PWA with 
 | Google API quota / verification | Sync unavailable at launch | Demo mode + manual ICS-free operation; sync is additive, never required. |
 | Provider cost per plan | Unit economics | Cheap model for parsing, strong model only for strategy/narration; deterministic engine does the heavy lifting. |
 | Scope creep into project management | Lost focus | Non-goals §3 are enforced in review (`RULES.md` §11). |
+
+
+## 15. Requirement audit — 2026-10-24
+
+This is a count of **48 functional requirements**, not a percentage of an entire commercial product.
+**47/48 (98%) have implementation paths; one is qualified.** Of the 48, **38 (79%) are locally
+covered**, **9 require live integration sign-off**, and **1 needs the meeting-cap interpretation
+accepted**. A local pass is not a hosted acceptance test or an accessibility certification. There was
+no reliable previous percentage; this audit is the baseline, not an invented before/after delta.
+
+- **L**: implemented and locally exercised/reviewed; normal real-user acceptance still applies.
+- **I**: implemented, with local adapter/tool/auth tests, but live external-provider acceptance pending.
+- **Q**: qualified: deep-work/total caps are enforced; meeting threshold warns without changing
+  immutable imported meetings. This does **not** claim a hard cap on an external calendar.
+
+| Requirement | Status | Implementation / local evidence |
+| --- | --- | --- |
+| FR-1.1 | L | TaskInbox / TaskBriefPreview / TaskConstraintFields; UI + scheduler tests |
+| FR-1.2 | L | TaskInbox / TaskBriefPreview / TaskConstraintFields; UI + scheduler tests |
+| FR-1.3 | L | TaskInbox / TaskBriefPreview / TaskConstraintFields; UI + scheduler tests |
+| FR-1.4 | L | TaskInbox / TaskBriefPreview / TaskConstraintFields; UI + scheduler tests |
+| FR-1.5 | L | TaskInbox / TaskBriefPreview / TaskConstraintFields; UI + scheduler tests |
+| FR-2.1 | L | PreferencePanel / types / score; UI + completion tests |
+| FR-2.2 | L | PreferencePanel / types / score; UI + completion tests |
+| FR-2.3 | L | PreferencePanel / types / score; UI + completion tests |
+| FR-2.4 | L | PreferencePanel / types / score; UI + completion tests |
+| FR-2.5 | L | PreferencePanel / types / score; UI + completion tests |
+| FR-2.6 | Q | PreferencePanel / types / score; UI + completion tests |
+| FR-2.7 | L | PreferencePanel / types / score; UI + completion tests |
+| FR-3.1 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.2 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.3 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.4 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.5 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.6 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.7 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.8 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.9 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.10 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-3.11 | L | scheduler engine / policies / score; invariants, perf and UI tests |
+| FR-4.1 | I | planner-agent / tools / planning-stream; agent + completion tests |
+| FR-4.2 | L | planner-agent / tools / planning-stream; agent + completion tests |
+| FR-4.3 | L | planner-agent / tools / planning-stream; agent + completion tests |
+| FR-4.4 | L | planner-agent / tools / planning-stream; agent + completion tests |
+| FR-4.5 | L | planner-agent / tools / planning-stream; agent + completion tests |
+| FR-4.6 | I | planner-agent / tools / planning-stream; agent + completion tests |
+| FR-5.1 | I | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-5.2 | I | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-5.3 | I | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-5.4 | I | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-5.5 | I | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-5.6 | I | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-5.7 | L | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-5.8 | L | google calendar / OAuth + ICS adapter; auth, ICS + completion tests |
+| FR-6.1 | L | PlanReportPanel / scheduler score; scheduler + UI tests |
+| FR-6.2 | L | PlanReportPanel / scheduler score; scheduler + UI tests |
+| FR-6.3 | L | PlanReportPanel / scheduler score; scheduler + UI tests |
+| FR-7.1 | L | auth / pricing / capability routes; auth + billing + marketing tests |
+| FR-7.2 | I | auth / pricing / capability routes; auth + billing + marketing tests |
+| FR-7.3 | L | auth / pricing / capability routes; auth + billing + marketing tests |
+| FR-7.4 | L | auth / pricing / capability routes; auth + billing + marketing tests |
+| FR-7.5 | L | auth / pricing / capability routes; auth + billing + marketing tests |
+| FR-7.6 | L | auth / pricing / capability routes; auth + billing + marketing tests |
+| FR-7.7 | L | auth / pricing / capability routes; auth + billing + marketing tests |
+| FR-7.8 | L | auth / pricing / capability routes; auth + billing + marketing tests |
+
+### Normative and non-functional sign-off
+
+- **INV-1–8:** scheduler regression/property checks plus new strict-hours/deadline, pin-conservation
+  and prerequisite-pin tests. Valid pins remain immovable; rejected pins are explicitly reported.
+- **Performance:** 60-task server budget and drag interaction regression tests pass locally. No claim
+  of production p95, universal ≤100ms interactions, or measured field CLS.
+- **Agent latency:** actual completed tool steps stream to the UI; default JSON clients still work.
+  Live tool loop has an 18-second total wait budget with deterministic fallback and SDK retries off.
+  This is a timeout mechanism, **not evidence of ≤20s end-to-end live p95**: calendar refresh, model
+  initialization, networking and fallback add time. Late remote work may still incur provider costs.
+- **Reliability:** zero-key demo and outage/schema fallback tested; availability errors fail closed,
+  not an empty-calendar success. Missing primary/per-calendar errors block planning/writing.
+- **Accessibility:** keyboard/focus, reduced motion, contrast and responsive Chromium checks exist;
+  assistive-technology/physical touch-device review and full WCAG audit remain outstanding.
+- **Privacy/access:** production Google identity requires AUTH_SECRET. Private planner and planning,
+  chat, sync and export POST APIs require a verified Google session, not a demo identity. Calendar
+  tokens remain server-side; a full production security/abuse audit is not claimed.
+- **Determinism/portability:** deterministic scheduler tests and Node production build pass; no new
+  runtime dependency or vendor-hosting lock-in was added.
+
+### Remaining acceptance, not missing feature claims
+
+1. Run one configured live LLM provider: successful tool invocation, malformed-output repair,
+   timeout/outage fallback, and measured usage/latency. Configured credentials alone do not prove AI ran.
+2. Test Google identity + Calendar OAuth on the deployed domain: import known busy events, approved
+   insert, re-sync update (no duplicates), revoke/refresh recovery, partial failure and rollback.
+3. Accept meeting-warning semantics above or define a separate feature to modify external meetings;
+   the latter conflicts with MVP's immutable-calendar guarantee and must not happen implicitly.
+4. Measure live p95/field performance; complete screen-reader/device/WCAG acceptance.
+5. Evaluate §9 metrics after launch with actual users; 60-day retention/acceptance cannot be tested locally.
+
+Task deadline/earliest-start fields are local wall-clock values in the planning timezone, not
+cross-zone instants. Legacy offset-bearing task strings retain wall-component semantics; callers
+should send local values. Google freebusy and request `now` are absolute instants converted at the
+boundary. DST fall-back busy ranges conservatively reserve the repeated hour.
+
+Server-backed persistence, cross-device accounts, payments/entitlements, teams and RAG are not
+silently counted as MVP requirements. See LAUNCH-READINESS.md for paid-product gaps.

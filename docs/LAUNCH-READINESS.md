@@ -159,3 +159,23 @@ Screenshots and logs are local artifacts, not evidence of a hosted deployment pr
 - Cancel planning invalidates the client result; it does not guarantee an already-running server
   or model-provider request has stopped or avoided charges. Calendar writes are not exposed to this
   cancellation action. Inputs edited during a pending request are retained, not silently merged.
+
+
+## PRD completion audit — 2026-10-24
+
+Implemented confirmation-before-commit intake; editable structured constraints; planning timezone;
+connected-calendar refresh before plan/chat; zoned freebusy/DST boundaries; fail-closed calendar
+rechecks; strict hours/deadlines/caps and pin conservation/dependency safety; meeting-only cap warnings;
+explicit extend-hours trade-off; real tool-step NDJSON progress and a bounded provider-loop fallback.
+Private deployments reject demo identities on page/API entry; real production accounts require
+AUTH_SECRET. Calendar sync expiry clears the connected capability for recovery.
+
+PRD §15 contains the 48-row traceability matrix: 47 implementation paths plus one qualified meeting
+cap; 38 locally covered, 9 live-integration sign-offs pending, 1 product interpretation qualified.
+This is not 98% of a paid SaaS or proof of live AI/Google integration. No credentials were supplied,
+no provider inference or Google writes were claimed, and no RAG/payments/database scope was invented.
+
+Validation: 215 tests / 52 suites, lint/typecheck, production build, seven-width Chromium regression
+(including planner at 390/768/1280). New tests cover timezone/DST, context refresh/errors, private
+access, streamed tool steps/default JSON, provider budget, strict constraints and conservation.
+60-day metrics, live p95, full WCAG/device acceptance and live Google/LLM sign-off remain pending.

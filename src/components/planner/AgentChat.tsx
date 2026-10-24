@@ -24,7 +24,7 @@ const SUGGESTIONS = [
 ]
 
 export function AgentChat() {
-  const { chat, chatBusy, sendMessage, capability, mode, setMode, status } = usePlanner()
+  const { chat, chatBusy, sendMessage, capability, mode, setMode, status, trace } = usePlanner()
   const locked = usePlanner(plannerLocked)
   const [message, setMessage] = useState('')
   const [showTrace, setShowTrace] = useState(false)
@@ -129,7 +129,7 @@ export function AgentChat() {
 
         {chatBusy || status === 'planning' ? (
           <div className="space-y-1.5" aria-live="polite">
-            <PaperSkeleton lines={2} />
+            {trace.length ? <TraceList trace={trace} /> : <PaperSkeleton lines={2} />}
           </div>
         ) : null}
       </div>

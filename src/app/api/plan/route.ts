@@ -1,3 +1,7 @@
+import { planningResponse } from '@/lib/planning-stream'
+import { plannerAccessError } from '@/lib/auth/planner-access'
+import { planningBusy } from '@/lib/google/planning-context'
+import { localWallISO } from '@/lib/timezone'
 import { NextResponse } from 'next/server'
 import { planRequestSchema, type PlanResponse } from '@/lib/types'
 import { runPlannerAgent } from '@/lib/agent/planner-agent'
@@ -19,6 +23,8 @@ function fail(code: string, message: string, detail?: unknown) {
 }
 
 export async function POST(request: Request) {
+  const denied = await plannerAccessError()
+  if (denied) return denied
   let body: unknown
   try {
     body = await request.json()
@@ -33,38 +39,43 @@ export async function POST(request: Request) {
 
   const input = parsed.data
   const nowISO = input.now ?? new Date().toISOString()
-  const weekStartDate = input.weekStart ?? weekStartOf(nowISO, input.preferences.weekStartsOn)
+  const weekStartDate = input.weekStart ?? weekStartOf(localWallISO(nowISO, input.preferences.timezone), input.preferences.weekStartsOn)
 
   if (input.tasks.length === 0 && !input.instruction) {
     return fail('NO_TASKS', 'Add at least one task, or paste a brief for the agent to read.')
   }
 
-  try {
-    const result = await runPlannerAgent({
-      tasks: input.tasks,
-      preferences: input.preferences,
-      busy: input.busy,
-      pins: input.pins,
-      weekStartDate,
-      nowISO,
-      freeText: input.instruction,
-      mode: input.mode,
-      provider: input.provider,
-    })
+  return planningResponse(request, async (onStep) => {
+    try {
+      const calendar = await planningBusy(weekStartDate, input.preferences.timezone, input.busy)
+      if (!calendar.ok) return NextResponse.json({ ok: false, error: { code: calendar.code, message: 'Could not refresh your calendar availability. The previous draft is unchanged. Reconnect Google Calendar or try again.' } }, { status: 502 })
+      const result = await runPlannerAgent({
+        onStep,
+        tasks: input.tasks,
+        preferences: input.preferences,
+        busy: calendar.events,
+        pins: input.pins,
+        weekStartDate,
+        nowISO: localWallISO(nowISO, input.preferences.timezone),
+        freeText: input.instruction,
+        mode: input.mode,
+        provider: input.provider,
+      })
 
-    const data: PlanResponse['data'] = {
-      proposal: result.proposal,
-      provider: result.provider,
-      mode: result.mode,
-      trace: result.trace,
-      notes: result.notes,
+      const data: PlanResponse['data'] = {
+        proposal: result.proposal,
+        provider: result.provider,
+        mode: result.mode,
+        trace: result.trace,
+        notes: [...calendar.notes, ...result.notes],
+      }
+      return NextResponse.json({ ok: true, data })
+    } catch (error) {
+      return fail('PLAN_FAILED', 'The planner could not build a week from that input.', {
+        reason: error instanceof Error ? error.message.slice(0, 200) : 'unknown',
+      })
     }
-    return NextResponse.json({ ok: true, data })
-  } catch (error) {
-    return fail('PLAN_FAILED', 'The planner could not build a week from that input.', {
-      reason: error instanceof Error ? error.message.slice(0, 200) : 'unknown',
-    })
-  }
+  })
 }
 
 export async function GET() {

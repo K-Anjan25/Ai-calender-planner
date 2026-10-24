@@ -78,14 +78,14 @@ export function dependencyConflicts(
     const dependencies = (task.dependsOn ?? []).filter((id) => byId.has(id) && id !== task.id)
     if (dependencies.length === 0) continue
     const start = starts.get(task.id)
-    if (start === undefined) continue // the task itself never landed; that is a different report
 
     const blockedBy: string[] = []
     const missing: string[] = []
     for (const id of dependencies) {
       const end = ends.get(id)
-      if (end === undefined) missing.push(byId.get(id)?.title ?? id)
-      else if (start < end) blockedBy.push(byId.get(id)?.title ?? id)
+      const placedMinutes = blocks.filter(block => block.kind === 'task' && block.taskId === id).reduce((sum, block) => sum + block.minutes, 0)
+      if (end === undefined || placedMinutes < totalDemandMinutes(byId.get(id)!)) missing.push(byId.get(id)?.title ?? id)
+      else if (start !== undefined && start < end) blockedBy.push(byId.get(id)?.title ?? id)
     }
     if (blockedBy.length > 0 || missing.length > 0) conflicts.push({ taskId: task.id, title: task.title, blockedBy, missing })
   }
@@ -179,6 +179,8 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
   const warnings: Warning[] = []
   for (const day of frame.days) {
     const dayBlocks = taskBlocks.filter((b) => b.date === day.date).sort((a, b) => a.startMin - b.startMin)
+    const meetingTotal = busy.filter(event => event.date === day.date).reduce((sum, event) => sum + event.endMin - event.startMin, 0)
+    if (meetingTotal > prefs.maxMeetingMinutesPerDay) warnings.push({ code: 'meeting-cap', severity: 'warn', weekday: day.weekday, message: `${WEEKDAY_SHORT[day.weekday]} has ${fmtDuration(meetingTotal)} of meetings, above your ${fmtDuration(prefs.maxMeetingMinutesPerDay)} threshold. Existing meetings were kept.` })
     if (!dayBlocks.length) continue
     const total = dayBlocks.reduce((sum, b) => sum + b.minutes, 0)
     const label = WEEKDAY_SHORT[day.weekday]
@@ -318,7 +320,7 @@ export function evaluatePlan(input: EvaluateInput): PlanProposal {
   // A 15-minute sliver that will not fit is a footnote, not a crisis. Only a shortfall that a
   // human would call real (a whole block, or 2% of the week) downgrades the verdict.
   const significantShortfall = unscheduledMinutes >= Math.max(prefs.minBlockMinutes, demandMinutes * 0.02)
-  const overCapacity = scheduledMinutes > capacityMinutes && unplacedCount > 0
+  const overCapacity = significantShortfall
   const fits: PlanReport['fits'] = overCapacity
     ? 'overbooked'
     : utilisation >= 0.92 || deadlineRisks.some((r) => r.severity === 'critical') || significantShortfall

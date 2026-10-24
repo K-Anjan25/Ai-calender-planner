@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { clsx } from 'clsx'
-import { Plus, Trash2, Wand2, Clock, Flag, Ban, ChevronDown, ChevronRight } from 'lucide-react'
-import { SNAP_MINUTES, type Energy, type Task } from '@/lib/types'
+import { Plus, Trash2, Clock, Flag, Ban, ChevronDown, ChevronRight } from 'lucide-react'
+import { SNAP_MINUTES, taskSchema, type Energy, type Task } from '@/lib/types'
 import { ENERGY_LABEL } from '@/lib/types'
 import { fmtDuration } from '@/lib/scheduler/slots'
 import { recurrenceLabel } from '@/lib/scheduler/policies'
@@ -16,8 +16,9 @@ import {
   PaperInput,
   PaperLabel,
   PaperSelect,
-  PaperTextarea,
 } from '@/components/paper/PaperControls'
+import { TaskConstraintFields } from '@/components/planner/TaskConstraintFields'
+import { TaskBriefPreview } from '@/components/planner/TaskBriefPreview'
 import { PaperSheet } from '@/components/paper/PaperSheet'
 
 /**
@@ -36,7 +37,6 @@ export function TaskInbox() {
     addTask,
     removeTask,
     updateTask,
-    buildWeek,
     status,
     demoSet,
     loadDemoSet,
@@ -46,7 +46,6 @@ export function TaskInbox() {
     syncState,
   } = usePlanner()
   const weekStart = proposal?.weekStart ?? currentWeekStart()
-  const [brief, setBrief] = useState('')
   const [draft, setDraft] = useState({
     title: '',
     estimateMinutes: 60,
@@ -57,68 +56,38 @@ export function TaskInbox() {
     deadlineTime: '17:00',
     splittable: true,
     location: '',
+    earliestStart: '',
+    dependsOn: [] as string[],
+    repeatDays: [] as Task['repeatDays'],
   })
+  const [formError, setFormError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const busy = status === 'planning' || chatBusy || syncState.status === 'syncing'
 
   const submitTask = () => {
     const title = draft.title.trim()
-    if (title.length < 2) return
+    if (title.length < 2 || tasks.length >= 120) { setFormError('Use a title of at least 2 characters; keep the backlog to 120 tasks.'); return }
+    if (tasks.some(task => task.title.trim().toLowerCase() === title.toLowerCase())) { setFormError('This task already exists. Edit it below or use a different title.'); return }
     const estimate = draft.estimateMinutes || estimateDurationMinutes(title, draft.energy, draft.category)
-    addTask({
-      id: `t_${title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_')
-        .slice(0, 28)}_${tasks.length}`,
-      title,
-      estimateMinutes: estimate,
+    const result = taskSchema.safeParse({
+      id: `t_${crypto.randomUUID()}`, title, estimateMinutes: estimate,
       deadline: draft.deadlineDate ? `${draft.deadlineDate}T${draft.deadlineTime}:00` : undefined,
-      priority: draft.priority,
-      energy: draft.energy,
-      category: draft.category,
-      splittable: draft.splittable,
-      minChunkMinutes: draft.energy === 'deep' ? 60 : 30,
-      location: draft.location.trim() || undefined,
-      source: 'user',
+      earliestStart: draft.earliestStart || undefined, dependsOn: draft.dependsOn, repeatDays: draft.repeatDays,
+      priority: draft.priority, energy: draft.energy, category: draft.category, splittable: draft.splittable,
+      minChunkMinutes: Math.min(estimate, draft.energy === 'deep' ? 60 : 30),
+      location: draft.location.trim() || undefined, source: 'user', estimatedByAI: !draft.estimateMinutes,
     })
-    setDraft((current) => ({ ...current, title: '', deadlineDate: '', location: '' }))
+    if (!result.success || estimate % SNAP_MINUTES || (result.data.deadline && result.data.earliestStart && result.data.earliestStart >= result.data.deadline)) { setFormError('Use 15–720 minutes in 15-minute steps, with earliest start before the deadline.'); return }
+    setFormError('')
+    addTask(result.data)
+    setDraft((current) => ({ ...current, title: '', deadlineDate: '', location: '', earliestStart: '', dependsOn: [], repeatDays: [] }))
   }
 
   return (
     <fieldset disabled={busy} aria-busy={busy} className="flex min-w-0 flex-col gap-3 disabled:opacity-60">
       <legend className="sr-only">Task editing</legend>
-      <PaperSheet className="p-3.5">
-        <PaperLabel htmlFor="brief">Tell Calendra what your week holds</PaperLabel>
-        <PaperTextarea
-          id="brief"
-          rows={4}
-          value={brief}
-          placeholder={
-            'Finish the Q4 deck by Thursday 5pm (4h). Review PRs every weekday. Gym Mon/Wed/Fri, 45 min. Study module 4 before Sunday night.'
-          }
-          onChange={(event) => setBrief(event.target.value)}
-        />
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <PaperButton
-            tone="terracotta"
-            onClick={async () => {
-              await buildWeek(brief)
-              if (usePlanner.getState().status === 'ready') usePlanner.getState().setRailTab('calendar')
-            }}
-            disabled={busy || !brief.trim()}
-          >
-            <Wand2 size={14} aria-hidden="true" />
-            {busy ? 'Planning…' : 'Plan this brief'}
-          </PaperButton>
-
-          <span className="ml-auto text-[11px] text-ink-faint">{tasks.length} tasks ready</span>
-        </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
-          Durations you do not give are estimated and flagged. Everything the parser reads appears below before it
-          reaches your calendar.
-        </p>
-      </PaperSheet>
+      <TaskBriefPreview />
 
       <PaperSheet className="p-3.5">
         <header className="mb-2 flex items-center justify-between">
@@ -224,6 +193,8 @@ export function TaskInbox() {
                 />
               </div>
             </div>
+            <TaskConstraintFields prefix="new-task" value={{ earliestStart: draft.earliestStart || undefined, location: draft.location, dependsOn: draft.dependsOn, repeatDays: draft.repeatDays }} tasks={tasks} onChange={patch => setDraft(current => ({ ...current, earliestStart: patch.earliestStart !== undefined ? patch.earliestStart : ('earliestStart' in patch ? '' : current.earliestStart), location: 'location' in patch ? patch.location ?? '' : current.location, dependsOn: patch.dependsOn ?? current.dependsOn, repeatDays: patch.repeatDays ?? current.repeatDays }))} />
+            {formError && <p role="alert" className="text-sm">{formError}</p>}
             <div className="flex items-center justify-between gap-2 pt-1">
               <label className="flex items-center gap-2 text-xs font-semibold text-ink-soft">
                 <input
@@ -319,6 +290,7 @@ export function TaskInbox() {
 
                   {expanded ? (
                     <div className="paper-well m-2 mt-0 grid grid-cols-2 gap-2 p-2">
+                      <TaskConstraintFields prefix={`edit-${task.id}`} value={task} tasks={tasks} editing onChange={patch => updateTask(task.id, patch)} />
                       <div>
                         <PaperLabel htmlFor={`${task.id}-minutes`}>Minutes</PaperLabel>
                         <PaperInput

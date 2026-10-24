@@ -10,6 +10,7 @@ import {
   type Weekday,
 } from '@/lib/types'
 import { addDaysISO, fmtClock, fmtDuration, parseDate, weekdayOfDate, workingHoursFor } from '@/lib/scheduler/slots'
+import { occurrenceDays } from '@/lib/scheduler/policies'
 import { estimateDurationMinutes, type InterpretedMessage, type Interpreter, type ParsedTasks } from '@/lib/agent/tools'
 
 /**
@@ -558,6 +559,14 @@ export function interpretLocally(
     const targetDay = parseWeekday(target)
     const matched = ctx.tasks.find((t) => t.title.toLowerCase().includes(needle.split(' ')[0] ?? '') || needle.includes(t.title.toLowerCase().slice(0, 12)))
     if (matched && targetDay) {
+      const cadence = occurrenceDays(matched, ctx.weekStartDate)
+      if (cadence.length > 1 && !cadence.includes(targetDay)) {
+        const movedDays = [targetDay, ...cadence.slice(1)]
+        tasks = (tasks ?? ctx.tasks).map(task => task.id === matched.id ? {
+          ...task, repeatDays: movedDays,
+          recurrence: task.recurrence ? { ...task.recurrence, byWeekday: movedDays } : undefined,
+        } : task)
+      }
       const date = dateOfWeekday(targetDay, ctx.weekStartDate)
       const time = parseTimeOfDay(target)
       const hours = workingHoursFor({ ...ctx.preferences, ...preferences }, targetDay)
