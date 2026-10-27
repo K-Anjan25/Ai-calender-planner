@@ -354,7 +354,7 @@ export function TaskInbox() {
           </ul>
         )}
 
-        <footer className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:rgba(55,112,191,0.25)] pt-2.5">
+        <footer className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-[color:rgba(25,25,25,0.25)] pt-2.5">
           <div className="flex gap-1.5">
             <PaperButton
               size="sm"
@@ -375,7 +375,7 @@ export function TaskInbox() {
           </div>
           <button
             type="button"
-            className={clsx('min-h-11 min-w-11 rounded-lg px-2 text-xs font-semibold text-ink-soft hover:bg-frost-light')}
+            className={clsx('min-h-11 min-w-11 rounded-none px-2 text-xs font-semibold text-ink-soft hover:bg-frost-light')}
             onClick={clearTasks}
           >
             Clear all

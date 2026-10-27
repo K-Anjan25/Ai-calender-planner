@@ -82,9 +82,9 @@ export default function PlannerWorkspace() {
     setTimeout(() => document.getElementById('planner-diagnostics')?.focus(), 0)
   }
   return (
-    <main className="relative min-h-screen pb-10">
-      <h1 className="sr-only">Plan your week</h1>
-      <header className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+    <main className="bauhaus-workspace relative min-h-screen pb-10">
+      <a className="bauhaus-skip" href="#planner-content">Skip to planner</a>
+      <header className="bauhaus-workspace-header mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <div className="flex items-center gap-2.5">
           <Link href="/" aria-label="Calendra home">
             <CalendraLogo size={26} className="text-teal-deep" />
@@ -140,7 +140,8 @@ export default function PlannerWorkspace() {
           </PaperButton>
         </div>
       </header>
-      <div className="mx-auto max-w-[1440px] space-y-4 px-4 sm:px-6">
+      <div id="planner-content" tabIndex={-1} className="mx-auto max-w-[1440px] space-y-4 px-4 sm:px-6">
+        <section className="bauhaus-planner-intro"><div><p className="bauhaus-eyebrow"><span />THE WEEKLY WORKSPACE</p><h1>Give your week <span>shape.</span></h1></div><div className="bauhaus-planner-shapes" aria-hidden="true"><i /><i /><i /></div></section>
         <div
           role="toolbar"
           aria-label="Plan actions"
@@ -366,6 +367,7 @@ export default function PlannerWorkspace() {
       <footer className="mx-auto mt-8 max-w-[1440px] px-4 text-sm text-ink sm:px-6">
         Nothing reaches Google Calendar until you review and approve it.
       </footer>
+      <footer className="bauhaus-workspace-footer"><span>Calendra · Good weeks, by design.</span><nav aria-label="Planner footer"><Link href="/">Home</Link><Link href="/legal#privacy">Privacy</Link><Link href="/legal#terms">Terms</Link></nav></footer>
     </main>
   )
 }

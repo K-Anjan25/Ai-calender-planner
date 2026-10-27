@@ -65,7 +65,7 @@ export function PreferencePanel() {
       <ul className="space-y-2">
         {WEEKDAYS.map(day => {
           const hours = workingHoursFor(preferences, day)
-          return <li key={day} className="min-w-0 space-y-2 rounded-xl border border-[color:rgba(55,112,191,0.18)] p-2.5">
+          return <li key={day} className="min-w-0 space-y-2 rounded-none border border-[color:rgba(25,25,25,0.18)] p-2.5">
             <div className="flex min-w-0 items-center justify-between gap-2">
               <span className="text-sm font-semibold">{WEEKDAY_LABEL[day]} <span className="ml-1 text-xs font-normal text-ink-soft">{hours ? 'On' : 'Off'}</span></span>
               <PaperToggle checked={Boolean(hours)} onChange={() => toggleDay(day)} label={`${WEEKDAY_LABEL[day]} is a working day`} tone="olive" />
@@ -116,8 +116,8 @@ export function PreferencePanel() {
       {!preferences.blackouts.length ? <p className="text-xs text-ink-soft">Nothing blocked. Add school runs, therapy, travel or other unavailable time.</p> : <ul className="space-y-3">
         {preferences.blackouts.map((blackout, index) => {
           const patch = (value: Partial<typeof blackout>) => update({ blackouts: preferences.blackouts.map(item => item.id === blackout.id ? { ...item, ...value } : item) })
-          return <li key={blackout.id} className="min-w-0 space-y-2 rounded-xl border border-[color:rgba(55,112,191,0.18)] p-2.5">
-            <div className="flex min-w-0 items-center gap-2"><ValidatedTextInput aria-label="Blackout label" maxLength={60} value={blackout.label} onValueChange={label => patch({ label })} /><button type="button" aria-label={`Remove ${blackout.label || 'blackout'}`} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-ink hover:bg-frost-light disabled:opacity-45" onClick={() => update({ blackouts: preferences.blackouts.filter(item => item.id !== blackout.id) })}><Trash2 size={16} aria-hidden="true" /></button></div>
+          return <li key={blackout.id} className="min-w-0 space-y-2 rounded-none border border-[color:rgba(25,25,25,0.18)] p-2.5">
+            <div className="flex min-w-0 items-center gap-2"><ValidatedTextInput aria-label="Blackout label" maxLength={60} value={blackout.label} onValueChange={label => patch({ label })} /><button type="button" aria-label={`Remove ${blackout.label || 'blackout'}`} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-none text-ink hover:bg-frost-light disabled:opacity-45" onClick={() => update({ blackouts: preferences.blackouts.filter(item => item.id !== blackout.id) })}><Trash2 size={16} aria-hidden="true" /></button></div>
             <PaperLabel htmlFor={`blackout-${blackout.id}-day`}>Repeat</PaperLabel>
             <PaperSelect id={`blackout-${blackout.id}-day`} aria-label="Blackout day" value={blackout.weekday ?? 'every'} onChange={event => patch({ weekday: event.target.value === 'every' ? undefined : event.target.value as Weekday })}><option value="every">Every day</option>{WEEKDAYS.map(day => <option key={day} value={day}>{WEEKDAY_SHORT[day]}</option>)}</PaperSelect>
             <RuleTimeWindow label={`Blackout ${index + 1}`} value={blackout} onChange={patch} />

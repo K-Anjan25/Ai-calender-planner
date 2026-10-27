@@ -92,7 +92,7 @@ export function CalendarPanel() {
             {/* A real anchor: OAuth consent must be a full navigation, not a client route. */}
             <a
               href={calendarAuthUrl()}
-              className="paper-fibre inline-flex items-center gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(55,112,191,0.2)] bg-plum px-3.5 py-1.5 text-sm font-semibold text-paper-ivory shadow-[var(--shadow-tile)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[var(--shadow-lift)]"
+              className="paper-fibre inline-flex items-center gap-2 rounded-[var(--radius-cut-sm)] border border-[color:rgba(25,25,25,0.2)] bg-plum px-3.5 py-1.5 text-sm font-semibold text-paper-ivory shadow-[var(--shadow-tile)] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[var(--shadow-lift)]"
             >
               <Link2 size={13} aria-hidden="true" />
               Connect Google Calendar

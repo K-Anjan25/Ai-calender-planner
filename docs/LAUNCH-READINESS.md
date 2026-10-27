@@ -206,3 +206,17 @@ cover Space-key switches, state restoration, master/individual weekends, invalid
 switch thumb containment/on-off fill, 44px field geometry, no page overflow, and existing calendar,
 preview/discard, move failure/retry, export/publish and stale-state flows. This is not a claim of
 exhaustive device/browser coverage or live Google/provider verification.
+
+## Entire-site Bauhaus design — 2026-10-27
+
+The landing's primary-color geometric design now covers sign-in, sign-up, the full planner, legal,
+shared navigation/footer/controls, branded 404, retry and route-loading states. DM Sans replaces the
+serif/application font split; square controls and neutral borders replace remaining rounded pastel
+surfaces. Updated v10 favicon/Apple assets match the new blue identity. Scheduler/auth logic and
+configuration requirements are unchanged. Pricing still redirects to the designed landing plans;
+paid tiers remain enquiries. Retired docs and unknown pages return 404, not publicly rendered docs.
+
+233 tests / 54 suites, lint/typecheck and production build pass. Chromium landing checks pass at
+seven widths; site-wide checks pass at 320/390/768/1280/1440, including private/demo failures, retry,
+long-account header layout, native menu focus, planner build, Rules edits, provisional intake and
+publishing navigation. Live OAuth/provider/delivery checks remain separate from these UI fixtures.

@@ -1,168 +1,157 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { usePathname } from 'next/navigation'
-import { ArrowRight, LogOut, Menu, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ArrowUpRight, LogOut, Menu, X } from 'lucide-react'
 import { CalendraLogo } from '@/components/paper/CalendraMark'
-import { PaperButton, PaperLink } from '@/components/paper/PaperControls'
 import { useSession } from '@/lib/use-session'
-
-/**
- * The product header: navigation, account state, and the two calls to action.
- *
- * It resolves the session on the client so a cached static page can still show *your* name. Until
- * that resolves it renders a neutral placeholder of the same height, so the layout never shifts —
- * a header that pops from "Sign in" to an avatar is the kind of jitter that reads as a bug.
- */
 
 const NAV = [
   { href: '/#how-it-works', label: 'How it works' },
-  { href: '/#features', label: 'Features' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/#product', label: 'The product' },
+  { href: '/pricing', label: 'Plans' },
 ]
 
+/** Native modal navigation provides focus containment, Escape and focus restoration on mobile. */
 export function SiteHeader({ tone = 'board' }: { tone?: 'board' | 'sand' }) {
-  const { status, user, capabilities, signOut } = useSession()
+  const { status, user, signOut } = useSession()
   const [open, setOpen] = useState(false)
-  const pathname = usePathname()
-
+  const [error, setError] = useState('')
+  const dialog = useRef<HTMLDialogElement>(null)
+  const toggle = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (open) dialog.current?.showModal()
+    else dialog.current?.close()
+    const previous = document.body.style.overflow
+    if (open) document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [open])
+  function close() {
+    setOpen(false)
+    toggle.current?.focus()
+  }
+  async function leave() {
+    try {
+      await signOut()
+      setError('')
+      close()
+    } catch {
+      setError('Could not sign out. Check your connection and retry.')
+    }
+  }
   return (
-    <header
-      className={
-        tone === 'sand'
-          ? 'relative z-20 border-b border-[color:rgba(55,112,191,0.16)] bg-paper-sand/70'
-          : 'relative z-20'
-      }
-    >
-      <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-4 py-4 sm:px-8">
-        <Link href="/" className="shrink-0" aria-label="Calendra home">
-          <CalendraLogo size={28} className="text-teal-deep" markClassName="shrink-0" />
+    <header className="bauhaus-site-header" data-tone={tone}>
+      <a className="bauhaus-skip" href="#page-content">
+        Skip to content
+      </a>
+      <div className="bauhaus-header-inner">
+        <Link href="/" className="bauhaus-brand" aria-label="Calendra home">
+          <CalendraLogo size={32} />
         </Link>
-
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
+        <nav className="bauhaus-desktop-nav" aria-label="Main">
           {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`rounded-[var(--radius-cut-xs)] px-3 py-1.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors ${
-                pathname === item.href ? 'bg-paper-ivory text-ink' : 'text-ink-soft hover:bg-paper-ivory/70 hover:text-ink'
-              }`}
-            >
+            <Link key={item.href} href={item.href}>
               {item.label}
             </Link>
           ))}
         </nav>
-
-        <div className="flex items-center gap-2">
-          {/* Account block. `min-h` reserves the row so resolving the session never reflows the page. */}
-          <div className="hidden min-h-[34px] items-center gap-2 sm:flex">
-            {status === 'loading' ? (
-              <span className="paper-well h-[30px] w-[104px]" aria-hidden="true" />
-            ) : user ? (
-              <>
-                <span className="flex max-w-[190px] items-center gap-2 rounded-[var(--radius-cut-xs)] bg-paper-ivory/80 px-2 py-1">
-                  {user.picture ? (
-                    // A remote avatar from Google's CDN — a plain <img>, so no image-domain config is
-                    // needed and the app still runs on any host.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.picture} alt="" width={20} height={20} className="h-5 w-5 shrink-0 rounded-full" />
-                  ) : (
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-light text-[10px] font-bold text-teal-deep">
-                      {user.name.slice(0, 1).toUpperCase()}
-                    </span>
-                  )}
-                  <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink" title={user.email}>
-                    {user.name}
-                  </span>
-                  {user.provider === 'demo' ? (
-                    <span className="shrink-0 rounded-[var(--radius-cut-xs)] bg-paper-kraft px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-ink-soft uppercase">
-                      demo
-                    </span>
-                  ) : null}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void signOut()}
-                  className="flex items-center gap-1 rounded-[var(--radius-cut-xs)] px-2 py-1.5 text-[12.5px] font-semibold text-ink-soft transition-colors hover:bg-paper-ivory/70 hover:text-ink"
-                >
-                  <LogOut size={13} aria-hidden="true" />
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/signin"
-                  className="rounded-[var(--radius-cut-xs)] px-2.5 py-1.5 text-[13px] font-semibold text-ink-soft whitespace-nowrap transition-colors hover:bg-paper-ivory/70 hover:text-ink"
-                >
-                  Sign in
-                </Link>
-                <PaperLink href="/signup" tone="teal" size="sm">
-                  Start free
-                  <ArrowRight size={13} aria-hidden="true" />
-                </PaperLink>
-              </>
-            )}
-          </div>
-
-          <PaperButton
-            variant="flat"
-            size="sm"
-            className="lg:hidden"
+        <div className="bauhaus-header-actions">
+          {status === 'loading' ? (
+            <span className="bauhaus-account-placeholder" aria-hidden="true" />
+          ) : user ? (
+            <div className="bauhaus-account">
+              <span title={user.email}>
+                {user.name}
+                {user.provider === 'demo' ? ' · Demo' : ''}
+              </span>
+              <button onClick={() => void leave()}>
+                <LogOut size={14} />
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <Link className="bauhaus-sign-in" href="/signin">
+              Sign in
+              <ArrowUpRight size={15} />
+            </Link>
+          )}
+          <Link className="bauhaus-header-cta" href="/planner">
+            Start planning
+            <ArrowUpRight size={17} />
+          </Link>
+          <button
+            ref={toggle}
+            className="bauhaus-menu-button"
+            aria-label="Open navigation"
             aria-expanded={open}
             aria-controls="site-menu"
-            onClick={() => setOpen((value) => !value)}
+            onClick={() => setOpen(true)}
           >
-            {open ? <X size={15} aria-hidden="true" /> : <Menu size={15} aria-hidden="true" />}
-            <span className="sr-only">Menu</span>
-          </PaperButton>
+            <Menu size={22} />
+          </button>
         </div>
       </div>
-
-      {open ? (
-        <div id="site-menu" className="border-t border-dashed border-[color:rgba(55,112,191,0.22)] bg-paper-ivory/95 lg:hidden">
-          <nav className="mx-auto grid max-w-[1240px] gap-1 px-4 py-3 sm:px-8" aria-label="Mobile">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="rounded-[var(--radius-cut-xs)] px-3 py-2 text-[14px] font-semibold text-ink-soft hover:bg-paper-sand/60 hover:text-ink"
-              >
-                {item.label}
-              </Link>
-            ))}
-            <div className="mt-1 grid gap-2 border-t border-dashed border-[color:rgba(55,112,191,0.22)] pt-3">
-              {user ? (
-                <>
-                  <p className="px-3 text-[12.5px] text-ink-soft">
-                    Signed in as <span className="font-semibold text-ink">{user.email}</span>
-                  </p>
-                  <PaperButton variant="flat" onClick={() => { setOpen(false); void signOut() }}>
-                    <LogOut size={14} aria-hidden="true" />
-                    Sign out
-                  </PaperButton>
-                </>
-              ) : (
-                <>
-                  <PaperLink href="/signin" variant="flat" onClick={() => setOpen(false)}>
-                    Sign in
-                  </PaperLink>
-                  <PaperLink href="/signup" tone="teal" onClick={() => setOpen(false)}>
-                    Start free
-                    {capabilities.googleSignIn ? null : <span className="text-[11px] opacity-80">(demo)</span>}
-                    <ArrowRight size={14} aria-hidden="true" />
-                  </PaperLink>
-                </>
-              )}
-              <PaperLink href="/planner" variant="flat" onClick={() => setOpen(false)}>
-                Open the planner
-              </PaperLink>
-            </div>
-          </nav>
+      {error && (
+        <p role="alert" className="bauhaus-nav-error">
+          {error}
+        </p>
+      )}
+      <dialog
+        id="site-menu"
+        ref={dialog}
+        className="bauhaus-menu"
+        aria-label="Site navigation"
+        onCancel={(event) => {
+          event.preventDefault()
+          close()
+        }}
+        onClick={(event) => {
+          if (event.target === dialog.current) close()
+        }}
+      >
+        <div className="bauhaus-menu-top">
+          <CalendraLogo size={28} />
+          <button autoFocus onClick={close} aria-label="Close navigation">
+            <X />
+          </button>
         </div>
-      ) : null}
+        <nav aria-label="Mobile">
+          {NAV.map((item) => (
+            <Link href={item.href} key={item.href} onClick={close}>
+              {item.label}
+              <ArrowUpRight size={20} />
+            </Link>
+          ))}
+          <Link href="/planner" onClick={close}>
+            Open the planner
+            <ArrowUpRight size={20} />
+          </Link>
+          {user ? (
+            <>
+              <p className="bauhaus-mobile-account">
+                Signed in as {user.email}
+              </p>
+              <button onClick={() => void leave()}>
+                Sign out
+                <LogOut size={18} />
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/signin" onClick={close}>
+                Sign in
+                <ArrowUpRight size={20} />
+              </Link>
+              <Link href="/signup" onClick={close}>
+                Create an account
+                <ArrowUpRight size={20} />
+              </Link>
+            </>
+          )}
+        </nav>
+      </dialog>
     </header>
   )
 }

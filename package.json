@@ -15,7 +15,8 @@
     "smoke": "tsx scripts/smoke.ts",
     "test:ui": "node scripts/run-tests.mjs tests/ui.test.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
-    "test:browser": "node scripts/check-bauhaus-browser.mjs"
+    "test:browser": "node scripts/check-bauhaus-browser.mjs && node scripts/check-site-browser.mjs",
+    "test:browser:site": "node scripts/check-site-browser.mjs"
   },
   "dependencies": {
     "@langchain/anthropic": "^1.5.12",

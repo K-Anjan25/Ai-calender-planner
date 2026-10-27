@@ -502,3 +502,13 @@ access, streamed tool steps/default JSON, provider budget, strict constraints an
 - [x] Remove ineffective automatic-overflow UI; preserve explicit report trade-offs and hard rules.
 - [x] 230 tests / 54 suites, lint/typecheck, production build; seven-width landing and four-width
   planner/Rules Chromium regressions. No live external-integration claims.
+
+## Site-wide Bauhaus rollout — 2026-10-27
+
+- [x] Shared Bauhaus palette, DM Sans typography, square controls/cards, accessible primary accents.
+- [x] Sign-in/sign-up editorial layouts with retained Google/demo/private/error handling.
+- [x] Responsive shared header/footer, native mobile dialog, account state, long-name truncation.
+- [x] Full planner workspace styling, tabs/rules/calendar/reports/insights/publishing shared controls.
+- [x] Legal, branded 404/retry and scoped loading screens; actual 404 for retired docs preserved.
+- [x] Versioned favicon/Apple identity; 233 tests, lint/typecheck/build, landing + site browser suites.
+- [ ] External Google/LLM acceptance and production deployment remain independent verification.

@@ -29,7 +29,7 @@ const UI_SOURCES = walkSource(join(ROOT, 'src'), (p) => p.endsWith('.tsx') || p.
 
 describe('the overflow guard is installed', () => {
   it('lets long tokens break in every element that holds text', () => {
-    const guard = CSS.match(/:where\(h1, h2, h3, h4, p, li, dd, dt, td, th, span, a, code, strong, em, figcaption\)\s*\{([^}]*)\}/)
+    const guard = CSS.replace(/\s+/g, ' ').match(/:where\(\s*h1, h2, h3, h4, p, li, dd, dt, td, th, span, a, code, strong, em, figcaption\s*\)\s*\{([^}]*)\}/)
     assert.ok(guard, 'the :where(…) text guard is gone from globals.css')
     assert.match(guard[1], /overflow-wrap:\s*break-word/, 'the text guard no longer breaks words')
     assert.match(guard[1], /word-break:\s*normal/, 'word-break was changed; break-all mangles ordinary prose')

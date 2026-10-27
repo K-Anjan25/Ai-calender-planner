@@ -8,42 +8,42 @@
 
 @theme {
   /* --- base paper stock ------------------------------------------------ */
-  --color-paper-cream: #F3F6FF;
-  --color-paper-ivory: #F3F6FF;
-  --color-paper-sand: #F3F6FF;
-  --color-paper-kraft: #F3F6FF;
-  --color-paper-edge: #3770BF;
+  --color-paper-cream: #f5f2e9;
+  --color-paper-ivory: #f5f2e9;
+  --color-paper-sand: #f5f2e9;
+  --color-paper-kraft: #f5f2e9;
+  --color-paper-edge: #191919;
 
   /* --- ink (warm, never pure black) ------------------------------------ */
-  --color-ink: #102C50;
-  --color-ink-soft: #102C50;
-  --color-ink-faint: #102C50;
-  --color-ink-ghost: #102C50;
+  --color-ink: #191919;
+  --color-ink-soft: #191919;
+  --color-ink-faint: #191919;
+  --color-ink-ghost: #191919;
 
   /* --- dyed sheet accents ---------------------------------------------- */
-  --color-rose: #3770BF;
-  --color-rose-deep: #102C50;
-  --color-rose-light: #F3F6FF;
+  --color-rose: #c73527;
+  --color-rose-deep: #191919;
+  --color-rose-light: #f5f2e9;
 
-  --color-terracotta: #CEF26D;
-  --color-terracotta-deep: #102C50;
-  --color-terracotta-light: #F3F6FF;
+  --color-terracotta: #f3cd38;
+  --color-terracotta-deep: #191919;
+  --color-terracotta-light: #f5f2e9;
 
-  --color-olive: #8DC2FF;
-  --color-olive-deep: #102C50;
-  --color-olive-light: #F3F6FF;
+  --color-olive: #f3cd38;
+  --color-olive-deep: #191919;
+  --color-olive-light: #f3cd38;
 
-  --color-teal: #3770BF;
-  --color-teal-deep: #102C50;
-  --color-teal-light: #F3F6FF;
+  --color-teal: #173bb5;
+  --color-teal-deep: #191919;
+  --color-teal-light: #f5f2e9;
 
-  --color-plum: #3770BF;
-  --color-plum-deep: #102C50;
-  --color-plum-light: #F3F6FF;
+  --color-plum: #c73527;
+  --color-plum-deep: #191919;
+  --color-plum-light: #f5f2e9;
 
-  --color-frost: #8DC2FF;
-  --color-frost-deep: #102C50;
-  --color-frost-light: #F3F6FF;
+  --color-frost: #f3cd38;
+  --color-frost-deep: #191919;
+  --color-frost-light: #f5f2e9;
 
   /* --- light & shadow: warm, soft, never grey -------------------------- */
   --shadow-mat: none;
@@ -53,15 +53,15 @@
   --shadow-press: none;
   --shadow-tile: none;
 
-  /* --- hand-cut radii (asymmetric on purpose) -------------------------- */
-  --radius-cut: 14px;
-  --radius-cut-sm: 10px;
-  --radius-cut-xs: 6px;
-  --radius-well: 12px;
+  /* --- square architectural surfaces ----------------------------------- */
+  --radius-cut: 0px;
+  --radius-cut-sm: 0px;
+  --radius-cut-xs: 0px;
+  --radius-well: 0px;
 
   /* --- typography ------------------------------------------------------ */
-  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, ui-serif, serif;
-  --font-sans: 'Nunito Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'DM Sans', Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'DM Sans', Arial, ui-sans-serif, system-ui, sans-serif;
 
   /* --- motion ---------------------------------------------------------- */
   --ease-paper: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -90,8 +90,8 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    letter-spacing: -0.045em;
     color: var(--color-ink);
   }
 
@@ -103,7 +103,7 @@
   :focus-visible {
     outline: 2px solid var(--color-teal-deep);
     outline-offset: 2px;
-    border-radius: 6px;
+    border-radius: 0px;
   }
 
   input,
@@ -160,7 +160,24 @@
    * unaffected. `hyphens: none` keeps it explicit. Headings are included because a headline is where a
    * long word is most visible.
    */
-  :where(h1, h2, h3, h4, p, li, dd, dt, td, th, span, a, code, strong, em, figcaption) {
+  :where(
+    h1,
+    h2,
+    h3,
+    h4,
+    p,
+    li,
+    dd,
+    dt,
+    td,
+    th,
+    span,
+    a,
+    code,
+    strong,
+    em,
+    figcaption
+  ) {
     overflow-wrap: break-word;
     word-break: normal;
   }
@@ -193,24 +210,35 @@
 
   select.paper-field {
     padding-right: 2.25rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m5 7 5 5 5-5' fill='none' stroke='%23102C50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m5 7 5 5 5-5' fill='none' stroke='%23191919' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-position: right 0.5rem center;
     background-size: 1rem;
     background-repeat: no-repeat;
   }
 
   /* Compatibility selectors for shared controls; rendered as clean, flat surfaces. */
-  .paper-fibre { position: relative; }
-  .paper-board { background-color: var(--color-paper-cream); }
-  .paper-sheet, .paper-well, .paper-tile {
+  .paper-fibre {
+    position: relative;
+  }
+  .paper-board {
+    background-color: var(--color-paper-cream);
+  }
+  .paper-sheet,
+  .paper-well,
+  .paper-tile {
     background-color: var(--color-paper-ivory);
     border: 1px solid var(--color-paper-edge);
-    border-radius: 12px;
+    border-radius: 0px;
   }
-  .paper-perforation { border-top: 1px solid var(--color-paper-edge); }
-  .paper-lifted { z-index: 5; }
-  .paper-pressed { transform: translateY(1px); }
-
+  .paper-perforation {
+    border-top: 1px solid var(--color-paper-edge);
+  }
+  .paper-lifted {
+    z-index: 5;
+  }
+  .paper-pressed {
+    transform: translateY(1px);
+  }
 }
 
 /* ==================================================================
@@ -299,19 +327,643 @@
 }
 
 /* Native landing anchors account for the fixed menu; honor reduced motion globally. */
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
 
-/* Sunny Herb / Blue Harbor reaches 3.91:1, suitable for large bold type,
-   not small body labels. Keep all primary attention buttons above that threshold. */
-button[data-accent='terracotta'] { font-size: 19px; font-weight: 700; min-height: 44px; }
+/* Primary action: compact, accessible Bauhaus control. */
+button[data-accent='terracotta'] {
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 44px;
+}
 
-/* Approved fifth swatch: dark blue text for AAA contrast on the brand surfaces. */
-html { scroll-padding-top: 110px; }
+/* Native anchors clear the shared navigation. */
+html {
+  scroll-padding-top: 110px;
+}
 
 /* Uniform dense-calendar affordances; full detail is available on selection. */
-[data-block-id] { border: 1px solid var(--color-ink); background: var(--color-paper-cream); overflow: hidden; }
-[data-block-id]:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; z-index: 25; }
-.planner-status-chip { display: inline-block; border: 1px solid var(--color-paper-edge); border-radius: 4px; background: var(--color-paper-cream); padding: 1px 4px; font-size: 10px; font-weight: 600; color: var(--color-ink); }
+[data-block-id] {
+  border: 1px solid var(--color-ink);
+  background: var(--color-paper-cream);
+  overflow: hidden;
+}
+[data-block-id]:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 2px;
+  z-index: 25;
+}
+.planner-status-chip {
+  display: inline-block;
+  border: 1px solid var(--color-paper-edge);
+  border-radius: 4px;
+  background: var(--color-paper-cream);
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
 
-.planner-meeting:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 2px; z-index: 25; }
+.planner-meeting:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 2px;
+  z-index: 25;
+}
+
+/* Bauhaus site-wide shell: shared by account, legal, recovery and planner routes. */
+.bauhaus-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  line-height: 1.5;
+}
+.bauhaus-eyebrow > span {
+  width: 8px;
+  height: 8px;
+  display: block;
+  flex-shrink: 0;
+  background: var(--color-rose);
+  border-radius: 50%;
+}
+.bauhaus-skip {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  padding: 12px 20px;
+  background: var(--color-terracotta);
+  border: 2px solid var(--color-ink);
+  z-index: 100;
+  transform: translateY(-180%);
+}
+.bauhaus-skip:focus {
+  transform: none;
+}
+.bauhaus-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--color-paper-cream);
+  border-bottom: 1px solid var(--color-ink);
+}
+.bauhaus-header-inner {
+  min-height: 86px;
+  width: min(1344px, calc(100% - 72px));
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.bauhaus-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-ink);
+}
+.bauhaus-brand > span > span {
+  font-size: 25px;
+  letter-spacing: -1px;
+  font-weight: 700;
+}
+.bauhaus-desktop-nav,
+.bauhaus-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.bauhaus-desktop-nav a,
+.bauhaus-sign-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  font-size: 13px;
+}
+.bauhaus-desktop-nav a:hover,
+.bauhaus-sign-in:hover {
+  color: var(--color-teal);
+}
+.bauhaus-header-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  min-height: 44px;
+  padding: 10px 17px;
+  background: var(--color-ink);
+  color: var(--color-paper-cream);
+  font-size: 13px;
+}
+.bauhaus-header-cta:hover {
+  background: var(--color-teal);
+}
+.bauhaus-menu-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-ink);
+  background: none;
+}
+.bauhaus-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  font-size: 12px;
+}
+.bauhaus-account > span {
+  max-width: 135px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bauhaus-account button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.bauhaus-account-placeholder {
+  display: block;
+  min-height: 44px;
+  width: 72px;
+}
+.bauhaus-nav-error {
+  padding: 10px 24px;
+  font-size: 12px;
+  border-top: 1px solid var(--color-ink);
+}
+.bauhaus-menu {
+  margin: auto;
+  width: min(460px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-paper-cream);
+  overflow-y: auto;
+}
+.bauhaus-menu::backdrop {
+  background: rgba(25, 25, 25, 0.6);
+}
+.bauhaus-menu-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.bauhaus-menu-top button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-ink);
+}
+.bauhaus-menu nav > a,
+.bauhaus-menu nav > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 0;
+  border-top: 1px solid var(--color-paper-edge);
+  font-size: 20px;
+  text-align: left;
+  min-height: 54px;
+}
+.bauhaus-mobile-account {
+  font-size: 12px;
+  padding: 18px 0;
+}
+.bauhaus-auth {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  gap: 80px;
+  padding-block: 72px 80px;
+}
+.bauhaus-auth-copy {
+  min-width: 0;
+}
+.bauhaus-auth-title {
+  font-size: clamp(44px, 5.2vw, 70px);
+  line-height: 1.03;
+  letter-spacing: -0.065em;
+  margin: 23px 0 28px;
+}
+.bauhaus-auth-title span {
+  color: var(--color-teal);
+}
+.bauhaus-auth-card {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--color-ink) !important;
+  border-top: 5px solid var(--color-teal) !important;
+  background: var(--color-paper-cream);
+  border-radius: 0 !important;
+}
+.bauhaus-auth-card-title {
+  font-size: 28px;
+  letter-spacing: -0.045em;
+}
+.bauhaus-google {
+  min-height: 52px !important;
+  margin-top: 8px;
+}
+.bauhaus-auth-art {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 112px;
+  margin-top: 30px;
+}
+.bauhaus-auth-art > i {
+  display: block;
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+}
+.bauhaus-auth-art > i:first-child {
+  background: var(--color-rose);
+  border-radius: 50%;
+}
+.bauhaus-auth-art > i:nth-child(2) {
+  background: var(--color-teal);
+  width: 54px;
+  height: 54px;
+}
+.bauhaus-auth-art > i:nth-child(3) {
+  background: var(--color-terracotta);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  width: 58px;
+  height: 58px;
+}
+.bauhaus-auth-art > span {
+  position: absolute;
+  top: 0;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+.bauhaus-site-footer {
+  border-top: 1px solid var(--color-ink);
+  margin-top: auto;
+  background: var(--color-paper-cream);
+}
+.bauhaus-footer-inner {
+  width: min(1240px, calc(100% - 64px));
+  margin: auto;
+  padding-block: 40px;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 0.8fr;
+  gap: 36px;
+}
+.bauhaus-footer-inner p {
+  font-size: 12px;
+  margin-top: 9px;
+}
+.bauhaus-footer-inner nav h2 {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  margin-bottom: 12px;
+}
+.bauhaus-footer-inner nav a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  font-size: 12px;
+}
+.bauhaus-footer-inner nav a:hover {
+  text-decoration: underline;
+}
+.bauhaus-footer-shapes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+.bauhaus-footer-shapes i {
+  display: block;
+  width: 15px;
+  height: 15px;
+  background: var(--color-teal);
+}
+.bauhaus-footer-shapes i:first-child {
+  background: var(--color-rose);
+  border-radius: 50%;
+}
+.bauhaus-footer-shapes i:last-child {
+  background: var(--color-terracotta);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.bauhaus-footer-bottom {
+  width: min(1240px, calc(100% - 64px));
+  margin: auto;
+  border-top: 1px solid var(--color-ink);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  min-height: 70px;
+  font-size: 10px;
+}
+.bauhaus-footer-bottom > span:nth-child(2) {
+  letter-spacing: 0.14em;
+}
+.bauhaus-footer-bottom a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.bauhaus-legal {
+  max-width: 850px;
+  margin: auto;
+  padding: 64px 24px 80px;
+}
+.bauhaus-legal h1 {
+  font-size: clamp(48px, 6vw, 78px);
+  line-height: 1.03;
+  letter-spacing: -0.065em;
+  margin-top: 24px;
+}
+.bauhaus-legal h1 > span {
+  color: var(--color-teal);
+}
+.bauhaus-legal section + section {
+  margin-top: 48px;
+  padding-top: 36px;
+  border-top: 1px solid var(--color-ink);
+}
+.bauhaus-legal p,
+.bauhaus-legal li {
+  font-size: 15px;
+  line-height: 1.8;
+}
+.bauhaus-workspace-header {
+  border-bottom: 1px solid var(--color-ink);
+  margin-bottom: 0;
+}
+.bauhaus-planner-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px 0 18px;
+}
+.bauhaus-planner-intro h1 {
+  font-size: clamp(32px, 4vw, 50px);
+  line-height: 1.1;
+  letter-spacing: -0.055em;
+  margin-top: 12px;
+}
+.bauhaus-planner-intro h1 span {
+  color: var(--color-teal);
+}
+.bauhaus-planner-shapes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bauhaus-planner-shapes i {
+  display: block;
+  width: 36px;
+  height: 36px;
+  background: var(--color-teal);
+}
+.bauhaus-planner-shapes i:first-child {
+  border-radius: 50%;
+  background: var(--color-rose);
+}
+.bauhaus-planner-shapes i:last-child {
+  background: var(--color-terracotta);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.bauhaus-workspace-footer {
+  max-width: 1392px;
+  margin: 40px auto 0;
+  padding: 18px 24px 0;
+  border-top: 1px solid var(--color-ink);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+.bauhaus-workspace-footer nav {
+  display: flex;
+  gap: 24px;
+}
+.bauhaus-workspace-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.bauhaus-workspace [role='tabpanel'] > h2 {
+  font-size: 24px;
+  letter-spacing: -0.04em;
+  margin-top: 22px;
+}
+.bauhaus-workspace [role='tablist'] {
+  border: 0;
+  border-bottom: 1px solid var(--color-ink);
+  padding: 0;
+  gap: 0;
+}
+.bauhaus-workspace [role='tab'] {
+  padding: 14px 22px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  min-height: 48px;
+}
+.bauhaus-workspace [role='tab'][aria-selected='true'] {
+  border-color: var(--color-ink);
+  background: var(--color-terracotta);
+}
+.bauhaus-workspace [role='toolbar'] {
+  border-color: var(--color-ink);
+}
+.bauhaus-recovery {
+  max-width: 860px;
+  margin: auto;
+  padding: 80px 24px;
+  min-height: 60vh;
+}
+.bauhaus-recovery h1 {
+  font-size: clamp(44px, 7vw, 80px);
+  line-height: 1;
+  letter-spacing: -0.055em;
+  margin: 25px 0;
+}
+.bauhaus-recovery p {
+  max-width: 440px;
+  margin-bottom: 26px;
+}
+.bauhaus-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+@media (max-width: 1050px) {
+  .bauhaus-header-inner {
+    width: calc(100% - 48px);
+    gap: 16px;
+  }
+  .bauhaus-desktop-nav,
+  .bauhaus-header-actions {
+    gap: 18px;
+  }
+  .bauhaus-auth {
+    gap: 40px;
+    padding-block: 56px;
+  }
+  .bauhaus-auth-title {
+    font-size: 54px;
+  }
+  .bauhaus-account > span {
+    max-width: 95px;
+  }
+}
+@media (max-width: 760px) {
+  .bauhaus-header-inner {
+    width: calc(100% - 32px);
+    min-height: 72px;
+  }
+  .bauhaus-desktop-nav,
+  .bauhaus-header-cta,
+  .bauhaus-account-placeholder {
+    display: none;
+  }
+  .bauhaus-menu-button {
+    display: flex;
+    flex-shrink: 0;
+  }
+  .bauhaus-header-actions {
+    gap: 14px;
+  }
+  .bauhaus-brand > span > span {
+    font-size: 23px;
+  }
+  .bauhaus-account > span {
+    display: none;
+  }
+  .bauhaus-account button {
+    font-size: 11px;
+  }
+  .bauhaus-auth {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-block: 40px 48px;
+  }
+  .bauhaus-auth-title {
+    font-size: clamp(40px, 9vw, 60px);
+  }
+  .bauhaus-auth-art {
+    display: none;
+  }
+  .bauhaus-auth-card {
+    padding: 24px;
+  }
+  .bauhaus-footer-inner {
+    width: calc(100% - 40px);
+    grid-template-columns: 1fr 1fr;
+    gap: 25px 20px;
+    padding-block: 30px;
+  }
+  .bauhaus-footer-inner > div {
+    grid-column: 1/-1;
+  }
+  .bauhaus-footer-bottom {
+    width: calc(100% - 40px);
+    flex-wrap: wrap;
+    font-size: 9px;
+  }
+  .bauhaus-footer-bottom > span:nth-child(2) {
+    display: none;
+  }
+  .bauhaus-legal {
+    padding: 40px 20px 55px;
+  }
+  .bauhaus-planner-intro {
+    padding: 24px 0 12px;
+    gap: 12px;
+  }
+  .bauhaus-planner-shapes {
+    gap: 5px;
+  }
+  .bauhaus-planner-shapes i {
+    width: 16px;
+    height: 16px;
+  }
+  .bauhaus-workspace [role='tab'] {
+    padding: 12px 16px;
+  }
+  .bauhaus-workspace-footer {
+    margin-inline: 16px;
+    padding-inline: 0;
+  }
+  .bauhaus-recovery {
+    padding-block: 50px;
+  }
+}
+@media (max-width: 1050px) {
+  .bauhaus-desktop-nav,
+  .bauhaus-header-cta {
+    display: none;
+  }
+  .bauhaus-menu-button {
+    display: flex;
+  }
+}
+@media (max-width: 900px) {
+  .bauhaus-auth {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .bauhaus-auth-card {
+    max-width: 600px;
+    width: 100%;
+  }
+  .bauhaus-auth-art {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  input.paper-field,
+  select.paper-field,
+  textarea.paper-field {
+    font-size: 16px;
+  }
+}
+.bauhaus-sign-in {
+  white-space: nowrap;
+}
+.bauhaus-header-actions {
+  flex-shrink: 0;
+}
+@media (max-width: 370px) {
+  .bauhaus-brand > span > span {
+    font-size: 21px;
+  }
+  .bauhaus-header-actions {
+    gap: 10px;
+  }
+  .bauhaus-header-inner {
+    gap: 12px;
+  }
+}

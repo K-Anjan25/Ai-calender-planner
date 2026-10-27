@@ -26,7 +26,7 @@ it('ships a calendar SVG and a matching PNG-backed ICO rather than the starter f
   const svg = readFileSync('src/app/icon.svg', 'utf8')
   assert.match(svg, /xmlns="http:\/\/www.w3.org\/2000\/svg"/)
   assert.match(svg, /aria-label="Calendra"/)
-  assert.match(svg, /#3770BF/)
+  assert.match(svg, /#173BB5/)
   const ico = readFileSync('src/app/favicon.ico')
   assert.equal(ico.readUInt16LE(2), 1)
   assert.equal(ico.readUInt16LE(4), 1)
@@ -53,7 +53,7 @@ it('keeps internal docs off the public website and moves legal links to their ow
 
 it('explicitly links a versioned PNG favicon and an Apple touch icon', () => {
   const layout = readFileSync('src/app/layout.tsx', 'utf8')
-  for (const name of ['calendra-icon-v9.png', 'calendra-apple-v9.png']) {
+  for (const name of ['calendra-icon-v10.png', 'calendra-apple-v10.png']) {
     assert.equal(layout.includes('/' + name), true)
     assert.equal(
       readFileSync('public/' + name)

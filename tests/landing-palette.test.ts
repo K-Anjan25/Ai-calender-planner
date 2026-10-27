@@ -53,8 +53,8 @@ it('keeps Bauhaus text and action pairs above AA normal-text contrast', () => {
       `${foreground} / ${background}`,
     );
 });
-it('isolates the new landing palette without changing the approved application colors', () => {
-  const allowed = new Set(['F3F6FF', 'CEF26D', '3770BF', '8DC2FF', '102C50']);
+it('uses the same Bauhaus primary palette throughout the application', () => {
+  const allowed = new Set(['F5F2E9', 'F3CD38', '173BB5', 'C73527', '191919']);
   const walk = (directory: string): string[] =>
     readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
       const path = `${directory}/${entry.name}`;
@@ -127,7 +127,7 @@ it('uses ink on yellow and white on primary red actions', () => {
   assert.match(css, /\.button\s*\{[^}]*background:\s*var\(--red\)/s);
   assert.ok(ratio(bauhaus('ink'), bauhaus('yellow')) >= 7);
 });
-it('retains AAA text contrast on the unchanged planner surfaces', () => {
-  for (const surface of ['#F3F6FF', '#CEF26D', '#8DC2FF'])
+it('keeps AAA ink contrast on Bauhaus planner surfaces', () => {
+  for (const surface of ['#F5F2E9', '#F3CD38'])
     assert.ok(ratio(token('ink'), surface) >= 7);
 });

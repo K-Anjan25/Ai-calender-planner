@@ -33,7 +33,7 @@ export function PaperSheet({
         'relative',
         TONE_CLASS[tone],
         shadow,
-        'border border-[color:rgba(55,112,191,0.14)]',
+        'border border-[color:rgba(25,25,25,0.14)]',
         'rounded-[var(--radius-cut)]',
         className,
       )}

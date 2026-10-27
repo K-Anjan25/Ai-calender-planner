@@ -23,7 +23,7 @@ export default async function SignUpPage({
   return (
     <main className="relative flex min-h-screen flex-col overflow-x-clip">
       <SiteHeader />
-      <div className="mx-auto w-full max-w-[1240px] flex-1 px-4 sm:px-8">
+      <div id="page-content" tabIndex={-1} className="mx-auto w-full max-w-[1240px] flex-1 px-5 sm:px-8">
         <AuthPanel mode="signup" error={error} errorHost={errorHost} next={next} plan={plan} />
       </div>
       <SiteFooter />
