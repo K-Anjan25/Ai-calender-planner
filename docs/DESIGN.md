@@ -498,3 +498,27 @@ to the tile. Arrow inspection keeps focus on the canvas. Main buttons/tabs/remov
 Publishing selection is shared by dry-run/export/approval; changing selection retires old feedback.
 Undo reveals a confirmation with keyboard focus before any deletion request. Current local browser
 checks are not a guarantee of complete accessibility or live-provider readiness.
+
+## Landing redesign: Bauhaus — 2026-10-27
+
+The latest landing-page direction supersedes its previous pastel palette and editorial layout.
+It does not replace the planner, authentication or legal-page design systems.
+
+- Scoped CSS module: warm off-white canvas, near-black ink, primary red/blue/yellow accents.
+- DM Sans/system sans typography throughout the landing, including the retained calendar wordmark.
+- Strong aligned grids, square controls, thin rules, circles/squares/triangles as CSS geometry.
+- Right-side illustrative weekly calendar on desktop; stacked mobile composition, no horizontal
+  scrolling. Explicit cells/blocks share the same tracks; displayed durations match row spans.
+- No particles, raster illustrations, invented adoption statistics or floating CTA overlays.
+- Sticky bounded header, native mobile navigation dialog with Escape/focus restoration, skip link,
+  reduced-motion-aware anchors, accessible FAQ buttons and associated answer panels.
+- Same-origin contact/newsletter routes retain validation, pending, failure/retry and accepted-only
+  success states. Pro/Teams remain enquiries, not paid checkout. Compact Hyderabad map retained.
+- Palette tests now distinguish the scoped landing palette from the unchanged application palette;
+  AA action/text contrast is checked numerically. Existing planner contrast coverage remains.
+
+Validation: lint, typecheck, 230 automated tests, production build, and Chromium at
+320/390/768/900/1024/1280/1440px. Browser checks cover calendar geometry/right-side placement,
+overflow, navigation, FAQs, enquiry prefilling, contact validation/failure/retry/success, newsletter
+and footer identity/map. Font/map network delivery is stubbed or blocked in those checks; no real
+marketing delivery, Google OAuth or model inference is implied.

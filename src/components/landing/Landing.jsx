@@ -1,650 +1,280 @@
-'use client'
+'use client';
 
-import React, { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
-  ArrowUpRight,
   ArrowRight,
+  ArrowUpRight,
   ArrowUp,
   Menu,
   X,
   Plus,
   Minus,
   Check,
-  CalendarDays,
-  Clock3,
   ShieldCheck,
-  MapPin,
-  Sparkles,
-} from 'lucide-react'
-import s from './site.module.css'
-import { CalendraLogo } from '@/components/paper/CalendraMark'
+  Clock3,
+  SlidersHorizontal,
+} from 'lucide-react';
+import { CalendraLogo } from '@/components/paper/CalendraMark';
+import s from './site.module.css';
 
-/* Same-origin App Router handlers own validation, delivery configuration and credentials.
-   Only an accepted server response can produce a success message. */
 const FORM_ENDPOINTS = {
   contact: '/api/contact',
   newsletter: '/api/newsletter',
-}
+};
 const NAV = [
-  { label: 'Home', href: '#top' },
-  { label: 'Product', href: '#product' },
-  { label: 'Pricing', href: '#plans' },
-  { label: 'FAQs', href: '#questions' },
-  { label: 'Contact', href: '#contact' },
-]
-
+  ['How it works', '#how-it-works'],
+  ['The product', '#product'],
+  ['Plans', '#plans'],
+  ['FAQs', '#questions'],
+];
 const FAQ = [
   [
     'What happens when everything won’t fit?',
-    'You get a clear capacity report, not an impossibly busy calendar. Calendra shows what could not be placed so you can change the scope, deadline or available hours.',
+    'An honest answer. Calendra shows what could not be placed and why. You choose whether to change the scope, deadline or available hours. It never quietly overbooks your week.',
   ],
   [
     'Does AI decide when I work?',
-    'AI interprets your tasks and requests. A constraint-based scheduling engine places the work around your hours, meetings and protected time. You review the result.',
+    'AI can interpret your tasks and requests. A deterministic scheduling engine places the work around your hours, meetings and protected time. You review and adjust the result.',
   ],
   [
     'Will it change my Google Calendar automatically?',
-    'No. Calendar access is a separate permission, and you approve specific blocks before they are written. You stay in control.',
+    'No. Connecting Google Calendar is a separate permission. You approve specific blocks before they are written, and can preview the proposed changes first.',
   ],
   [
-    'Can I use it without an AI subscription?',
-    'Yes. The planner can use its rule-based mode without an external model. Live language-model features depend on the provider configured for your deployment.',
+    'Do I need an AI subscription?',
+    'The rule-based planner works without an external model. Live language-model features depend on the provider configured for your deployment.',
   ],
   [
     'Where are my tasks saved?',
-    'Tasks and preferences are currently saved in your browser. Signing in connects your Google identity; it does not sync those tasks between devices.',
+    'Your tasks and preferences are saved in this browser. Google sign-in does not currently sync your tasks across devices.',
   ],
-]
-// Brand icons use inline SVG; Lucide supplies the interface icons.
-function Github() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.86c-2.78.6-3.37-1.18-3.37-1.18-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.64-1.34-2.22-.25-4.56-1.11-4.56-4.95 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.03A9.58 9.58 0 0 1 12 6.82c.85 0 1.71.11 2.51.34 1.91-1.3 2.75-1.03 2.75-1.03.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.69 0 3.85-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" />
-    </svg>
-  )
-}
-function Linkedin() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM3 9h4v12H3V9Zm6 0h4v1.6c.6-1 1.7-1.9 3.5-1.9 3.7 0 4.5 2.4 4.5 5.5V21h-4v-6c0-1.5 0-3.3-2-3.3s-2.1 1.6-2.1 3.2V21H9V9Z" />
-    </svg>
-  )
-}
-// Use the same original mark and wordmark as the dashboard, auth pages and favicon.
-function Mark() {
-  return <CalendraLogo size={32} className={s.brand} />
-}
-function LinkButton({
-  children,
-  href = '/planner',
-  secondary = false,
-  className = '',
-  ...rest
-}) {
+];
+
+function Button({ href, children, secondary = false, ...props }) {
   return (
     <Link
       href={href}
-      data-attention={!secondary && href === '/planner' ? true : undefined}
-      className={`${s.button} ${secondary ? s.secondary : ''} ${className}`}
-      {...rest}
+      className={`${s.button} ${secondary ? s.secondary : ''}`}
+      {...props}
     >
       {children}
-      <ArrowUpRight size={17} />
+      <ArrowUpRight size={19} aria-hidden="true" />
     </Link>
-  )
+  );
+}
+function Brand() {
+  return <CalendraLogo size={32} />;
 }
 
-function Week({ compact = false }) {
-  const blocks = [
-    ['Deep work', '09:00 – 10:30', 0, 17, 31, 'sage'],
-    ['Product review', '11:00 – 12:00', 0, 57, 21, 'clay'],
-    ['Write the brief', '09:00 – 11:00', 1, 17, 42, 'sage'],
-    ['Research', '14:00 – 15:00', 1, 70, 21, 'cream'],
-    ['Focus time', '09:00 – 10:30', 2, 17, 31, 'sage'],
-    ['Team sync', '11:00 – 12:00', 2, 57, 21, 'clay'],
-    ['Build & refine', '09:00 – 11:00', 3, 17, 42, 'sage'],
-    ['Read & reflect', '14:00 – 15:00', 3, 70, 21, 'cream'],
-    ['Wrap up', '09:00 – 10:30', 4, 17, 31, 'sage'],
-  ]
+const BLOCKS = [
+  {
+    day: 0,
+    row: 0,
+    span: 2,
+    name: 'Deep work',
+    time: '09:00 — 11:00',
+    color: 'blue',
+  },
+  { day: 0, row: 3, span: 1, name: 'Admin', time: '12:00', color: 'yellow' },
+  { day: 1, row: 0, span: 1, name: 'Review', time: '09:00', color: 'yellow' },
+  {
+    day: 1,
+    row: 2,
+    span: 2,
+    name: 'Research',
+    time: '11:00 — 13:00',
+    color: 'red',
+  },
+  {
+    day: 2,
+    row: 1,
+    span: 2,
+    name: 'Create',
+    time: '10:00 — 12:00',
+    color: 'blue',
+  },
+  { day: 2, row: 4, span: 1, name: 'Walk', time: '13:00', color: 'yellow' },
+  {
+    day: 3,
+    row: 0,
+    span: 2,
+    name: 'Focus',
+    time: '09:00 — 11:00',
+    color: 'red',
+  },
+  { day: 3, row: 3, span: 1, name: 'Inbox', time: '12:00', color: 'yellow' },
+  {
+    day: 4,
+    row: 1,
+    span: 2,
+    name: 'Finish',
+    time: '10:00 — 12:00',
+    color: 'blue',
+  },
+];
+function Week() {
   return (
-    <div
-      className={`${s.week} ${compact ? s.compact : ''}`}
-      role="figure"
-      aria-label="Illustrative weekly schedule, not a live calendar"
-    >
-      <div className={s.weekTop}>
-        <div>
-          <span className={s.eyebrow}>YOUR WEEK, WITH ROOM TO BREATHE</span>
-          <p className={s.weekTitle}>A little more possible.</p>
+    <div className={s.poster}>
+      <div className={s.posterTop}>
+        <span>YOUR WEEK, IN GOOD SHAPE.</span>
+        <span>MON — FRI</span>
+      </div>
+      <div className={s.posterShapes} aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </div>
+      <div
+        className={s.week}
+        role="img"
+        aria-label="Illustrative weekly calendar: focused work, admin and breaks arranged across Monday to Friday. This is a sample, not your live plan."
+      >
+        <div className={s.weekTop}>
+          <span>
+            <span className={s.liveDot} />A week with room.
+          </span>
+          <span>Sample plan</span>
         </div>
-        <CalendarDays size={20} />
-      </div>
-      <div className={s.weekDays}>
-        {['MON', 'TUE', 'WED', 'THU', 'FRI'].map((d, i) => (
-          <div key={d}>
-            {d}
-            <b>{19 + i}</b>
-          </div>
-        ))}
-      </div>
-      <div className={s.weekBody}>
-        {Array.from({ length: 5 }, (_, i) => (
-          <div className={s.gridCol} key={i} />
-        ))}
-        {blocks.map(([title, time, col, top, height, tone]) => (
-          <div
-            key={title}
-            className={`${s.block} ${s[tone]}`}
-            style={{
-              left: `calc(${col * 20}% + 5px)`,
-              top: `${Math.round(top * 3.2)}px`,
-              height: `${Math.round(height * 3.2)}px`,
-              width: 'calc(20% - 10px)',
-            }}
-          >
-            <span>{title}</span>
-            <small>{time}</small>
-          </div>
-        ))}
-      </div>
-      <div className={s.weekAgenda} aria-label="Week overview">
-        {['MON', 'TUE', 'WED', 'THU', 'FRI'].map((day, index) => (
-          <div key={day}>
-            <strong>{day}</strong>
-            <div>
-              {blocks
-                .filter((block) => block[2] === index)
-                .map(([title, time]) => (
-                  <p key={title}>
-                    <b>{title}</b>
-                    <span>{time}</span>
-                  </p>
-                ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className={s.weekBottom}>
-        <span>
-          <i /> A realistic plan. Not a perfect fiction.
-        </span>
-        <span>Illustrative week</span>
-      </div>
-    </div>
-  )
-}
-function Reveal({ children, className = '', ...props }) {
-  return (
-    <div className={`${s.reveal} ${className}`} data-reveal {...props}>
-      {children}
-    </div>
-  )
-}
-function Counter({ value, label, suffix = '' }) {
-  const ref = useRef(null),
-    [count, setCount] = useState(value)
-  useEffect(() => {
-    let raf = 0
-    const mq = matchMedia('(prefers-reduced-motion: reduce)')
-    if (mq.matches) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          const start = performance.now()
-          function tick(t) {
-            const p = Math.min((t - start) / 1000, 1)
-            setCount(Math.round(value * (1 - Math.pow(1 - p, 3))))
-            if (p < 1) raf = requestAnimationFrame(tick)
-          }
-          setCount(0)
-          raf = requestAnimationFrame(tick)
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.5 },
-    )
-    observer.observe(ref.current)
-    return () => {
-      observer.disconnect()
-      cancelAnimationFrame(raf)
-    }
-  }, [value])
-  return (
-    <div ref={ref} className={s.stat}>
-      <strong aria-hidden="true">
-        {count}
-        <span>{suffix}</span>
-      </strong>
-      <span className={s.srOnly}>
-        {value}
-        {suffix}
-      </span>
-      <p>{label}</p>
-    </div>
-  )
-}
-function FAQs() {
-  const [open, setOpen] = useState(0)
-  return (
-    <section className={`${s.section} ${s.faqSection}`} id="questions">
-      <Reveal>
-        <div className={s.sectionHeading}>
-          <span className={s.eyebrow}>GOOD QUESTIONS</span>
-          <h2>
-            A little clarity
-            <br />
-            before you begin.
-          </h2>
+        <div className={s.dayHeaders}>
+          <span />
+          <span>MON</span>
+          <span>TUE</span>
+          <span>WED</span>
+          <span>THU</span>
+          <span>FRI</span>
         </div>
-        <div className={s.faq}>
-          {FAQ.map(([q, a], i) => (
-            <div key={q} className={s.faqItem}>
-              <h3>
-                <button
-                  id={`question-${i}`}
-                  aria-expanded={open === i}
-                  aria-controls={`answer-${i}`}
-                  onClick={() => setOpen(open === i ? null : i)}
-                >
-                  <span className={s.faqQuestion}>{q}</span>
-                  {open === i ? (
-                    <Minus size={18} aria-hidden="true" />
-                  ) : (
-                    <Plus size={18} aria-hidden="true" />
-                  )}
-                </button>
-              </h3>
+        <div className={s.calendarBody}>
+          <div className={s.hours}>
+            {['09', '10', '11', '12', '13', '14'].map((hour) => (
+              <span key={hour}>{hour}</span>
+            ))}
+          </div>
+          <div className={s.calendarGrid}>
+            {Array.from({ length: 30 }, (_, i) => (
+              <span
+                className={s.cell}
+                key={i}
+                style={{
+                  gridColumn: (i % 5) + 1,
+                  gridRow: Math.floor(i / 5) + 1,
+                }}
+              />
+            ))}
+            {BLOCKS.map((block) => (
               <div
-                id={`answer-${i}`}
-                role="region"
-                aria-labelledby={`question-${i}`}
-                hidden={open !== i}
+                key={`${block.day}-${block.row}`}
+                className={`${s.block} ${s[block.color]}`}
+                style={{
+                  gridColumn: block.day + 1,
+                  gridRow: `${block.row + 1} / span ${block.span}`,
+                }}
               >
-                <p>{a}</p>
+                <strong>{block.name}</strong>
+                <span>{block.time}</span>
               </div>
-            </div>
-          ))}
-        </div>
-      </Reveal>
-    </section>
-  )
-}
-function Home() {
-  return (
-    <>
-      <section className={s.hero}>
-        <div className={s.orbit} aria-hidden="true" />
-        <div className={s.heroInner}>
-          <Reveal>
-            <div className={s.pill}>
-              <span /> LESS GUESSWORK. MORE GOOD WEEKS.
-            </div>
-            <h1>
-              Your time is finite.
-              <br />
-              Your calendar
-              <br />
-              <em>should know that.</em>
-            </h1>
-            <p className={s.heroCopy}>
-              Give it your tasks, deadlines and preferences. Calendra builds a
-              realistic week — and tells you the truth when it doesn’t fit.
-            </p>
-            <div className={s.heroActions}>
-              <LinkButton>Build my week</LinkButton>
-              <Link className={s.textLink} href="#product">
-                Meet your planner <ArrowRight size={16} />
-              </Link>
-            </div>
-            <div className={s.heroFoot}>
-              <ShieldCheck size={15} />
-              <span>
-                No card required. Your calendar stays in your control.
-              </span>
-            </div>
-          </Reveal>
-          <div className={s.heroVisual}>
-            <div className={s.visualLabel}>
-              <span>YOUR WEEK, AT A GLANCE</span>
-            </div>
-            <div
-              className={s.calendarScroll}
-              role="region"
-              aria-label="Illustrative weekly calendar"
-            >
-              <Week />
-            </div>
-            <div className={s.floatingNote}>
-              <span className={s.noteIcon}>
-                <Check size={16} />
-              </span>
-              <div>
-                <b>Enough space for the work.</b>
-                <span>And the life around it.</span>
-              </div>
-            </div>
-            <div className={s.smallOrbit} aria-hidden="true" />
+            ))}
           </div>
         </div>
-        <div className={s.heroBase}>
-          <span>BUILT FOR REAL LIFE, NOT JUST OPEN SLOTS.</span>
-          <span>SCROLL TO FIND YOUR RHYTHM ↓</span>
+        <div className={s.weekBottom}>
+          <span>
+            <Check size={14} aria-hidden="true" /> Focus protected
+          </span>
+          <span>Space is part of the plan.</span>
         </div>
-      </section>
-      <section className={`${s.section} ${s.intro}`} id="product">
-        <Reveal>
-          <span className={s.eyebrow}>A BETTER RELATIONSHIP WITH TIME</span>
-          <h2>
-            Most calendars show what’s next.
-            <br />
-            Calendra asks <em>what’s possible.</em>
-          </h2>
-          <p>
-            Busy isn’t the goal. A week you can actually finish is. Connect the
-            dots between what matters, the energy you have, and the hours that
-            are really yours.
-          </p>
-        </Reveal>
-      </section>
-      <section className={s.section} id="how-it-works">
-        <div className={s.split}>
-          <Reveal>
-            <div className={s.number}>MAKE SENSE OF THE MESS</div>
-            <h2>
-              A head full of tasks.
-              <br />
-              <em>A clear place to start.</em>
-            </h2>
-            <p>
-              Drop the to-dos, the deadlines, the “I really shoulds.” Turn a
-              messy list into work with a realistic shape — without filling in a
-              dozen fields first.
-            </p>
-            <Link href="#product" className={s.textLink}>
-              See how it works <ArrowUpRight size={17} />
-            </Link>
-          </Reveal>
-          <Reveal
-            className={s.intake}
-            role="figure"
-            aria-label="Illustrative task intake"
-          >
-            <span className={s.eyebrow}>ON YOUR MIND</span>
-            <blockquote>
-              “Finish the proposal by Thursday. Three runs this week. Keep my
-              mornings for deep work.”
-            </blockquote>
-            <div className={s.intakeLine}>
-              <Sparkles size={17} /> A little structure. A lot less friction.
-            </div>
-            <div className={s.taskRow}>
-              <i className={s.taskDot} />
-              Finish proposal <span>THU · DEEP WORK</span>
-            </div>
-            <div className={s.taskRow}>
-              <i className={s.taskDot} />
-              Go for a run <span>3 × THIS WEEK</span>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-      <section className={`${s.section} ${s.softSection}`} id="features">
-        <div className={`${s.split} ${s.reverse}`}>
-          <Reveal
-            className={s.capacity}
-            role="figure"
-            aria-label="Illustrative capacity report"
-          >
-            <div className={s.capacityTop}>
-              <Clock3 size={20} />
-              <span>THE HONEST ANSWER</span>
-            </div>
-            <h3>
-              Too much week.
-              <br />
-              Not enough hours.
-            </h3>
-            <div className={s.capacityBar}>
-              <span />
-            </div>
-            <div className={s.capacityNumbers}>
-              <span>28h requested</span>
-              <span>22h available</span>
-            </div>
-            <p>6 hours need a different plan.</p>
-            <div className={s.capacityChoices}>
-              <span>Reduce scope</span>
-              <span>Move a deadline</span>
-              <span>Make room</span>
-            </div>
-            <small>Illustrative capacity report</small>
-          </Reveal>
-          <Reveal>
-            <div className={s.number}>KNOW YOUR LIMITS</div>
-            <h2>
-              “It doesn’t fit”
-              <br />
-              <em>is a useful answer.</em>
-            </h2>
-            <p>
-              No squeezing eight hours of work into a four-hour afternoon. See
-              what fits, what doesn’t, and what you can change. Make a trade-off
-              before your week makes it for you.
-            </p>
-            <LinkButton href="#product" secondary>
-              Meet the honest planner
-            </LinkButton>
-          </Reveal>
-        </div>
-      </section>
-      <section className={`${s.section} ${s.statsSection}`}>
-        <Reveal>
-          <span className={s.eyebrow}>THE PLANNING PRINCIPLES</span>
-          <div className={s.stats}>
-            <Counter value={7} label="days, seen as one connected week" />
-            <Counter value={1} label="realistic plan you can adjust" />
-            <Counter value={0} label="calendar writes without your approval" />
-          </div>
-        </Reveal>
-      </section>
-      <Pricing preview />
-      <FAQs />
-      <section id="contact">
-        <Contact />
-      </section>
-    </>
-  )
+      </div>
+      <div className={s.posterBottom}>
+        <span>LESS FRICTION.</span>
+        <span>
+          MORE INTENTION. <ArrowUpRight size={15} />
+        </span>
+      </div>
+    </div>
+  );
 }
-const plans = [
-  {
-    name: 'Personal',
-    price: 'Free',
-    desc: 'For a week that feels like yours.',
-    features: [
-      'Task and deadline planning',
-      'Working hours and focus preferences',
-      'Capacity reports and manual adjustments',
-      'Calendar export and approved Google sync',
-    ],
-    cta: 'Start planning',
-    href: '/planner',
-  },
-  {
-    name: 'Pro',
-    price: 'Enquiry only',
-    desc: 'For a bigger planning horizon.',
-    features: [
-      'Share your planning requirements',
-      'Discuss history and longer horizons',
-      'Help shape the next chapter',
-    ],
-    cta: 'Ask about Pro',
-    inquiry: 'pro',
-    href: '#contact',
-    tag: 'REGISTER YOUR INTEREST',
-  },
-  {
-    name: 'Teams',
-    price: 'Enquiry only',
-    desc: 'For people doing meaningful work together.',
-    features: [
-      'Discuss your team’s workflow',
-      'Explore shared planning needs',
-      'Talk through privacy requirements',
-    ],
-    cta: 'Ask about Teams',
-    inquiry: 'teams',
-    href: '#contact',
-  },
-]
-function Pricing({ preview = false }) {
+
+function FAQs() {
+  const [open, setOpen] = useState(null);
   return (
-    <section className={`${s.section} ${s.pricing}`} id="plans">
-      <Reveal>
-        <div className={s.sectionHeading}>
-          <span className={s.eyebrow}>ROOM FOR A BETTER WEEK</span>
-          <h2>
-            {preview ? (
-              <>
-                Start with a little clarity.
-                <br />
-                <em>Stay for the breathing room.</em>
-              </>
-            ) : (
-              <>
-                Simple plans.
-                <br />
-                <em>No calendar gymnastics.</em>
-              </>
-            )}
-          </h2>
-          <p>
-            Start with Personal for free. Pro and Teams are enquiries only; no
-            checkout or payment is taken.
-          </p>
-        </div>
-        <div className={s.plans}>
-          {plans.map((p, i) => (
-            <article
-              className={s.plan}
-              data-plan={p.name}
-              aria-label={`${p.name} plan`}
-              key={p.name}
+    <div className={s.faqList}>
+      {FAQ.map(([question, answer], index) => (
+        <article className={s.faq} key={question}>
+          <h3>
+            <button
+              aria-expanded={open === index}
+              aria-controls={`faq-answer-${index}`}
+              id={`faq-question-${index}`}
+              onClick={() => setOpen(open === index ? null : index)}
             >
-              <span className={s.eyebrow}>
-                {p.tag ||
-                  (i === 0 ? 'YOUR PLACE TO START' : 'LET’S FIND YOUR FIT')}
+              {question}
+              <span aria-hidden="true">
+                {open === index ? <Minus size={20} /> : <Plus size={20} />}
               </span>
-              <h3>{p.name}</h3>
-              <p>{p.desc}</p>
-              <div className={s.price}>{p.price}</div>
-              <ul>
-                {p.features.map((f) => (
-                  <li key={f}>
-                    <Check size={15} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <LinkButton
-                href={p.href}
-                secondary={i !== 0}
-                data-inquiry={p.inquiry}
-                aria-describedby={
-                  p.inquiry ? `${p.inquiry}-inquiry-help` : undefined
-                }
-              >
-                {p.cta}
-              </LinkButton>
-              <p
-                id={p.inquiry ? `${p.inquiry}-inquiry-help` : undefined}
-                className={s.inquiryHint}
-              >
-                {p.inquiry
-                  ? `Opens the contact form below with ${p.name} selected. No payment required.`
-                  : 'Opens the free planner. No payment required.'}
-              </p>
-            </article>
-          ))}
-        </div>
-      </Reveal>
-    </section>
-  )
-}
-function PageIntro({ label, title, text }) {
-  return (
-    <section className={s.pageIntro}>
-      <Reveal>
-        <span className={s.eyebrow}>{label}</span>
-        <h2>{title}</h2>
-        <p>{text}</p>
-      </Reveal>
-    </section>
-  )
+            </button>
+          </h3>
+          <div
+            id={`faq-answer-${index}`}
+            role="region"
+            aria-labelledby={`faq-question-${index}`}
+            hidden={open !== index}
+          >
+            <p>{answer}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }
 function Form({ newsletter = false }) {
   const [errors, setErrors] = useState({}),
     [status, setStatus] = useState(''),
     [busy, setBusy] = useState(false),
-    ref = useRef(null)
+    ref = useRef(null);
   async function submit(e) {
-    e.preventDefault()
-    if (busy) return
-    const data = Object.fromEntries(new FormData(e.currentTarget))
-    const next = {}
+    e.preventDefault();
+    if (busy) return;
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    const next = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((data.email || '').trim()))
-      next.email = 'Enter a valid email address.'
+      next.email = 'Enter a valid email address.';
     if (!newsletter) {
-      if (!(data.name || '').trim()) next.name = 'Enter your name.'
+      if (!(data.name || '').trim()) next.name = 'Enter your name.';
       if ((data.message || '').trim().length < 15)
-        next.message = 'Please enter at least 15 characters.'
-      if (!data.consent) next.consent = 'Please agree before sending.'
+        next.message = 'Please enter at least 15 characters.';
+      if (!data.consent) next.consent = 'Please agree before sending.';
     }
-    setErrors(next)
-    setStatus('')
+    setErrors(next);
+    setStatus('');
     if (Object.keys(next).length) {
       setTimeout(
         () => ref.current?.querySelector('[aria-invalid="true"]')?.focus(),
         0,
-      )
-      return
+      );
+      return;
     }
-    setBusy(true)
+    setBusy(true);
     try {
-      const endpoint = FORM_ENDPOINTS[newsletter ? 'newsletter' : 'contact']
-      if (!endpoint) throw Error('unavailable')
+      const endpoint = FORM_ENDPOINTS[newsletter ? 'newsletter' : 'contact'];
+      if (!endpoint) throw Error('unavailable');
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
-      })
-      if (!response.ok) throw Error('rejected')
+      });
+      if (!response.ok) throw Error('rejected');
       setStatus(
         newsletter
           ? 'You’re subscribed. Thanks for making room for us.'
           : 'Message received. Thank you for getting in touch.',
-      )
-      ref.current.reset()
+      );
+      ref.current.reset();
     } catch {
-      setStatus('We couldn’t send this right now. Please try again later.')
+      setStatus('We couldn’t send this right now. Please try again later.');
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
-  const id = newsletter ? 'newsletter' : 'contact'
+  const id = newsletter ? 'newsletter' : 'contact';
   return (
     <form
       ref={ref}
@@ -652,15 +282,15 @@ function Form({ newsletter = false }) {
       noValidate
       aria-busy={busy}
       onInput={(event) => {
-        const name = event.target.name
+        const name = event.target.name;
         if (name)
           setErrors((previous) => {
-            if (!previous[name]) return previous
-            const next = { ...previous }
-            delete next[name]
-            return next
-          })
-        setStatus('')
+            if (!previous[name]) return previous;
+            const next = { ...previous };
+            delete next[name];
+            return next;
+          });
+        setStatus('');
       }}
       className={newsletter ? s.newsletterForm : s.contactForm}
       aria-label={newsletter ? 'Newsletter subscription' : 'Contact Calendra'}
@@ -780,333 +410,492 @@ function Form({ newsletter = false }) {
         {busy ? 'Sending…' : status}
       </p>
     </form>
-  )
-}
-function Contact() {
-  return (
-    <>
-      <PageIntro
-        label="LET’S TALK"
-        title={
-          <>
-            Good weeks start
-            <br />
-            <em>with a conversation.</em>
-          </>
-        }
-        text="A question, a thoughtful suggestion, or a workflow worth untangling. We’d like to hear it."
-      />
-      <section className={`${s.section} ${s.contactGrid}`}>
-        <Reveal>
-          <h2>
-            A real conversation.
-            <br />
-            Not another ticket.
-          </h2>
-          <p>
-            Tell us what you’re trying to make room for. For account questions,
-            please don’t include passwords, API keys or private calendar
-            details.
-          </p>
-          <div className={s.contactDetail}>
-            <MapPin size={19} />
-            <span>
-              Built in Hyderabad, India.
-              <br />
-              <small>Made for weeks everywhere.</small>
-            </span>
-          </div>
-          <figure className={s.map} aria-label="Hyderabad location map">
-            <iframe
-              title="Map of Hyderabad, India"
-              src="https://www.google.com/maps?q=Hyderabad%2C%20India&z=12&output=embed"
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              allowFullScreen
-            />
-            <figcaption>
-              <span>Hyderabad, India · City view</span>
-              <a
-                href="https://www.google.com/maps/search/?api=1&query=Hyderabad%2C%20India"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open map <ArrowUpRight size={16} aria-hidden="true" />
-              </a>
-            </figcaption>
-          </figure>
-        </Reveal>
-        <Reveal>
-          <Form />
-        </Reveal>
-      </section>
-    </>
-  )
-}
-function Footer() {
-  return (
-    <footer className={s.footer}>
-      <div className={s.footerTop}>
-        <div>
-          <Link href="#top" aria-label="Calendra home">
-            <Mark />
-          </Link>
-          <h2>
-            A better week.
-            <br />A note now and then.
-          </h2>
-          <p>Thoughtful updates on planning, focus and making room.</p>
-          <Form newsletter />
-        </div>
-        <div className={s.footerLinks}>
-          <div>
-            <h3>EXPLORE</h3>
-            <Link href="#product">The planner</Link>
-            <Link href="#plans">Pricing</Link>
-            <Link href="#contact">Get in touch</Link>
-            <Link href="/signin">Sign in</Link>
-          </div>
-          <div>
-            <h3>THE DETAILS</h3>
-            <Link href="/legal#privacy">Privacy</Link>
-            <Link href="/legal#terms">Terms</Link>
-            <Link href="/planner">
-              Start planning <ArrowUpRight size={12} />
-            </Link>
-            <div className={s.social}>
-              <Link
-                href="https://github.com/K-Anjan25/Ai-calender-planner"
-                aria-label="Calendra source on GitHub"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Github size={18} />
-              </Link>
-              <Link
-                href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2FK-Anjan25%2FAi-calender-planner"
-                aria-label="Share Calendra on LinkedIn"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Linkedin size={18} />
-              </Link>
-            </div>
-          </div>
-        </div>
-        <div className={s.footerLocation}>
-          <div className={s.tinyMap}>
-            <iframe
-              title="Map of Hyderabad in the footer"
-              src="https://www.google.com/maps?q=Hyderabad%2C%20India&z=12&output=embed"
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              allowFullScreen
-            />
-          </div>
-          <span>
-            <a
-              href="https://www.google.com/maps/search/?api=1&query=Hyderabad%2C%20India"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Open Hyderabad location map (new tab)"
-            >
-              HYDERABAD, INDIA
-            </a>
-          </span>
-          <p>
-            A small point on the map.
-            <br />A little more room in your week.
-          </p>
-        </div>
-      </div>
-      <div className={s.footerBottom}>
-        <span>© {new Date().getFullYear()} Calendra</span>
-        <span>THE AI CALENDAR PLANNER</span>
-        <Link href="#top">
-          Back to a better week <ArrowUpRight size={14} />
-        </Link>
-      </div>
-    </footer>
-  )
+  );
 }
 export default function Landing() {
-  const [menu, setMenu] = useState(false),
-    [scrolled, setScrolled] = useState(false)
-  const toggle = useRef(null),
-    dialog = useRef(null),
-    main = useRef(null)
-  // All marketing sections are server-rendered by Next.js; motion enhances rather than hides them.
+  const [menu, setMenu] = useState(false);
+  const dialog = useRef(null),
+    toggle = useRef(null);
   useEffect(() => {
-    if (!('IntersectionObserver' in window)) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add(s.visible)
-            observer.unobserve(e.target)
-          }
-        })
-      },
-      { threshold: 0.08 },
-    )
-    document
-      .querySelectorAll('[data-reveal]')
-      .forEach((el) => observer.observe(el))
-    return () => observer.disconnect()
-  }, [])
-  useEffect(() => {
-    let raf = 0
-    function update() {
-      const y = window.scrollY
-      setScrolled(y > 40)
-      raf = 0
-    }
-    function scroll() {
-      if (!raf) raf = requestAnimationFrame(update)
-    }
-    update()
-    window.addEventListener('scroll', scroll, { passive: true })
+    if (menu) dialog.current?.showModal();
+    else dialog.current?.close();
+    const previous = document.body.style.overflow;
+    if (menu) document.body.style.overflow = 'hidden';
     return () => {
-      window.removeEventListener('scroll', scroll)
-      cancelAnimationFrame(raf)
-    }
-  }, [])
-  useEffect(() => {
-    if (menu) {
-      dialog.current?.showModal()
-      document.body.style.overflow = 'hidden'
-    } else {
-      dialog.current?.close()
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [menu])
+      document.body.style.overflow = previous;
+    };
+  }, [menu]);
+  function close() {
+    setMenu(false);
+    toggle.current?.focus();
+  }
   function followAnchor(event) {
-    const link = event.target.closest?.('a[href^="#"]')
+    const link = event.target.closest('a[href^="#"]');
     if (
       !link ||
-      event.button !== 0 ||
+      event.button > 0 ||
       event.metaKey ||
       event.ctrlKey ||
       event.shiftKey ||
       event.altKey
     )
-      return
-    const hash = link.getAttribute('href')
-    const target = document.getElementById(hash.slice(1))
-    if (!target) return
-    event.preventDefault()
-    // Run after drawer close/focus restoration, without letting Next reset scroll behavior.
-    setTimeout(() => {
-      target.scrollIntoView({
-        block: 'start',
-        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
-          ? 'auto'
-          : 'smooth',
-      })
-      if (!target.hasAttribute('tabindex'))
-        target.setAttribute('tabindex', '-1')
-      const inquiry = link.dataset.inquiry
-      const selector = document.getElementById('contact-inquiry')
-      if (selector && ['pro', 'teams'].includes(inquiry)) {
-        selector.value = inquiry
-        selector.dispatchEvent(new Event('input', { bubbles: true }))
-        selector.focus({ preventScroll: true })
-      } else target.focus({ preventScroll: true })
-      if (window.location.hash !== hash)
-        window.history.pushState(null, '', hash)
-    }, 0)
-  }
-  function close() {
-    setMenu(false)
-    toggle.current?.focus()
+      return;
+    const target = document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'instant'
+        : 'smooth',
+      block: 'start',
+    });
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+    history.replaceState(null, '', link.getAttribute('href'));
   }
   return (
     <div className={s.app} id="top" onClickCapture={followAnchor}>
-      <Link className={s.skip} href="#main-content">
+      <a className={s.skip} href="#main-content">
         Skip to content
-      </Link>
-      <header className={`${s.header} ${scrolled ? s.headerScrolled : ''}`}>
+      </a>
+      <header className={s.header}>
         <div className={s.headerInner}>
-          <div className={s.brandGroup}>
-            <Link href="#top" aria-label="Calendra home">
-              <Mark />
+          <Link className={s.brand} href="/" aria-label="Calendra home">
+            <Brand />
+          </Link>
+          <nav className={s.desktopNav} aria-label="Main navigation">
+            {NAV.slice(0, 3).map(([label, href]) => (
+              <a href={href} key={href}>
+                {label}
+              </a>
+            ))}
+          </nav>
+          <div className={s.headerActions}>
+            <Link className={s.signIn} href="/signin">
+              Sign in <ArrowUpRight size={15} />
             </Link>
-            <span className={s.headerTag}>THE AI CALENDAR PLANNER</span>
+            <Link className={s.headerCta} href="/planner">
+              Start planning <ArrowUpRight size={17} />
+            </Link>
+            <button
+              ref={toggle}
+              className={s.menuButton}
+              aria-label="Open navigation"
+              aria-expanded={menu}
+              aria-controls="navigation-dialog"
+              onClick={() => setMenu(true)}
+            >
+              <Menu size={24} />
+            </button>
           </div>
-          <button
-            ref={toggle}
-            className={s.menuButton}
-            onClick={() => setMenu(true)}
-            aria-expanded={menu}
-            aria-controls="navigation-dialog"
-          >
-            <span>MENU</span>
-            <Menu size={22} />
-          </button>
         </div>
       </header>
       <dialog
-        id="navigation-dialog"
         ref={dialog}
+        id="navigation-dialog"
         className={s.menuDialog}
         aria-label="Main navigation"
-        onCancel={(e) => {
-          e.preventDefault()
-          close()
+        onCancel={(event) => {
+          event.preventDefault();
+          close();
         }}
-        onClick={(e) => {
-          if (e.target === dialog.current) close()
+        onClick={(event) => {
+          if (event.target === dialog.current) close();
         }}
       >
-        <div className={s.menuPanel}>
-          <div className={s.menuTop}>
-            <Mark />
-            <button autoFocus onClick={close} aria-label="Close navigation">
-              <X />
-            </button>
-          </div>
-          <nav aria-label="Main">
-            {NAV.map(({ label, href }) => (
-              <Link key={href} href={href} onClick={close}>
-                {label}
-                <ArrowUpRight />
-              </Link>
-            ))}
-            <Link href="/signin">
-              Sign in
-              <ArrowUpRight />
-            </Link>
-          </nav>
-          <LinkButton href="/planner">Build my week</LinkButton>
-          <p>Less guesswork. More good weeks.</p>
+        <div className={s.menuTop}>
+          <Brand />
+          <button autoFocus onClick={close} aria-label="Close navigation">
+            <X />
+          </button>
         </div>
+        <nav>
+          {NAV.map(([label, href]) => (
+            <a href={href} onClick={close} key={href}>
+              {label}
+              <ArrowUpRight />
+            </a>
+          ))}
+          <Link onClick={close} href="/signin">
+            Sign in
+            <ArrowUpRight />
+          </Link>
+          <Link onClick={close} href="/planner">
+            Start planning
+            <ArrowUpRight />
+          </Link>
+        </nav>
       </dialog>
-      <main id="main-content" ref={main} tabIndex={-1}>
-        <Home />
-      </main>
-      <nav className={s.actionBar} aria-label="Planner actions">
-        <LinkButton className={s.stickyCTA} data-bottom-cta>
-          Build my week
-        </LinkButton>
-        <button
-          className={s.backTop}
-          aria-label="Back to top"
-          onClick={() =>
-            window.scrollTo({
-              top: 0,
-              behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
-                ? 'instant'
-                : 'smooth',
-            })
-          }
+      <main id="main-content">
+        <section className={`${s.hero} ${s.container}`}>
+          <div className={s.heroCopy}>
+            <p className={s.eyebrow}>
+              <span className={s.blueDot} />
+              THE AI CALENDAR PLANNER
+            </p>
+            <h1>
+              A little order.
+              <br />A lot more
+              <br />
+              <span>possible.</span>
+            </h1>
+            <p className={s.heroText}>
+              Turn a head full of tasks into a week that works. Built around
+              your time, your energy, your life.
+            </p>
+            <div className={s.heroActions}>
+              <Button href="/planner">Give your week shape</Button>
+              <a className={s.textLink} href="#how-it-works">
+                See how it works <ArrowRight size={17} />
+              </a>
+            </div>
+            <p className={s.heroNote}>
+              <ShieldCheck size={15} />
+              Your priorities. Your approval. Always.
+            </p>
+          </div>
+          <Week />
+          <div className={s.heroFoot}>
+            <span>GOOD WEEKS DON’T HAPPEN BY ACCIDENT.</span>
+            <span>
+              DESIGNED AROUND YOU <ArrowRight size={16} />
+            </span>
+          </div>
+        </section>
+        <div className={s.principles} aria-label="Planning principles">
+          <div className={s.container}>
+            <span>
+              <i className={s.smallCircle} />
+              Form follows focus.
+            </span>
+            <span>
+              <i className={s.smallSquare} />
+              Structure creates space.
+            </span>
+            <span>
+              <i className={s.smallTriangle} />
+              You set the direction.
+            </span>
+          </div>
+        </div>
+
+        <section id="how-it-works" className={`${s.section} ${s.container}`}>
+          <div className={s.sectionHeader}>
+            <div>
+              <p className={s.eyebrow}>LESS ORGANISING. MORE DOING.</p>
+              <h2>
+                From scattered
+                <br />
+                to structured.
+              </h2>
+            </div>
+            <p>
+              Not another list to manage.
+              <br />A clear path from intention to action.
+            </p>
+          </div>
+          <div className={s.steps}>
+            {[
+              [
+                'circle',
+                'Start with what’s on your mind.',
+                'Add your tasks, estimates and deadlines. Or paste a brief, then review what Calendra understood.',
+              ],
+              [
+                'square',
+                'Give your time some boundaries.',
+                'Set your working hours, focus windows and breaks. Your existing meetings stay exactly where they are.',
+              ],
+              [
+                'triangle',
+                'Make the week your own.',
+                'Build a plan, see why each block is there, and adjust. Only publish to your calendar when you approve.',
+              ],
+            ].map(([shape, title, text]) => (
+              <article key={shape}>
+                <div
+                  className={`${s.stepShape} ${s[shape]}`}
+                  aria-hidden="true"
+                />
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="product" className={s.productSection}>
+          <div className={`${s.product} ${s.container}`}>
+            <div
+              className={s.focusArt}
+              role="img"
+              aria-label="Geometric illustration of a balanced day, with protected focus, a break, and time left open."
+            >
+              <div className={s.artCaption}>
+                <span>THE ART OF A REALISTIC DAY</span>
+                <ArrowUpRight size={19} />
+              </div>
+              <div className={s.artCircle} />
+              <div className={s.artSquare} />
+              <div className={s.artTriangle} />
+              <div className={s.artSchedule}>
+                <div>
+                  <span>09:00</span>
+                  <strong>Room to focus.</strong>
+                </div>
+                <div>
+                  <span>12:30</span>
+                  <strong>Room to pause.</strong>
+                </div>
+                <div>
+                  <span>15:00</span>
+                  <strong>Room to breathe.</strong>
+                </div>
+              </div>
+              <span className={s.artFooter}>
+                A FULL LIFE. NOT JUST A FULL CALENDAR.
+              </span>
+            </div>
+            <div className={s.productCopy}>
+              <p className={s.eyebrow}>FUNCTION, NOT FRICTION.</p>
+              <h2>
+                Make room for
+                <br />
+                what matters.
+              </h2>
+              <p>
+                A calendar should support your life.
+                <br />
+                Not compete with it.
+              </p>
+              <div className={s.featureList} id="features">
+                {[
+                  [
+                    SlidersHorizontal,
+                    'Your rules come first.',
+                    'Working hours, protected breaks and daily caps are constraints, not suggestions.',
+                  ],
+                  [
+                    Clock3,
+                    'An honest view of your time.',
+                    'If the work won’t fit, see the shortfall and choose a trade-off. No silent overbooking.',
+                  ],
+                  [
+                    ShieldCheck,
+                    'Always in your hands.',
+                    'Move and resize blocks, export your week, or approve specific Google Calendar changes.',
+                  ],
+                ].map(([Icon, title, text]) => (
+                  <article key={title}>
+                    <Icon size={21} aria-hidden="true" />
+                    <div>
+                      <h3>{title}</h3>
+                      <p>{text}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <a className={s.textLink} href="/planner">
+                Explore the planner <ArrowRight size={18} />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${s.section} ${s.container}`} id="plans">
+          <div className={s.sectionHeader}>
+            <div>
+              <p className={s.eyebrow}>A SIMPLE PLACE TO START.</p>
+              <h2>
+                Less overhead.
+                <br />
+                More headspace.
+              </h2>
+            </div>
+            <p>
+              Start with Personal. Pro and Teams are enquiries only; no checkout
+              or payment is taken.
+            </p>
+          </div>
+          <div className={s.plans}>
+            <article
+              className={`${s.plan} ${s.personal}`}
+              aria-label="Personal plan"
+            >
+              <div className={s.planTitle}>
+                <h3>Personal</h3>
+                <span className={s.planDot} />
+              </div>
+              <p>For a week that feels like yours.</p>
+              <div className={s.price}>
+                Free<span> / to start</span>
+              </div>
+              <ul>
+                {[
+                  'Tasks, deadlines & weekly plans',
+                  'Focus windows & protected breaks',
+                  'Capacity reports & manual adjustments',
+                  'Calendar export & approved Google sync',
+                ].map((text) => (
+                  <li key={text}>
+                    <Check size={16} />
+                    {text}
+                  </li>
+                ))}
+              </ul>
+              <Button href="/planner">Start planning</Button>
+              <small>No payment required.</small>
+            </article>
+            {[
+              [
+                'Pro',
+                'More room to think ahead.',
+                'Longer horizons, planning history and your next priorities. Tell us what would help.',
+                'A bigger personal workflow',
+              ],
+              [
+                'Teams',
+                'Better weeks, together.',
+                'Shared planning, team workflows and privacy needs. Let’s explore what you need.',
+                'A more coordinated team',
+              ],
+            ].map(([name, subtitle, text, tag]) => (
+              <article
+                className={s.plan}
+                key={name}
+                aria-label={`${name} plan`}
+              >
+                <div className={s.planTitle}>
+                  <h3>{name}</h3>
+                  <ArrowUpRight size={26} />
+                </div>
+                <p>{subtitle}</p>
+                <div className={s.enquiry}>Let’s talk.</div>
+                <span className={s.planTag}>{tag}</span>
+                <p className={s.planDescription}>{text}</p>
+                <Button
+                  secondary
+                  href={`#contact`}
+                  onClick={() => {
+                    const select = document.getElementById('contact-inquiry');
+                    if (select) select.value = name.toLowerCase();
+                  }}
+                >
+                  Ask about {name}
+                </Button>
+                <small>Enquiry only. No checkout or payment.</small>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className={s.faqSection} id="questions">
+          <div className={`${s.faqGrid} ${s.container}`}>
+            <div>
+              <p className={s.eyebrow}>CLEAR ANSWERS.</p>
+              <h2>
+                A little less
+                <br />
+                guesswork.
+              </h2>
+              <p>
+                Still curious?{' '}
+                <a href="#contact">
+                  Let’s talk <ArrowUpRight size={15} />
+                </a>
+              </p>
+              <div className={s.faqGeometry} aria-hidden="true">
+                <i />
+                <i />
+              </div>
+            </div>
+            <FAQs />
+          </div>
+        </section>
+
+        <section
+          className={`${s.section} ${s.container} ${s.contact}`}
+          id="contact"
         >
-          <ArrowUp size={18} aria-hidden="true" />
-        </button>
-      </nav>
-      <Footer />
+          <div>
+            <p className={s.eyebrow}>A CONVERSATION STARTS HERE.</p>
+            <h2>
+              What’s on
+              <br />
+              your mind?
+            </h2>
+            <p>
+              A question, an idea, a better way to plan.
+              <br />
+              We’re listening.
+            </p>
+            <div className={s.contactShape} aria-hidden="true">
+              <span />
+              <ArrowUpRight size={48} strokeWidth={1.5} />
+            </div>
+          </div>
+          <Form />
+        </section>
+
+        <section className={s.closing}>
+          <div className={s.container}>
+            <span className={s.closingCircle} aria-hidden="true" />
+            <p className={s.eyebrow}>LESS CHAOS. MORE POSSIBILITY.</p>
+            <h2>
+              Your time.
+              <br />
+              By design.
+            </h2>
+            <Button href="/planner">Build a week that fits</Button>
+            <span className={s.closingSquare} aria-hidden="true" />
+          </div>
+        </section>
+      </main>
+      <footer className={s.footer}>
+        <div className={`${s.footerTop} ${s.container}`}>
+          <div>
+            <Link className={s.brand} href="/" aria-label="Calendra home">
+              <Brand />
+            </Link>
+            <p>Good weeks, by design.</p>
+            <div className={s.tinyMap}>
+              <iframe
+                title="Map of Hyderabad in the footer"
+                src="https://www.google.com/maps?q=Hyderabad%2C%20India&z=11&output=embed"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+              <a
+                href="https://www.google.com/maps?q=Hyderabad%2C%20India"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open Hyderabad location map (new tab)"
+              >
+                Hyderabad, India <ArrowUpRight size={12} />
+              </a>
+            </div>
+          </div>
+          <div className={s.footerLinks}>
+            <a href="#how-it-works">How it works</a>
+            <Link href="/planner">Planner</Link>
+            <a href="#plans">Plans</a>
+            <a href="#contact">Contact</a>
+            <Link href="/signin">Sign in</Link>
+            <Link href="/legal#privacy">Privacy</Link>
+          </div>
+          <div className={s.newsletter}>
+            <p>A little clarity in your inbox.</p>
+            <Form newsletter />
+          </div>
+        </div>
+        <div className={`${s.footerBottom} ${s.container}`}>
+          <span>© {new Date().getFullYear()} Calendra</span>
+          <span>FORM FOLLOWS FOCUS.</span>
+          <a href="#top" aria-label="Back to top">
+            Back to top <ArrowUp size={16} />
+          </a>
+        </div>
+      </footer>
     </div>
-  )
+  );
 }
